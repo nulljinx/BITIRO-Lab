@@ -1,4 +1,20 @@
-import type {LinePath,Point,ScenarioIntersection,TrackDefinition} from './types';
+import type {LinePath,Obstacle,Point,ScenarioIntersection,TrackDefinition} from './types';
+
+
+/**
+ * S01 uses one movable obstacle at the destination selected by the initial IR.
+ * The obstacle sits on the final base so the classroom sequence is preserved:
+ * choose a route -> follow the line -> reach the base -> strike the obstacle.
+ */
+export const S01_TARGET_OBSTACLES={
+ left:{id:'practice-box',x:17,y:18,width:8,height:8,movable:true,blocking:true},
+ right:{id:'practice-box',x:75,y:18,width:8,height:8,movable:true,blocking:true},
+} satisfies Record<'left'|'right',Obstacle>;
+
+export function s01ObstacleForIR(left:boolean,right:boolean):Obstacle|null{
+ if(left===right)return null;
+ return {...S01_TARGET_OBSTACLES[left?'left':'right']};
+}
 
 export const S03_FIXED_SCENARIO={
  obstacles:[

@@ -7,83 +7,106 @@ export interface MentorSolution {
 export const mentorSolutions:Record<string,MentorSolution>={
   s01:{
     title:'Solución de referencia · S01',
-    note:'Trabaja solo los elementos de esta sesión: lectura IR inicial, variable de estado, sensor central de línea, LCD, detección del obstáculo y mecanismo Golpe. No adelanta contadores, while ni seguidor con tres sensores.',
+    note:'Referencia construida con lo trabajado en S01: setup solo inicializa; en loop se leen los IR, se guarda el lado con una variable de estado, se sigue la línea con el sensor central y un umbral, y al llegar a la base se detecta y golpea el obstáculo.',
     source:`// BITIRO Lab · Sesión 01
 // Solución de referencia para mentor
 #include <KnightRoboticsLibs_Iroh.h>
+
+int lado = 0;          // 1 = izquierda, 2 = derecha
+int flag = 0;          // 0 = falta elegir lado, 1 = lado elegido
+int terminado = 0;     // 0 = recorriendo, 1 = desafío terminado
 
 int irIzq = 0;
 int irDer = 0;
 int sensorCentro = 0;
 int distancia = 0;
-int lado = 0;       // -1 = izquierda, 1 = derecha
-int cajaMovida = 0;
-int umbral = 200;   // Reemplazar por el valor obtenido al calibrar.
+int umbral = 200;      // Reemplazar por el valor obtenido al calibrar.
 
 void setup() {
+  // En setup solo inicializamos las partes del IROH que usaremos.
   inicializarMovimiento();
   inicializarSensores();
   inicializarPantalla();
   inicializarGolpe();
-
-  irIzq = leerSensorObstaculoIzquierdo();
-  irDer = leerSensorObstaculoDerecho();
-
-  borrarPantalla();
-
-  if (irIzq == 1 && irDer == 0) {
-    lado = -1;
-    escribirPantalla(0, 0, "IR IZQUIERDO");
-  }
-
-  if (irDer == 1 && irIzq == 0) {
-    lado = 1;
-    escribirPantalla(0, 0, "IR DERECHO");
-  }
 }
 
 void loop() {
-  sensorCentro = leerSensorLineaCentral();
-  distancia = leerDistanciaSonar();
 
-  // Cuando la caja queda frente al sonar, el robot se detiene y la mueve
-  // hacia el lado contrario al estímulo IR inicial.
-  if (cajaMovida == 0 && distancia > 5 && distancia < 14) {
-    detenerse();
+  // PRIMERA SUB-TAREA: leer los IR y guardar el lado elegido.
+  if (flag == 0) {
+    irIzq = leerSensorObstaculoIzquierdo();
+    irDer = leerSensorObstaculoDerecho();
 
-    if (lado == -1) {
-      moverServoGolpe(1);
+    borrarPantalla();
+
+    if (irIzq == 1 && irDer == 0) {
+      lado = 1;
+      flag = 1;
+      escribirPantalla(0, 0, "IR IZQUIERDO");
     }
-
-    if (lado == 1) {
-      moverServoGolpe(-1);
+    else if (irDer == 1 && irIzq == 0) {
+      lado = 2;
+      flag = 1;
+      escribirPantalla(0, 0, "IR DERECHO");
     }
-
-    pausa(350);
-    moverServoGolpe(0);
-    pausa(300);
-    cajaMovida = 1;
+    else {
+      escribirPantalla(0, 0, "ELIGE UN IR");
+      detenerse();
+      pausa(100);
+    }
   }
 
-  // En S01 usamos el sensor central. Si pierde la línea, buscamos nuevamente
-  // hacia el lado elegido al inicio.
-  if (sensorCentro >= umbral) {
-    avanzar(30);
+  // SEGUNDA SUB-TAREA: seguir la línea hasta la base final.
+  else if (terminado == 0) {
+
+    distancia = leerDistanciaSonar();
+
+    // TERCERA SUB-TAREA: al llegar, detectar y mover el obstáculo.
+    // En clase trabajamos el sonar dentro de un rango confiable.
+    if (distancia > 5 && distancia < 12) {
+      detenerse();
+
+      // IR izquierdo -> ruta izquierda -> golpe hacia la derecha.
+      if (lado == 1) {
+        moverServoGolpe(1);
+      }
+      // IR derecho -> ruta derecha -> golpe hacia la izquierda.
+      else {
+        moverServoGolpe(-1);
+      }
+
+      pausa(1000);
+      moverServoGolpe(0);
+      pausa(200);
+      terminado = 1;
+    }
+    else {
+      sensorCentro = leerSensorLineaCentral();
+
+      // Seguidor de línea con un sensor y movimiento en zig-zag.
+      if (lado == 1) {
+        if (sensorCentro >= umbral) {
+          avanzar(0, 50);
+        }
+        else {
+          avanzar(50, 0);
+        }
+      }
+      else {
+        if (sensorCentro >= umbral) {
+          avanzar(50, 0);
+        }
+        else {
+          avanzar(0, 50);
+        }
+      }
+
+      pausa(20);
+    }
   }
+
+  // Al terminar el desafío, el IROH queda detenido.
   else {
-    if (lado == -1) {
-      avanzar(12, 30);
-    }
-    if (lado == 1) {
-      avanzar(30, 12);
-    }
-  }
-
-  // En la actividad, ambos IR indican la detención final.
-  irIzq = leerSensorObstaculoIzquierdo();
-  irDer = leerSensorObstaculoDerecho();
-
-  if (irIzq == 1 && irDer == 1) {
     detenerse();
   }
 }
@@ -238,20 +261,20 @@ void loop() {
     // Línea hacia la derecha.
     else if (si < UMBRAL_I && sc < UMBRAL_C && sd >= UMBRAL_D) {
       ultimoGiro = 1;
-      avanzar(55, 0);
+      avanzar(55, 1);
     }
     // Línea hacia la izquierda.
     else if (si >= UMBRAL_I && sc < UMBRAL_C && sd < UMBRAL_D) {
       ultimoGiro = -1;
-      avanzar(0, 55);
+      avanzar(1, 55);
     }
     // Si los tres ven blanco, buscamos el último lado donde vimos la línea.
     else if (si < UMBRAL_I && sc < UMBRAL_C && sd < UMBRAL_D) {
       if (ultimoGiro == 1) {
-        avanzar(50, 0);
+        avanzar(50, 1);
       }
       if (ultimoGiro == -1) {
-        avanzar(0, 50);
+        avanzar(1, 50);
       }
       if (ultimoGiro == 0) {
         avanzar(14);

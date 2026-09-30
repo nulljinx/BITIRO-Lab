@@ -2,21 +2,16 @@ import {describe,it,expect} from 'vitest';
 import {SimulationEngine} from '../simulator/SimulationEngine';
 import {ProgramRuntime} from '../simulator/runtime/ProgramRuntime';
 import {trackForSession} from '../content/tracks';
-import leftSource from './reference-programs/s01-left.cpp?raw';
-import rightSource from './reference-programs/s01-right.cpp?raw';
+import {mentorSolutions} from '../content/mentor-solutions';
 
 function completeS01(side:'left'|'right'){
  const engine=new SimulationEngine(trackForSession('s01'));
  const runtime=new ProgramRuntime(engine);
  runtime.command({type:'ir',side:'left',value:side==='left'});
  runtime.command({type:'ir',side:'right',value:side==='right'});
- expect(runtime.run(side==='left'?leftSource:rightSource)).toEqual([]);
- for(let tick=0;tick<12000&&!engine.snapshot().finish.arrived&&engine.status==='running';tick++)runtime.step(10);
- expect(engine.snapshot().finish.arrived).toBe(true);
- expect(engine.snapshot().mission.status).toBe('in_progress');
- runtime.command({type:'ir',side:'left',value:true});
- runtime.command({type:'ir',side:'right',value:true});
- runtime.step(200);
+ expect(runtime.run(mentorSolutions.s01.source)).toEqual([]);
+ for(let tick=0;tick<12000&&engine.snapshot().mission.status!=='completed';tick++)runtime.step(10);
+ expect(engine.snapshot().mission.status).toBe('completed');
  return {engine,runtime};
 }
 

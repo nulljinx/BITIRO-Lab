@@ -27,6 +27,7 @@ export class MissionEvaluator {
  private last:{x:number;y:number}|null=null;
  private lastTickMs=0;
  private completed=false;
+ private destinationReached=false;
  private invalid=false;
  private obstacleDetections=new Set<string>();
  private obstacleReadEvents=0;
@@ -40,7 +41,7 @@ export class MissionEvaluator {
  constructor(private track:TrackDefinition){}
  setLineThresholds(values:LineThresholds){this.lineThresholds=[...values] as LineThresholds;}
  setScenarioIntersections(values:readonly ScenarioIntersection[]){this.scenarioIntersections=values.map(item=>({...item}));}
- reset(){this.active=false;this.initialIR=null;this.reads.clear();this.lineReads.clear();this.movedSides.clear();this.lcdDecision=false;this.intersection=false;this.intersectionStopMs=0;this.distance=0;this.last=null;this.lastTickMs=0;this.completed=false;this.invalid=false;this.obstacleDetections.clear();this.obstacleReadEvents=0;this.lcdNumber=null;this.s03IntersectionActive=null;this.s03IntersectionHeading=0;this.s03IntersectionTurned=false;this.s03IntersectionResponses=0;}
+ reset(){this.active=false;this.initialIR=null;this.reads.clear();this.lineReads.clear();this.movedSides.clear();this.lcdDecision=false;this.intersection=false;this.intersectionStopMs=0;this.distance=0;this.last=null;this.lastTickMs=0;this.completed=false;this.destinationReached=false;this.invalid=false;this.obstacleDetections.clear();this.obstacleReadEvents=0;this.lcdNumber=null;this.s03IntersectionActive=null;this.s03IntersectionHeading=0;this.s03IntersectionTurned=false;this.s03IntersectionResponses=0;}
  start(robot:RobotState){this.reset();this.active=true;this.initialIR={left:robot.irLeft,right:robot.irRight};this.last={x:robot.x,y:robot.y};this.lastTickMs=robot.simTimeMs;}
  invalidate(){this.invalid=true;this.active=false;}
  observeEvent(event:SimulationEvent){
@@ -60,6 +61,15 @@ export class MissionEvaluator {
   if(!this.active||this.invalid)return;
   if(this.last)this.distance+=Math.hypot(robot.x-this.last.x,robot.y-this.last.y);
   this.last={x:robot.x,y:robot.y};
+  if(this.track.id==='s01'&&this.initialIR){
+   const expectedId=this.initialIR.left&&!this.initialIR.right?'rect270':this.initialIR.right&&!this.initialIR.left?'rect272':null;
+   const expected=expectedId?this.track.finishZones.find(zone=>zone.id===expectedId):null;
+   if(expected){
+    const nearestX=Math.max(expected.x,Math.min(robot.x,expected.x+expected.width));
+    const nearestY=Math.max(expected.y,Math.min(robot.y,expected.y+expected.height));
+    if(Math.hypot(robot.x-nearestX,robot.y-nearestY)<=ROBOT.radiusCm)this.destinationReached=true;
+   }
+  }
   const elapsed=Math.max(0,robot.simTimeMs-this.lastTickMs);this.lastTickMs=robot.simTimeMs;
   const intersectionZone=this.track.missionZones?.find(zone=>zone.id==='intersection');
   const insideIntersection=!intersectionZone||(robot.x>=intersectionZone.x&&robot.x<=intersectionZone.x+intersectionZone.width&&robot.y>=intersectionZone.y&&robot.y<=intersectionZone.y+intersectionZone.height);
@@ -96,10 +106,10 @@ export class MissionEvaluator {
   if(this.track.id==='s01'){
    const left=!!this.initialIR?.left&&!this.initialIR?.right;
    const right=!!this.initialIR?.right&&!this.initialIR?.left;
-   check('decision','Leer el IR inicial y anunciar la decisión en LCD',this.reads.size>0&&(left||right)&&this.lcdDecision);
-   check('line','Usar el sensor central y recorrer la pista',this.lineReads.has('center')&&this.distance>=40);
-   check('obstacle','Mover la caja hacia el lado contrario',left?this.movedSides.has('right'):right?this.movedSides.has('left'):false);
-   check('finish','Llegar a la base correspondiente y detener ambos motores',stationary&&(left&&zone==='rect270'||right&&zone==='rect272'));
+   check('decision','Leer el IR inicial y guardar la decisión de ruta',this.reads.size>0&&(left||right)&&this.lcdDecision);
+   check('line','Seguir la línea usando el sensor central y un umbral',this.lineReads.has('center')&&this.distance>=40);
+   check('finish','Llegar a la base correspondiente',this.destinationReached);
+   check('obstacle','Mover el obstáculo hacia el lado contrario',left?this.movedSides.has('right'):right?this.movedSides.has('left'):false);
   }else if(this.track.id==='s02'){
    const left=!!this.initialIR?.left,right=!!this.initialIR?.right;
    const expected=left&&right?'base3':right?'base1':left?'base2':null;

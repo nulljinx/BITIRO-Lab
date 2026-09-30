@@ -1,5 +1,5 @@
 import {useEffect, useState, useRef} from 'react';
-import {Code2, Check, Download, ScanSearch, Play, BookOpen, ChevronDown, LoaderCircle, GraduationCap, Copy, FileInput} from 'lucide-react';
+import {Code2, Check, Download, ScanSearch, Play, ChevronDown, LoaderCircle, GraduationCap, Copy, FileInput} from 'lucide-react';
 import Editor, {loader} from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import 'monaco-editor/esm/vs/basic-languages/cpp/cpp.contribution';
@@ -14,7 +14,7 @@ import {mentorSolutionFor} from '../../content/mentor-solutions';
 (self as typeof self & {MonacoEnvironment:unknown}).MonacoEnvironment={getWorker:()=>new EditorWorker()};
 loader.config({monaco});
 monaco.editor.defineTheme('bitiro-night',{base:'vs-dark',inherit:true,rules:[{token:'comment',foreground:'A3AAB2'},{token:'keyword',foreground:'82B6D9'},{token:'string',foreground:'9FD4AF'},{token:'number',foreground:'F4C07A'}],colors:{'editor.background':'#101419','editorLineNumber.foreground':'#8994A2','editor.foreground':'#E8E4DB','editor.lineHighlightBackground':'#191F27','editor.selectionBackground':'#63432E','editorCursor.foreground':'#FFAF75','editorIndentGuide.background1':'#303842','editorIndentGuide.activeBackground1':'#77818D'}});
-export function CodeEditor({session,onGuide,simulation,storageScope,cloudContext,mentorMode=false}:{session:SessionDefinition;onGuide:()=>void;simulation?:SimulationConnection;storageScope?:string;cloudContext?:CloudContext;mentorMode?:boolean}) {
+export function CodeEditor({session,simulation,storageScope,cloudContext,mentorMode=false}:{session:SessionDefinition;simulation?:SimulationConnection;storageScope?:string;cloudContext?:CloudContext;mentorMode?:boolean}) {
   const [scope]=useState(()=>storageScope??getStorageScope());
   const [code,setCode]=useState(()=>loadCode(session,scope));
   const [saveState,setSaveState]=useState<'saved'|'pending'|'error'>('saved');
@@ -34,6 +34,7 @@ export function CodeEditor({session,onGuide,simulation,storageScope,cloudContext
   const pending=useRef<string|null>(null), timer=useRef<ReturnType<typeof setTimeout>|undefined>(undefined);
   const mentorSolution=mentorMode?mentorSolutionFor(session.id):null;
   const [mentorCopied,setMentorCopied]=useState(false);
+  const [mentorOpen,setMentorOpen]=useState(false);
   async function pushCloud(){
     if(!aliveRef.current||!cloudContext||!cloudReady.current||uploadingRef.current||uploadRef.current===null)return;
     const source=uploadRef.current;
@@ -174,6 +175,7 @@ export function CodeEditor({session,onGuide,simulation,storageScope,cloudContext
     return()=>{flush(false);window.removeEventListener('pagehide',handleHide);completion.dispose();hover.dispose();};
   },[session.id,session.number,scope]);
   useEffect(()=>{highlightIrohApi();},[code,session.number]);
+  useEffect(()=>{setMentorOpen(false);},[session.id]);
   function change(value:string|undefined){
     const next=value??'';if(next===currentCode.current)return;
     currentCode.current=next;typedRef.current=true;setCode(next);clearTimeout(timer.current);
@@ -196,33 +198,33 @@ export function CodeEditor({session,onGuide,simulation,storageScope,cloudContext
   }
   function loadMentorSolution(){
     if(!mentorSolution)return;
+    const confirmed=window.confirm('Cargar la solución de referencia reemplazará el código que tienes abierto en el editor. ¿Quieres continuar?');
+    if(!confirmed)return;
     change(mentorSolution.source);
+    flush();
+    setMentorOpen(false);
     window.setTimeout(()=>{editor.current?.revealLineInCenter(1);editor.current?.setPosition({lineNumber:1,column:1});editor.current?.focus();},0);
   }
   function runMentorSolution(){
     if(!mentorSolution||!simulation||unavailable||running||busy)return;
-    change(mentorSolution.source);
-    flush();
+    // La referencia del mentor se ejecuta de forma privada: no reemplaza el editor
+    // ni modifica el progreso del grupo.
     simulation.source(mentorSolution.source,true);
-    if(cloudContext){void markCloudActivity(cloudContext,session.id,'attempted').then(keepHighestProgress).catch(()=>{
-      setCloudMessage('El intento no se sincronizó. Tu código local permanece disponible.');
-    });}
-    window.setTimeout(()=>{editor.current?.revealLineInCenter(1);editor.current?.setPosition({lineNumber:1,column:1});},0);
   }
   async function copyMentorSolution(){
     if(!mentorSolution)return;
     try{await navigator.clipboard.writeText(mentorSolution.source);setMentorCopied(true);window.setTimeout(()=>setMentorCopied(false),1800);}catch{/* El código sigue visible para copiar manualmente. */}
   }
+  const activityLabel=progress==='completed'?'Completada':progress==='attempted'?'Intentada':progress==='visited'?'Visitada':'Sin registrar';
+  const cloudLabel=!cloudContext?'':cloudState==='loading'?'Consultando nube…':cloudState==='pending'?'Sincronizando…':cloudState==='saved'?`Nube sincronizada · ${activityLabel}`:cloudState==='offline'?'Guardado local · sin sincronización':cloudState==='conflict'?'Revisar versiones':'Guardado local';
   return <section className="code-panel" aria-label="Editor de código">
-    <div className="file-bar"><span className="file-tab"><i aria-hidden="true"/><Code2 size={16}/>intermedio_{session.id}.ino</span><span className={saveState==='error'?'save-error':'saved'} role="status">{saveState==='saved'?<><Check size={14}/>Guardado local</>:saveState==='pending'?'Guardando…':'Sin guardar'}</span>{cloudContext&&<span className="cloud-save-status" role="status">{cloudState==='saved'?'Nube sincronizada':cloudState==='loading'?'Consultando nube…':cloudState==='pending'?'Sincronizando…':cloudState==='conflict'?'Revisar versiones':cloudState==='offline'?'Solo copia local':''}</span>}</div>
+    <div className="file-bar"><span className="file-tab"><i aria-hidden="true"/><Code2 size={16}/>intermedio_{session.id}.ino</span><span className={saveState==='error'?'save-error':'saved'} role="status">{saveState==='saved'?<><Check size={14}/>Guardado local</>:saveState==='pending'?'Guardando…':'Sin guardar'}</span></div>
     {remoteConflict&&<div className="cloud-conflict" role="alert"><strong>Dos versiones de tu código</strong><p>{cloudMessage}</p><div className="button-row"><button type="button" onClick={selectLocal}>Usar mi versión local</button><button type="button" onClick={selectRemote}>Usar versión de la nube</button></div></div>}
-    {cloudMessage&&cloudState!=='conflict'&&<p className="cloud-alert" role="status">{cloudMessage}</p>}
-    {cloudContext&&<p className="cloud-progress" role="status">Actividad del grupo: {progress==='completed'?'Superada en simulador (autoevaluación)':progress==='attempted'?'Intentada':progress==='visited'?'Visitada':'Sin registrar'}</p>}
+    {cloudContext&&cloudState!=='conflict'&&<p className={`cloud-summary ${cloudState==='offline'?'is-offline':''}`} role="status" title={cloudMessage||undefined}>{cloudLabel}</p>}
     <div className="editor-toolbar"><span className="runtime-target">Arduino / IROH <i>local</i></span><div className="editor-tools">{simulation&&<span className={`program-load-state ${!simulation.programLoaded?'is-empty':simulation.loadedSource===code?'is-loaded':'has-changes'}`}>{!simulation.programLoaded?'Listo para probar':simulation.loadedSource===code?'En simulador':'Cambios nuevos'}</span>}<button onClick={download}><Download size={16}/>Descargar .ino</button></div></div>
     <div className="editor-wrap"><Editor onMount={instance=>{editor.current=instance;markers();highlightIrohApi();}} height="100%" language="cpp" path={`bitiro-${encodeURIComponent(scope)}-${session.id}.ino`} value={code} onChange={change} theme="bitiro-night" loading={<p className="editor-loading">Preparando el editor…</p>} options={{fontFamily:'IBM Plex Mono',fontSize:14,lineHeight:24,minimap:{enabled:false},scrollBeyondLastLine:false,padding:{top:16},automaticLayout:true,tabSize:2,wordWrap:'on',accessibilitySupport:'on',ariaLabel:'Código Arduino',tabFocusMode:true}}/></div>
-    <details className="editor-mission"><summary><BookOpen size={16}/>Misión y funciones<span className="mission-count">{session.objectives.length} objetivos</span><ChevronDown size={16}/></summary><div className="editor-mission-body"><ol className="mission-objectives">{session.objectives.map((o,index)=><li key={o}><span className="mission-step">{index+1}</span><span>{o}</span></li>)}</ol><div className="mission-help"><button className="text-link mission-guide-link" onClick={onGuide}>Consultar API y conceptos<BookOpen size={16}/></button><p className="mission-hint"><span><kbd>Tab</kbd> recorre controles</span><span><kbd>Ctrl+M</kbd> cambia el modo de tabulación</span></p></div></div></details>
-    {mentorSolution&&<details className="mentor-solution"><summary><span className="mentor-solution-icon"><GraduationCap size={17}/></span><span><strong>Solución del mentor</strong><small>Referencia privada para mostrar al cierre del desafío.</small></span><ChevronDown size={17}/></summary><div className="mentor-solution-body"><div className="mentor-solution-heading"><div><span className="eyebrow">HERRAMIENTA DEL MENTOR</span><h3>{mentorSolution.title}</h3><p>{mentorSolution.note}</p></div><div className="mentor-solution-actions"><button type="button" onClick={()=>void copyMentorSolution()}><Copy size={15}/>{mentorCopied?'Copiada':'Copiar'}</button><button type="button" onClick={loadMentorSolution}><FileInput size={15}/>Cargar en editor</button><button type="button" className="primary" disabled={busy||running||unavailable} onClick={runMentorSolution}><Play size={15}/>Probar solución</button></div></div><pre><code>{mentorSolution.source}</code></pre><p className="mentor-solution-warning">Esta referencia no se muestra en la interfaz de participantes. Al cargarla en el editor reemplaza la copia que el mentor tenga abierta.</p></div></details>}
-    {simulation&&<div className={`runtime-diagnostics ${simulation.reviewState==='Sin errores'?'is-success':simulation.reviewState==='Error'?'is-error':''}`}><p role="status">{busy?(simulation.reviewState==='Cargando programa…'?'Cargando el programa en el simulador…':'Revisando tu programa…'):simulation.reviewState==='Ejecutando'?(simulation.snapshot.status==='paused'?'Programa en pausa':'Programa iniciado. Observa al IROH.'):simulation.reviewState==='Sin errores'?'No se encontraron errores. El código está listo para ejecutar.':simulation.reviewState}</p><ul>{simulation.diagnostics.map((d,i)=><li key={i}><button className="diagnostic" onClick={()=>{editor.current?.revealLineInCenter(d.line);editor.current?.setPosition({lineNumber:d.line,column:d.column});editor.current?.focus();}}>Línea {d.line}, columna {d.column}: {d.message}</button></li>)}</ul></div>}
+    {mentorSolution&&<details className="mentor-solution" open={mentorOpen} onToggle={event=>setMentorOpen(event.currentTarget.open)}><summary><span className="mentor-solution-icon"><GraduationCap size={17}/></span><span><strong>Código de referencia del mentor</strong><small>Solución completa de {session.id.toUpperCase()} · solo visible para mentor.</small></span><ChevronDown size={17}/></summary><div className="mentor-solution-body"><div className="mentor-solution-heading"><div><span className="eyebrow">REFERENCIA DOCENTE</span><h3>{mentorSolution.title}</h3><p>{mentorSolution.note}</p></div><div className="mentor-solution-actions"><button type="button" onClick={()=>void copyMentorSolution()}><Copy size={15}/>{mentorCopied?'Copiada':'Copiar código'}</button><button type="button" onClick={loadMentorSolution}><FileInput size={15}/>Cargar en editor</button><button type="button" className="primary" disabled={busy||running||unavailable} onClick={runMentorSolution}><Play size={15}/>Probar referencia</button></div></div><div className="mentor-solution-code-label"><span>Código completo de referencia</span><span>{mentorSolution.source.split('\n').length} líneas</span></div><pre aria-label={`Código completo de referencia ${session.id.toUpperCase()}`}><code>{mentorSolution.source}</code></pre><p className="mentor-solution-warning">La referencia es privada del mentor. “Probar referencia” ejecuta este código sin modificar tu editor ni registrar progreso del grupo. “Cargar en editor” sí reemplaza tu copia actual y pide confirmación.</p></div></details>}
+    {simulation&&(simulation.reviewState!=='Listo'||simulation.diagnostics.length>0)&&<div className={`runtime-diagnostics ${simulation.reviewState==='Sin errores'?'is-success':simulation.reviewState==='Error'?'is-error':''}`}><p role="status">{busy?(simulation.reviewState==='Cargando programa…'?'Cargando el programa en el simulador…':'Revisando tu programa…'):simulation.reviewState==='Ejecutando'?(simulation.snapshot.status==='paused'?'Programa en pausa':'Programa iniciado. Observa al IROH.'):simulation.reviewState==='Sin errores'?'No se encontraron errores. El código está listo para ejecutar.':simulation.reviewState}</p><ul>{simulation.diagnostics.map((d,i)=><li key={i}><button className="diagnostic" onClick={()=>{editor.current?.revealLineInCenter(d.line);editor.current?.setPosition({lineNumber:d.line,column:d.column});editor.current?.focus();}}>Línea {d.line}, columna {d.column}: {d.message}</button></li>)}</ul></div>}
     <div className="editor-bottom-bar">{simulation?<><button className="review-button" disabled={busy||running||unavailable} onClick={()=>execute(false)}><ScanSearch size={18}/>Revisar código</button><button className="primary execute-button" disabled={busy||running||unavailable} title={running?'Detén la prueba antes de iniciar otra':'Probar la versión que estás viendo en el editor'} onClick={()=>execute(true)}>{busy?<LoaderCircle className="spin" size={18}/>:<Play size={18}/>}Probar código</button></>:<span>Material y editor · simulación próximamente</span>}</div>
     {saveState==='error'&&<p className="save-warning" role="alert">{sizeError||'No se pudo guardar. Descarga tu código para conservarlo.'}</p>}
   </section>;

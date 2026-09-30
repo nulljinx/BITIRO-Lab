@@ -2,7 +2,7 @@ import {ROBOT} from '../config';
 import type {SimulationEngine} from '../SimulationEngine';
 import type {Execution} from './runtime-types';
 import {voidValue} from './runtime-types';
-export const irohSpeedToCmS=(value:number)=>(50+Math.min(100,Math.max(0,value)))/150*ROBOT.maxWheelCmS;
+export const irohSpeedToCmS=(value:number)=>{const pwm=Math.min(100,Math.max(0,value));return pwm===0?0:(50+pwm)/150*ROBOT.maxWheelCmS;};
 export class Movement {
  private mode='stopped';
  constructor(private engine:SimulationEngine){}

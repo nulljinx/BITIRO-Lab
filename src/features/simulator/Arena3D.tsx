@@ -3,13 +3,15 @@ import type {Snapshot,TrackDefinition,LineThresholds} from '../../simulator/type
 import {renderScene3D,type SceneCamera} from '../../simulator/renderer/Scene3D';
 import {withScenarioIntersections} from '../../simulator/scenario';
 
-const PERSPECTIVE_CAMERA:SceneCamera={azimuth:-1.02,elevation:.64,distance:1.88,follow:false};
-const TOP_CAMERA:SceneCamera={azimuth:-Math.PI/2,elevation:Math.PI/2-.012,distance:2.38,follow:false};
-const FOLLOW_CAMERA:SceneCamera={azimuth:-1.10,elevation:.50,distance:.78,follow:true};
-export function Arena3D({snapshot,track,zoom,onZoom,thresholds}:{snapshot:Snapshot;track:TrackDefinition;zoom:number;onZoom:(zoom:number)=>void;thresholds:LineThresholds}){
+export type CameraPreset='perspective'|'follow';
+const PERSPECTIVE_CAMERA:SceneCamera={azimuth:-1.02,elevation:.64,distance:1.56,follow:false};
+const FOLLOW_CAMERA:SceneCamera={azimuth:-1.10,elevation:.50,distance:.72,follow:true};
+const CAMERA_PRESETS:Record<CameraPreset,SceneCamera>={perspective:PERSPECTIVE_CAMERA,follow:FOLLOW_CAMERA};
+export function Arena3D({snapshot,track,zoom,onZoom,thresholds,preset='perspective'}:{snapshot:Snapshot;track:TrackDefinition;zoom:number;onZoom:(zoom:number)=>void;thresholds:LineThresholds;preset?:CameraPreset}){
  const canvas=useRef<HTMLCanvasElement>(null);
- const [camera,setCamera]=useState<SceneCamera>(PERSPECTIVE_CAMERA);
+ const [camera,setCamera]=useState<SceneCamera>(CAMERA_PRESETS[preset]);
  const drag=useRef<{x:number;y:number;pointerId:number}|null>(null);
+ useEffect(()=>{setCamera(CAMERA_PRESETS[preset]);},[preset]);
  useEffect(()=>{
   const element=canvas.current;if(!element)return;
   const effectiveCamera={...camera,distance:Math.max(.42,Math.min(4.6,camera.distance/Math.max(.5,zoom)))};
@@ -24,11 +26,6 @@ export function Arena3D({snapshot,track,zoom,onZoom,thresholds}:{snapshot:Snapsh
   setCamera(previous=>({...previous,azimuth:previous.azimuth-dx*.009,elevation:Math.max(.1,Math.min(Math.PI/2-.02,previous.elevation+dy*.007))}));
  };
  return <div className="arena-3d">
-  <div className="arena-3d-presets" role="group" aria-label="Cámara tridimensional">
-   <button type="button" aria-pressed={!camera.follow&&camera.elevation>1.4} onClick={()=>setCamera(TOP_CAMERA)}>Superior 3D</button>
-   <button type="button" aria-pressed={!camera.follow&&camera.elevation<=1.4} onClick={()=>setCamera(PERSPECTIVE_CAMERA)}>Perspectiva</button>
-   <button type="button" aria-pressed={camera.follow} onClick={()=>setCamera(FOLLOW_CAMERA)}>Seguir IROH</button>
-  </div>
   <canvas ref={canvas} role="img" tabIndex={0} aria-label={`Vista tridimensional de ${track.id.toUpperCase()}. Usa flechas para girar la cámara y más o menos para acercarte.`}
    onPointerDown={event=>{if(event.button!==0)return;event.currentTarget.setPointerCapture(event.pointerId);drag.current={x:event.clientX,y:event.clientY,pointerId:event.pointerId};}}
    onPointerMove={move}

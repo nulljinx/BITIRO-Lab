@@ -14,7 +14,7 @@ export class ProgramRuntime {
  review(source:string):Diagnostic[]{try{validate(new Parser(source).parse());return [];}catch(error){return [diagnosticFor(error)];}}
  run(source:string):Diagnostic[]{
   this.cancel();this.diagnostic=null;this.engine.status='compiling';
-  try{const program=new Parser(source).parse();validate(program);const {irLeft,irRight,buttonPressed}=this.engine.robot;this.engine.reset();Object.assign(this.engine.robot,{irLeft,irRight,buttonPressed});this.execution=new Interpreter(program,new IrohRuntimeAdapter(this.engine)).run();this.engine.programControlled=true;this.engine.status='running';this.engine.mission.start(this.engine.robot);this.engine.emit({type:'PROGRAM_STARTED'});return [];}
+  try{const program=new Parser(source).parse();validate(program);const {irLeft,irRight,buttonPressed}=this.engine.robot;this.engine.reset();Object.assign(this.engine.robot,{irLeft,irRight,buttonPressed});this.engine.syncS01Scenario();this.execution=new Interpreter(program,new IrohRuntimeAdapter(this.engine)).run();this.engine.programControlled=true;this.engine.status='running';this.engine.mission.start(this.engine.robot);this.engine.emit({type:'PROGRAM_STARTED'});return [];}
   catch(error){this.fail(error);return [this.diagnostic!];}
  }
  private cancel(){this.execution?.return();this.execution=null;this.wait=null;this.accumulated=0;this.engine.robot.leftMotor=0;this.engine.robot.rightMotor=0;}
