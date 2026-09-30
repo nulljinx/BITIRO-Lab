@@ -743,6 +743,15 @@
 .mustakis-hero.mustakis-hero-v71{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.12fr) minmax(340px,.72fr);grid-template-areas:'copy next';align-items:start;gap:54px;padding:64px clamp(32px,6vw,104px) 60px;background:linear-gradient(180deg,#FBFAF7 0%,#F7F7F4 100%);border-bottom:1px solid rgba(9,8,95,.10);min-height:0;}
 .mustakis-hero.mustakis-hero-v71:before{content:'';position:absolute;inset:0;z-index:-2;background:linear-gradient(90deg,rgba(14,13,159,.018) 1px,transparent 1px),linear-gradient(rgba(14,13,159,.018) 1px,transparent 1px);background-size:64px 64px;mask-image:linear-gradient(90deg,transparent 0%,#000 40%,#000 100%);}
 .mustakis-hero.mustakis-hero-v71:after{display:none;}
+
+/* Mentor hero: subtle community photo texture, kept behind readable content. */
+.mustakis-hero.mustakis-hero-v71.is-mentor-hero{background:#F8F7F3;}
+.mustakis-hero.mustakis-hero-v71.is-mentor-hero:before{z-index:-3;background:linear-gradient(90deg,rgba(14,13,159,.018) 1px,transparent 1px),linear-gradient(rgba(14,13,159,.018) 1px,transparent 1px);background-size:64px 64px;mask-image:linear-gradient(90deg,transparent 0%,#000 40%,#000 100%);}
+.mentor-hero-photo{position:absolute;inset:-18px -22px;z-index:-2;pointer-events:none;background-image:linear-gradient(90deg,rgba(248,247,243,.97) 0%,rgba(248,247,243,.90) 24%,rgba(248,247,243,.68) 40%,rgba(248,247,243,.38) 58%,rgba(248,247,243,.34) 76%,rgba(248,247,243,.48) 100%),url('/brand/mustakis/cyt-talca-group.jpg');background-size:cover;background-position:center 61%;filter:blur(3.5px) saturate(.86) contrast(.94);transform:scale(1.025);opacity:.88;}
+.mentor-hero-photo:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(247,247,244,.08));}
+.mustakis-hero.mustakis-hero-v71.is-mentor-hero .mustakis-hero-copy,.mustakis-hero.mustakis-hero-v71.is-mentor-hero .mustakis-focus-card{position:relative;z-index:1;}
+@media(max-width:900px){.mentor-hero-photo{opacity:.62;background-position:58% 58%;filter:blur(5px) saturate(.78);background-image:linear-gradient(90deg,rgba(248,247,243,.94) 0%,rgba(248,247,243,.79) 48%,rgba(248,247,243,.58) 100%),url('/brand/mustakis/cyt-talca-group.jpg');}}
+@media(prefers-reduced-motion:reduce){.mentor-hero-photo{transform:scale(1.02);}}
 .mustakis-grid-motif{position:absolute;right:4.5%;top:42px;width:28px;height:28px;border-radius:7px;background:rgba(14,13,159,.055);box-shadow:40px 0 rgba(14,13,159,.055),0 40px rgba(14,13,159,.055),40px 40px rgba(14,13,159,.055);z-index:-1;pointer-events:none;}
 .mustakis-grid-motif:before{content:'';position:absolute;left:92px;top:0;width:17px;height:68px;border-radius:7px;background:rgba(14,13,159,.045);box-shadow:29px 0 rgba(14,13,159,.045);}
 .mustakis-hero-copy{grid-area:copy;max-width:760px;padding:0;}
@@ -2039,4 +2048,92 @@
   .landing-mascot-cutout{width:min(100%,348px);}
   .landing-hero-card.is-understand{left:1%;}
   .landing-hero-card.is-test{left:2%;}
+}
+
+
+/* v7.70 · mentor workspace cleanup */
+.theme-mustakis.is-mentor-view .workspace-learning{
+  padding-top:38px;
+  padding-bottom:44px;
+}
+.theme-mustakis.is-mentor-view .workspace-learning .section-heading{
+  align-items:flex-end;
+}
+.theme-mustakis.is-mentor-view .workspace-learning .section-heading h2{
+  margin-bottom:4px;
+}
+.theme-mustakis.is-mentor-view .institution-sessions{
+  margin-top:18px;
+  gap:14px;
+}
+.theme-mustakis.is-mentor-view .institution-session{
+  min-height:228px;
+}
+.theme-mustakis.is-mentor-view .institution-session.is-preparing-card{
+  min-height:142px;
+  align-self:start;
+  padding:18px 18px 16px;
+  background:#f5f7fa;
+  box-shadow:none;
+}
+.theme-mustakis.is-mentor-view .institution-session.is-preparing-card:before{
+  height:3px;
+}
+.theme-mustakis.is-mentor-view .institution-session.is-preparing-card h3{
+  margin:8px 0 0;
+  font-size:16px;
+  line-height:1.2;
+}
+.theme-mustakis.is-mentor-view .institution-session.is-preparing-card>p,
+.theme-mustakis.is-mentor-view .institution-session.is-preparing-card .session-skills,
+.theme-mustakis.is-mentor-view .institution-session.is-preparing-card>.small{
+  display:none;
+}
+.theme-mustakis.is-mentor-view .institution-session.is-preparing-card .session-state{
+  margin-top:8px;
+}
+.mentor-institution-strip{
+  display:grid;
+  grid-template-columns:minmax(0,1.4fr) minmax(220px,.55fr) minmax(150px,.35fr);
+  align-items:center;
+  gap:28px;
+  padding:18px clamp(28px,6vw,100px);
+  border-top:1px solid rgba(9,8,95,.10);
+  border-bottom:1px solid rgba(9,8,95,.10);
+  background:#faf9f5;
+  color:var(--mustakis-navy);
+}
+.mentor-institution-identity{display:flex;align-items:center;gap:20px;min-width:0;}
+.mentor-institution-identity img{width:170px;max-height:54px;object-fit:contain;object-position:left center;}
+.mentor-institution-identity div{display:flex;flex-direction:column;gap:3px;min-width:0;}
+.mentor-institution-identity span,.mentor-institution-partner span,.mentor-institution-platform span{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#676878;}
+.mentor-institution-identity strong,.mentor-institution-platform strong{font:600 15px/1.2 var(--font-sans);}
+.mentor-institution-partner{display:flex;align-items:center;gap:14px;padding-left:22px;border-left:1px solid rgba(9,8,95,.10);}
+.mentor-institution-partner img{width:72px;height:44px;object-fit:contain;}
+.mentor-institution-platform{display:flex;flex-direction:column;gap:4px;padding-left:22px;border-left:1px solid rgba(9,8,95,.10);}
+.mentor-compact-footer{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:24px;
+  padding:15px clamp(28px,6vw,100px) 17px;
+  background:var(--mustakis-navy);
+  color:#fff;
+  font-size:11px;
+}
+.mentor-compact-footer>span{color:rgba(255,255,255,.74);}
+.mentor-compact-footer>div{display:flex;gap:22px;align-items:center;}
+.mentor-compact-footer a{display:inline-flex;gap:6px;align-items:center;color:#fff;text-decoration:none;}
+.mentor-compact-footer a:hover,.mentor-compact-footer a:focus-visible{text-decoration:underline;text-underline-offset:3px;}
+@media(max-width:1000px){
+  .mentor-institution-strip{grid-template-columns:1fr auto;gap:18px;}
+  .mentor-institution-platform{display:none;}
+}
+@media(max-width:767px){
+  .theme-mustakis.is-mentor-view .workspace-learning{padding-top:28px;padding-bottom:34px;}
+  .theme-mustakis.is-mentor-view .institution-session.is-preparing-card{min-height:118px;}
+  .mentor-institution-strip{grid-template-columns:1fr;padding:16px 20px;gap:14px;}
+  .mentor-institution-partner{padding-left:0;border-left:0;border-top:1px solid rgba(9,8,95,.10);padding-top:12px;}
+  .mentor-institution-identity img{width:140px;}
+  .mentor-compact-footer{padding:14px 20px;align-items:flex-start;flex-direction:column;gap:10px;}
 }

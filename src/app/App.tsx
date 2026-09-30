@@ -57,6 +57,15 @@ function LegacySessionRoute(){
 function LegacyResourcesGate(){const {status}=useAuth();if(status==='unconfigured')return <AppShell page="resources"/>;return <Navigate to={status==='authenticated'?'/espacios':'/login?next=/espacios'} replace/>;}
 
 function findWorkspace(workspaces:WorkspaceSummary[],orgId:string|undefined,cohortId:string|undefined){return workspaces.find(item=>item.organization_id===orgId&&item.cohort_id===cohortId);}
+
+function SpacesEntryRoute(){
+  const {status}=useAuth();
+  const state=useWorkspaces();
+  if(status==='loading'||state.loading)return <LoadingView/>;
+  if(status!=='authenticated')return <Navigate to="/login?next=/espacios" replace/>;
+  if(state.workspaces.length===1)return <Navigate to={workspacePath(state.workspaces[0])} replace/>;
+  return <AppShell page="spaces"/>;
+}
 function WorkspaceRoute(){
   const {orgId,cohortId}=useParams();const {status}=useAuth();const state=useWorkspaces();
   const requested=`/espacios/${orgId??''}/grupos/${cohortId??''}`;
@@ -107,7 +116,7 @@ function LegacyWorkspaceRedirect({kind='workspace'}:{kind?:'workspace'|'mentor'|
 function RouteReset(){const {pathname}=useLocation();useLayoutEffect(()=>{window.scrollTo(0,0);},[pathname]);return null;}
 function AppRoutes(){return <><RouteReset/><Routes>
   <Route path="/" element={<AppShell page="landing"/>}/>
-  <Route path="/espacios" element={<AccountGate registerFirst><AppShell page="spaces"/></AccountGate>}/>
+  <Route path="/espacios" element={<SpacesEntryRoute/>}/>
   <Route path="/espacios/:orgId/grupos/:cohortId" element={<WorkspaceRoute/>}/>
   <Route path="/espacios/:orgId/grupos/:cohortId/mentor" element={<MentorRoute/>}/>
   <Route path="/espacios/:orgId/grupos/:cohortId/intermedio/:sessionId" element={<InstitutionSessionRoute/>}/>
