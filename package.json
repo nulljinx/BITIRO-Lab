@@ -1,6 +1,6 @@
 {
   "name": "bitiro-lab",
-  "version": "7.46.0",
+  "version": "7.50.0",
   "private": true,
   "type": "module",
   "scripts": {

@@ -46,7 +46,7 @@
   --surface-panel-muted:#ECEAE5;
   --surface-panel-soft:#F4F2ED;
   --surface-hover:#F7F5F0;
-  --surface-selected:#FFF0E7;
+  --surface-selected:var(--mustakis-blue-soft);
 
   /* Instrument surfaces */
   --instrument-bg:#0B0D10;
@@ -77,14 +77,14 @@
   --text-on-action:#FFFFFF;
 
   /* Action — copper means action / signal / movement */
-  --action-primary:#A74314;
-  --action-primary-strong:#B34B18;
-  --action-primary-hover:#92380F;
-  --action-primary-border:#92380F;
-  --action-primary-border-hover:#81300B;
-  --action-primary-soft:#FFF0E7;
-  --action-primary-soft-2:#FFF8F3;
-  --action-primary-text:#9B4520;
+  --action-primary:var(--mustakis-blue);
+  --action-primary-strong:var(--mustakis-navy);
+  --action-primary-hover:var(--mustakis-navy);
+  --action-primary-border:var(--mustakis-blue);
+  --action-primary-border-hover:var(--mustakis-navy);
+  --action-primary-soft:var(--mustakis-blue-soft);
+  --action-primary-soft-2:var(--mustakis-cream);
+  --action-primary-text:var(--mustakis-blue);
 
   /* Status */
   --status-success:#187548;
@@ -141,13 +141,13 @@
   --alpha-cyan-15:rgba(22,217,238,.15);
   --alpha-cyan-60:rgba(22,217,238,.60);
 
-  --alpha-action-0:rgba(243,111,42,0);
-  --alpha-action-055:rgba(243,111,42,.055);
-  --alpha-action-08:rgba(243,111,42,.08);
-  --alpha-action-10:rgba(243,111,42,.10);
-  --alpha-action-16:rgba(243,111,42,.16);
-  --alpha-action-18:rgba(243,111,42,.18);
-  --alpha-action-38:rgba(243,111,42,.38);
+  --alpha-action-0:rgba(14,13,159,0);
+  --alpha-action-055:rgba(14,13,159,.055);
+  --alpha-action-08:rgba(14,13,159,.08);
+  --alpha-action-10:rgba(14,13,159,.10);
+  --alpha-action-16:rgba(14,13,159,.16);
+  --alpha-action-18:rgba(14,13,159,.18);
+  --alpha-action-38:rgba(14,13,159,.38);
 
   --alpha-line-035:rgba(38,43,49,.035);
   --alpha-line-12:rgba(38,43,49,.12);
@@ -174,8 +174,8 @@
 
   /* Shadows — only floating/action elements should use these */
   --shadow-none:none;
-  --shadow-action:0 4px 10px rgba(243,111,42,.12);
-  --shadow-action-hover:0 6px 14px rgba(243,111,42,.15);
+  --shadow-action:0 4px 10px rgba(14,13,159,.12);
+  --shadow-action-hover:0 6px 14px rgba(14,13,159,.15);
   --shadow-floating:0 16px 44px rgba(11,13,16,.16);
   --shadow-brand:0 2px 8px rgba(11,13,16,.05);
 
