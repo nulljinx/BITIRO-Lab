@@ -19,7 +19,7 @@ const ResourcesPage=lazy(()=>import('../features/platform/ContentPages').then(m=
 const SitesPage=lazy(()=>import('../features/platform/ContentPages').then(m=>({default:m.SitesPage})));
 const PrivacyPage=lazy(()=>import('../features/platform/ContentPages').then(m=>({default:m.PrivacyPage})));
 
-export function LoadingView(){return <main id="main" className="brand-loading" aria-live="polite"><img src="/brand/bitiro-symbol-128.png" alt=""/><h1>Preparando tu espacio.</h1><p>Un momento. Estamos abriendo las herramientas de tu laboratorio.</p><div className="loading-track" aria-hidden="true"/></main>;}
+export function LoadingView(){return <main id="main" className="brand-loading" aria-live="polite"><img src="/brand/bitiro-symbol-128.png" alt=""/><h1>Preparando tu laboratorio.</h1><p>Un momento. Estamos cargando las herramientas y contenidos de Robótica Educativa.</p><div className="loading-track" aria-hidden="true"/></main>;}
 function StorageScope({children}:{children:ReactNode}){
   const {status,user}=useAuth();const wanted=user?.id??'guest';const [ready,setReady]=useState<string|null>(null);
   useLayoutEffect(()=>{setStorageScope(wanted);setReady(wanted);},[wanted]);
@@ -46,7 +46,7 @@ function AccountGate({children,next='/espacios',registerFirst=false}:{children:R
 function StaffGate({children}:{children:ReactNode}){
   const {status,membership}=useAuth();
   if(status!=='authenticated')return <Navigate to="/login?next=/equipo" replace/>;
-  if(!membership||membership.role==='participant')return <main id="main" className="recovery-page"><span className="eyebrow">Área de plataforma</span><h1>Este espacio requiere permisos.</h1><p>Los permisos globales se administran por separado de los roles de mentor dentro de cada institución.</p><Link className="button" to="/espacios">Volver a mis espacios</Link></main>;
+  if(!membership||membership.role==='participant')return <main id="main" className="recovery-page"><span className="eyebrow">Área de plataforma</span><h1>Esta sección requiere permisos.</h1><p>El acceso de equipo se administra por separado de los permisos de participante y mentor del programa.</p><Link className="button" to="/espacios">Volver a mi programa</Link></main>;
   return children;
 }
 function LegacyLabGate({session}:{session?:SessionDefinition}){
@@ -91,7 +91,7 @@ function InstitutionSessionRoute(){
   if(!workspace||!session)return <Navigate to="/espacios" replace/>;
   if(access==='idle'||access==='loading')return <LoadingView/>;
   if(access==='locked')return <AppShell workspace={workspace}><LockedInstitutionSession workspace={workspace} sessionId={session.id}/></AppShell>;
-  if(access==='error')return <AppShell workspace={workspace}><main id="main" className="recovery-page"><h1>No pudimos comprobar el acceso.</h1><p>Reintenta desde tu espacio institucional. No mostramos el contenido hasta confirmar que está habilitado.</p><Link className="button" to={workspacePath(workspace)}>Volver a mi espacio</Link></main></AppShell>;
+  if(access==='error')return <AppShell workspace={workspace}><main id="main" className="recovery-page"><h1>No pudimos comprobar el acceso.</h1><p>Reintenta desde tu programa. No mostramos una sesión hasta confirmar que está habilitada para tu grupo.</p><Link className="button" to={workspacePath(workspace)}>Volver a mi espacio</Link></main></AppShell>;
   return <AppShell workspace={workspace} session={session}/>;
 }
 function LegacyWorkspaceRedirect({kind='workspace'}:{kind?:'workspace'|'mentor'|'session'}){
