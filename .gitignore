@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-e2e/
+test-results/
+playwright-report/
+*.tsbuildinfo
+
+.pnpm-store/
+.env
+.env.*
+!.env.example

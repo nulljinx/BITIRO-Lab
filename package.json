@@ -1,0 +1,49 @@
+{
+  "name": "bitiro-lab",
+  "version": "7.45.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node node_modules/vite/bin/vite.js --host 127.0.0.1 --configLoader runner",
+    "build": "node tools/build-release.mjs",
+    "preview": "node tools/serve.mjs",
+    "test": "node node_modules/vitest/vitest.mjs run --configLoader runner",
+    "test:db": "node supabase/tests/rls.test.mjs",
+    "test:e2e": "node tools/run-e2e.mjs",
+    "audit:design": "node tools/audit-design-tokens.mjs",
+    "verify": "pnpm check && pnpm test:e2e",
+    "browser:install": "node node_modules/@playwright/test/cli.js install chromium",
+    "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
+    "test:unit": "node node_modules/vitest/vitest.mjs run --configLoader runner",
+    "check": "pnpm typecheck && pnpm test:unit && pnpm test:db && pnpm audit:design",
+    "browser:install:ci": "node node_modules/@playwright/test/cli.js install --with-deps chromium",
+    "ci": "pnpm check && pnpm build"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.2.0",
+    "@fontsource/ibm-plex-sans": "^5.2.0",
+    "@monaco-editor/react": "^4.7.0",
+    "@supabase/supabase-js": "^2.116.0",
+    "lucide-react": "^1.46.0",
+    "monaco-editor": "^0.52.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
+    "@playwright/test": "^1.52.0",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "axe-core": "^4.13.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.3.5",
+    "vitest": "^4.1.11"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "packageManager": "pnpm@11.19.0"
+}

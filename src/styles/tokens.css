@@ -1,0 +1,277 @@
+/* BITIRO Lab v6 — semantic design tokens
+   Rule: product CSS consumes semantic tokens; raw palette values live here. */
+:root{
+  /* Neutral primitives used only for masks/true white */
+  --neutral-white:#FFFFFF;
+  --neutral-black:#000000;
+
+  /* Brand primitives */
+  --brand-ink:#071426;
+  --brand-ink-2:#0B1B32;
+  --brand-blue:#2458A6;
+  --brand-blue-strong:#194785;
+  --brand-blue-soft:#3566B1;
+  --brand-cyan:#16D9EE;
+
+  /* Institutional workspace palette — Mustakis v7.1.
+     The supplied Mustakis asset anchors the institutional blue (#0E0D9F).
+     Talca's supplied red is reserved for the alliance accent, not generic UI states. */
+  --mustakis-navy:#09085F;
+  --mustakis-blue:#0E0D9F;
+  --mustakis-blue-light:#5154C4;
+  --mustakis-blue-soft:#ECECF9;
+  --mustakis-partner-red:#A41E2E;
+  --mustakis-partner-red-soft:#F8EAEC;
+  --mustakis-cream:#FAF9F5;
+  --mustakis-paper:#FFFFFF;
+  --mustakis-navy-soft:#EEEFF5;
+  /* Legacy aliases retained for old selectors; v7.1 components no longer use them as decorative accents. */
+  --mustakis-cyan:var(--mustakis-blue-light);
+  --mustakis-yellow:var(--mustakis-blue);
+  --mustakis-coral:var(--mustakis-partner-red);
+  --mustakis-green:#4E7A66;
+  --mustakis-yellow-soft:var(--mustakis-blue-soft);
+  --mustakis-cyan-soft:var(--mustakis-blue-soft);
+  --mustakis-coral-soft:var(--mustakis-partner-red-soft);
+  --mustakis-green-soft:#EAF1ED;
+  --alpha-mustakis-navy-08:rgba(9,8,95,.08);
+  --alpha-mustakis-navy-14:rgba(9,8,95,.14);
+  --alpha-mustakis-yellow-24:rgba(14,13,159,.18);
+  --alpha-mustakis-cyan-16:rgba(81,84,196,.14);
+
+  /* Product surfaces — shared across Explorer + Workspace */
+  --surface-page:#F5F3EE;
+  --surface-panel:#FCFBF8;
+  --surface-panel-raised:#FFFFFF;
+  --surface-panel-muted:#ECEAE5;
+  --surface-panel-soft:#F4F2ED;
+  --surface-hover:#F7F5F0;
+  --surface-selected:#FFF0E7;
+
+  /* Instrument surfaces */
+  --instrument-bg:#0B0D10;
+  --instrument-panel:#14181D;
+  --instrument-panel-raised:#191E24;
+  --instrument-panel-soft:#11161B;
+  --instrument-panel-deep:#0E1216;
+  --instrument-line:#262B31;
+  --instrument-line-strong:#30363D;
+  --instrument-text:#ECE7DD;
+  --instrument-text-muted:#AEB4BA;
+  --instrument-text-soft:#8E949A;
+
+  /* Borders */
+  --border-default:#D9D6CF;
+  --border-subtle:#E3E0D9;
+  --border-strong:#BEB9B0;
+  --border-hover:#B8B4AC;
+  --border-instrument:#292F35;
+  --border-instrument-strong:#3A4148;
+
+  /* Text */
+  --text-primary:#171D24;
+  --text-secondary:#656B72;
+  --text-tertiary:#626971;
+  --text-soft:#687079;
+  --text-inverse:#FAF9F6;
+  --text-on-action:#FFFFFF;
+
+  /* Action — copper means action / signal / movement */
+  --action-primary:#A74314;
+  --action-primary-strong:#B34B18;
+  --action-primary-hover:#92380F;
+  --action-primary-border:#92380F;
+  --action-primary-border-hover:#81300B;
+  --action-primary-soft:#FFF0E7;
+  --action-primary-soft-2:#FFF8F3;
+  --action-primary-text:#9B4520;
+
+  /* Status */
+  --status-success:#187548;
+  --status-success-strong:#147846;
+  --status-success-soft:#DCF3E7;
+  --status-success-border:#8FDAB6;
+  --status-warning:#C98510;
+  --status-warning-strong:#996814;
+  --status-warning-soft:#FFF9ED;
+  --status-warning-border:#FFF0CC;
+  --status-danger:#B52E42;
+  --status-danger-strong:#B32D42;
+  --status-danger-soft:#FFF5F6;
+  --status-danger-border:#FFC8D0;
+  --status-info:#146BFF;
+  --status-info-strong:#0B5BBE;
+  --status-info-soft:#EEF4FF;
+  --status-info-border:#BDD9F6;
+
+  /* Instrument/readout */
+  --readout-surface:#ECE9E3;
+  --readout-border:#DAD5CC;
+  --lcd-bg:#CAD3C2;
+  --lcd-border:#BFC6B8;
+  --lcd-text:#243127;
+
+
+  /* Alpha/color primitives — raw functional colors are centralized here too.
+     Feature CSS must consume these tokens instead of declaring rgb()/rgba()/hsl() directly. */
+  --alpha-ink-045:rgba(7,20,38,.045);
+  --alpha-ink-05:rgba(7,20,38,.05);
+  --alpha-ink-08:rgba(7,20,38,.08);
+  --alpha-ink-09:rgba(7,20,38,.09);
+  --alpha-ink-42:rgba(7,20,38,.42);
+  --alpha-black-16:rgba(0,0,0,.16);
+  --alpha-black-80:rgba(0,0,0,.8);
+  --alpha-white-35:rgba(255,255,255,.35);
+  --alpha-white-70:rgba(255,255,255,.70);
+  --alpha-white-72:rgba(255,255,255,.72);
+
+  --alpha-blue-07:rgba(20,107,255,.07);
+  --alpha-blue-08:rgba(20,107,255,.08);
+  --alpha-blue-09:rgba(20,107,255,.09);
+  --alpha-blue-11:rgba(20,107,255,.11);
+  --alpha-blue-12:rgba(20,107,255,.12);
+  --alpha-blue-15:rgba(20,107,255,.15);
+  --alpha-blue-18:rgba(20,107,255,.18);
+  --alpha-blue-22:rgba(20,107,255,.22);
+  --alpha-blue-45:rgba(20,107,255,.45);
+  --alpha-blue-60:rgba(20,107,255,.60);
+  --alpha-cyan-045:rgba(22,217,238,.045);
+  --alpha-cyan-08:rgba(22,217,238,.08);
+  --alpha-cyan-10:rgba(22,217,238,.10);
+  --alpha-cyan-15:rgba(22,217,238,.15);
+  --alpha-cyan-60:rgba(22,217,238,.60);
+
+  --alpha-action-0:rgba(243,111,42,0);
+  --alpha-action-055:rgba(243,111,42,.055);
+  --alpha-action-08:rgba(243,111,42,.08);
+  --alpha-action-10:rgba(243,111,42,.10);
+  --alpha-action-16:rgba(243,111,42,.16);
+  --alpha-action-18:rgba(243,111,42,.18);
+  --alpha-action-38:rgba(243,111,42,.38);
+
+  --alpha-line-035:rgba(38,43,49,.035);
+  --alpha-line-12:rgba(38,43,49,.12);
+  --alpha-page-grid:rgba(112,137,169,.045);
+  --alpha-viewport-grid:rgba(38,43,49,.035);
+  --alpha-instrument-divider:rgba(58,65,72,.55);
+  --alpha-paper-035:rgba(236,231,221,.035);
+  --alpha-lcd-shadow:rgba(36,49,39,.12);
+  --alpha-success-08:rgba(31,157,109,.08);
+  --alpha-success-10:rgba(31,157,109,.10);
+
+  --overlay-border:rgba(217,214,207,.78);
+  --overlay-row:rgba(250,249,246,.76);
+  --overlay-row-border:rgba(217,214,207,.65);
+  --overlay-action-soft:rgba(255,240,231,.88);
+
+  /* Decorative / technical grid */
+  --grid-line:var(--alpha-line-035);
+  --grid-node:var(--alpha-blue-11);
+  --grid-glow:var(--alpha-cyan-10);
+  --overlay-header:rgba(250,249,246,.96);
+  --overlay-hover:var(--overlay-row);
+  --overlay-backdrop:var(--alpha-ink-42);
+
+  /* Shadows — only floating/action elements should use these */
+  --shadow-none:none;
+  --shadow-action:0 4px 10px rgba(243,111,42,.12);
+  --shadow-action-hover:0 6px 14px rgba(243,111,42,.15);
+  --shadow-floating:0 16px 44px rgba(11,13,16,.16);
+  --shadow-brand:0 2px 8px rgba(11,13,16,.05);
+
+  /* Radius policy */
+  --radius-hairline:2px;
+  --radius-panel:4px;
+  --radius-control:6px;
+  --radius-floating:10px;
+  --radius-pill:999px;
+
+  /* Typography */
+  --font-sans:'IBM Plex Sans',sans-serif;
+  --font-mono:'IBM Plex Mono',monospace;
+  --font-display:var(--font-sans);
+  --text-display:46px;
+  --text-h1:32px;
+  --text-h2:24px;
+  --text-h3:17px;
+  --text-body:14px;
+  --text-label:12px;
+  --text-micro:11px;
+  --text-code:13px;
+
+  /* Spacing */
+  --space-1:4px;
+  --space-2:8px;
+  --space-3:12px;
+  --space-4:16px;
+  --space-5:20px;
+  --space-6:24px;
+  --space-8:32px;
+  --space-10:40px;
+  --space-12:48px;
+
+  /* Motion */
+  --motion-micro:130ms;
+  --motion-fast:160ms;
+  --motion-hover:180ms;
+  --motion-panel:240ms;
+  --motion-route:300ms;
+  --ease-out:cubic-bezier(.22,1,.36,1);
+
+  /* Layout */
+  --z-header:20;
+  --z-floating:30;
+  --header-height:72px;
+
+  /* Compatibility aliases. Legacy selectors may use these, but values are semantic. */
+  --bitiro-ink-975:var(--instrument-bg);
+  --bitiro-ink-950:var(--brand-ink);
+  --bitiro-ink-900:var(--brand-ink-2);
+  --bitiro-ink-850:var(--instrument-panel-raised);
+  --bitiro-ink-800:var(--instrument-panel);
+  --bitiro-blue-650:var(--brand-blue-strong);
+  --bitiro-blue-600:var(--brand-blue);
+  --bitiro-blue-500:var(--brand-blue-soft);
+  --bitiro-cyan-500:var(--brand-cyan);
+  --bitiro-violet-500:var(--brand-blue-soft);
+  --bitiro-bg:var(--surface-page);
+  --bitiro-bg-cool:var(--surface-panel-muted);
+  --bitiro-surface:var(--surface-panel);
+  --bitiro-surface-muted:var(--surface-panel-soft);
+  --bitiro-surface-raised:var(--surface-panel-raised);
+  --bitiro-border:var(--border-default);
+  --bitiro-border-subtle:var(--border-subtle);
+  --bitiro-text:var(--text-primary);
+  --bitiro-text-muted:var(--text-secondary);
+  --bitiro-text-soft:var(--text-soft);
+  --bitiro-success:var(--status-success);
+  --bitiro-warning:var(--status-warning);
+  --bitiro-danger:var(--status-danger);
+  --brand-gradient:linear-gradient(180deg,var(--action-primary-strong) 0%,var(--action-primary) 100%);
+  --brand-gradient-horizontal:linear-gradient(90deg,var(--action-primary-strong),var(--action-primary));
+  --brand-glow:var(--shadow-action-hover);
+  --shadow-soft:var(--shadow-none);
+  --shadow-float:var(--shadow-floating);
+  --radius-xs:var(--radius-panel);
+  --radius-sm:var(--radius-control);
+  --radius-md:var(--radius-panel);
+  --radius-lg:var(--radius-floating);
+  --radius-xl:var(--radius-floating);
+
+  /* v5 aliases retained for compatibility */
+  --lab-void:var(--instrument-bg);
+  --lab-panel:var(--instrument-panel);
+  --lab-panel-raised:var(--instrument-panel-raised);
+  --lab-line:var(--instrument-line);
+  --lab-paper:var(--instrument-text);
+  --lab-paper-dim:var(--instrument-text-soft);
+  --lab-signal:var(--action-primary);
+  --lab-signal-strong:var(--action-primary-strong);
+  --lab-signal-soft:var(--action-primary-soft);
+  --lab-warm-bg:var(--surface-page);
+  --lab-warm-surface:var(--surface-panel);
+  --lab-warm-line:var(--border-default);
+  --signal-shadow:var(--shadow-action-hover);
+}
+
+:root { --signal-bright:#FF9C66; --signal-on-dark:#FFC4A0; --hero-ink:#252F39; --preview-grid:rgba(255,255,255,.045); --focus-ring:#2458A6; --placeholder:#687079; }

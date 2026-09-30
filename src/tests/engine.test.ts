@@ -1,0 +1,43 @@
+import { describe,it,expect } from 'vitest';
+import { SimulationEngine } from '../simulator/SimulationEngine';
+import { integrate } from '../simulator/RobotPhysics';
+import { distanceToSegment,lineCoverage,rayBox } from '../simulator/geometry';
+import { lineSensorSurfaceLevels,lineSurfaceLevels,majorityIR,sensorPosition,updateSensors } from '../simulator/sensors';
+import { ROBOT } from '../simulator/config';
+import track from '../content/tracks/s01.json';
+const straight=[{id:'line',widthCm:2,lineCap:'round',points:[{x:0,y:10},{x:10,y:10}]}];
+const base=()=>new SimulationEngine(track);
+describe('differential physics',()=>{
+ it('moves straight at equal wheel speed',()=>{const r={...base().robot,x:50,y:100,heading:0,leftMotor:10,rightMotor:10};const next=integrate(r,1);expect(next.x).toBeCloseTo(60);expect(next.y).toBeCloseTo(100);expect(next.heading).toBeCloseTo(0)});
+ it('rotates clockwise with left wheel forward and right backward',()=>{const r={...base().robot,heading:0,leftMotor:6,rightMotor:-6};const next=integrate(r,1);expect(next.x).toBe(r.x);expect(next.y).toBe(r.y);expect(next.heading).toBeCloseTo(1)});
+ it('rotates counterclockwise for a left turn',()=>{const r={...base().robot,heading:0,leftMotor:-6,rightMotor:6};expect(integrate(r,1).heading).toBeCloseTo(-1)});
+ it('has timestep-invariant analytical integration on an arc',()=>{const r={...base().robot,heading:0,leftMotor:18,rightMotor:9};let result=r;for(let i=0;i<100;i++)result=integrate(result,.01);const one=integrate(r,1);expect(result.x).toBeCloseTo(one.x,8);expect(result.y).toBeCloseTo(one.y,8)});
+ it('moves backwards with negative equal speeds',()=>{const r={...base().robot,heading:0,leftMotor:-10,rightMotor:-10};expect(integrate(r,1).x).toBeCloseTo(r.x-10)});
+});
+describe('real geometry and sensors',()=>{
+ it('imports ten printed black elements, exact 2.6cm width, and two 20cm bases',()=>{expect(track.paths).toHaveLength(10);expect(track.paths[0].widthCm).toBeCloseTo(2.6,4);expect(track.finishZones).toHaveLength(2);expect(track.finishZones[0].width).toBeCloseTo(20,3)});
+ it('contains the real continuous S01 stem at 50,100',()=>expect(lineCoverage({x:50,y:100},track.paths)).toBe(1));
+ it('reads white outside the line',()=>expect(lineCoverage({x:70,y:100},track.paths)).toBe(0));
+ it('returns partial analog coverage at an edge',()=>{expect(lineCoverage({x:5,y:11},straight)).toBeCloseTo(.5)});
+ it('detects a physical gap without an event override',()=>{const paths=[{...straight[0],points:[{x:0,y:10},{x:4,y:10}]},{...straight[0],points:[{x:6,y:10},{x:10,y:10}]}];expect(lineCoverage({x:5,y:10},paths.map(p=>({...p,widthCm:.4})))).toBe(0)});
+ it('detects intersecting line occupancy',()=>{expect(lineCoverage({x:5,y:10},[...straight,{...straight[0],points:[{x:5,y:0},{x:5,y:20}]}])).toBe(1)});
+ it('handles zero length segments',()=>expect(distanceToSegment({x:3,y:4},{x:0,y:0},{x:0,y:0})).toBe(5));
+ it('places left sensor on robot left when pointing up',()=>{const r=base().robot;expect(sensorPosition(r,-ROBOT.lineSpreadCm).x).toBeLessThan(r.x)});
+ it('uses material calibration with black above white',()=>{const r=updateSensors({...base().robot,x:50,y:110},track);expect(r.lineCenter).toBeGreaterThan(r.lineLeft);expect(r.lineCenter).toBeGreaterThan(330);expect(r.lineCenter).toBeLessThanOrEqual(460)});
+ it('simulates stable spatial reflectance variation for calibration',()=>{const a=lineSurfaceLevels({x:20,y:120},track),b=lineSurfaceLevels({x:80,y:30},track);expect(a).not.toEqual(b);expect(a.black-a.white).toBeGreaterThan(250);expect(b.black-b.white).toBeGreaterThan(250);expect(lineSurfaceLevels({x:20,y:120},track)).toEqual(a)});
+ it('gives each line sensor its own stable response and threshold range',()=>{const point={x:32,y:118},left=lineSensorSurfaceLevels(point,track,0),center=lineSensorSurfaceLevels(point,track,1),right=lineSensorSurfaceLevels(point,track,2);const thresholds=[left,center,right].map(level=>Math.round((level.white+level.black)/2));expect(new Set(thresholds).size).toBe(3);expect(thresholds[0]).toBeLessThan(thresholds[1]);expect(thresholds[1]).toBeLessThan(thresholds[2]);expect(lineSensorSurfaceLevels(point,track,0)).toEqual(left)});
+ it('computes forward sonar intersection',()=>expect(rayBox({x:0,y:5},{x:1,y:0},{id:'b',x:10,y:0,width:5,height:10,movable:false})).toBe(10));
+ it('ignores objects behind the sonar',()=>expect(rayBox({x:0,y:5},{x:-1,y:0},{id:'b',x:10,y:0,width:5,height:10,movable:false})).toBe(Infinity));
+ it('returns zero without echo, per NewPing and IROH source',()=>expect(updateSensors(base().robot,{...track,obstacles:[]}).sonarCm).toBe(0));
+ it('rejects sonar measurements at 5cm or less',()=>{const r={...base().robot,x:50,y:114};expect(updateSensors(r,track).sonarCm).toBe(0)});
+ it('filters IR by majority of three samples',()=>{expect(majorityIR([true,false,true])).toBe(true);expect(majorityIR([false,true,false])).toBe(false)});
+});
+describe('simulation lifecycle',()=>{
+ it('advances fixed time with manual motor commands',()=>{const e=base();e.command({type:'motors',left:18,right:18});for(let i=0;i<10;i++)e.tick();expect(e.robot.simTimeMs).toBe(100);expect(e.robot.y).toBeLessThan(track.start.y)});
+ it('does not advance when paused, then resumes',()=>{const e=base();e.command({type:'motors',left:18,right:18});e.tick();e.command({type:'pause'});const y=e.robot.y;e.tick();expect(e.robot.y).toBe(y);e.command({type:'resume'});e.tick();expect(e.robot.y).toBeLessThan(y)});
+ it('resets motors, pose, time, LCD, IR and button',()=>{const e=base();e.command({type:'ir',side:'right',value:true});e.command({type:'button',value:true});e.command({type:'motors',left:18,right:18});e.tick();e.command({type:'reset'});expect(e.snapshot()).toEqual(base().snapshot())});
+ it('stops at a collision without penetrating a box',()=>{const e=base();e.command({type:'motors',left:18,right:18});for(let i=0;i<500;i++)e.tick();expect(e.status).toBe('idle');expect(e.collisions).toBe(1);expect(e.robot.y).toBeGreaterThanOrEqual(109);expect(e.robot.leftMotor).toBe(0)});
+ it('rejects non-finite motor values and clamps speeds',()=>{const e=base();e.command({type:'motors',left:Infinity,right:999});expect(e.robot.leftMotor).toBe(0);expect(e.robot.rightMotor).toBe(28)});
+ it('snapshots cannot mutate engine state',()=>{const e=base();const s=e.snapshot();s.robot.x=0;s.robot.lcd[0]='oops';expect(e.robot.x).toBe(50);expect(e.robot.lcd[0]).toBe('                ')});
+ it('changing IR does not command motors or write the LCD',()=>{const e=base();e.command({type:'ir',side:'right',value:true});expect(e.robot.irRight).toBe(true);expect(e.robot.leftMotor).toBe(0);expect(e.robot.lcd[0].trim()).toBe('')});
+});

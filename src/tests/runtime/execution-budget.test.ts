@@ -1,0 +1,8 @@
+import {it,expect} from 'vitest';
+import {create,program} from './helpers';
+import infinite from '../reference-programs/infinite-loop.cpp?raw';
+it('infinite loops stop within the instruction slice and remain resettable',()=>{const {engine,runtime}=create(infinite);runtime.step(10);expect(runtime.diagnostic?.kind).toBe('ExecutionLimitError');expect(engine.instructions).toBe(8001);expect(engine.status).toBe('error');runtime.command({type:'reset'});expect(engine.status).toBe('idle');expect(runtime.run(program(''))).toEqual([]);runtime.step(10);expect(engine.status).toBe('running');});
+it.each([['source',' '.repeat(32769)],['string',program('escribirPantalla(0,0,"'+'a'.repeat(257)+'");')],['depth',program('int n='+'('.repeat(70)+'1'+')'.repeat(70)+';')]])('limits %s before execution',(_,source)=>expect(create(source).runtime.diagnostic?.kind).toBe('ExecutionLimitError'));
+it('limits recursive functions',()=>{const {runtime}=create('void f(){f();}void setup(){f();}void loop(){}');runtime.step(10);expect(runtime.diagnostic?.kind).toBe('ExecutionLimitError');});
+it('limits active variables but releases scopes',()=>{const declarations=Array.from({length:257},(_,i)=>`int n${i}=0;`).join('');const a=create(program(declarations));a.runtime.step(10);expect(a.runtime.diagnostic?.kind).toBe('ExecutionLimitError');const b=create(program('for(int i=0;i<500;i++){int temporary=i;pausa(0);}'));b.runtime.step(5010);expect(b.runtime.diagnostic).toBeNull();});
+it.each(['fetch("url");','document();','eval("1");','window();','__proto__();'])('rejects external access %s',code=>{const {engine,runtime}=create(program(code));expect(runtime.diagnostic?.kind).toBe('UnknownFunctionError');expect(engine.robot.simTimeMs).toBe(0);});

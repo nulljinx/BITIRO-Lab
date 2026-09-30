@@ -1,0 +1,186 @@
+[
+  {
+    "name": "@fontsource/ibm-plex-mono",
+    "version": "5.3.0",
+    "license": "OFL-1.1",
+    "notices": [
+      "dependencias/fontsource__ibm-plex-mono-5.3.0/LICENSE"
+    ]
+  },
+  {
+    "name": "@fontsource/ibm-plex-sans",
+    "version": "5.3.0",
+    "license": "OFL-1.1",
+    "notices": [
+      "dependencias/fontsource__ibm-plex-sans-5.3.0/LICENSE"
+    ]
+  },
+  {
+    "name": "@monaco-editor/loader",
+    "version": "1.7.0",
+    "license": "MIT",
+    "notices": [
+      "dependencias/monaco-editor__loader-1.7.0/LICENSE"
+    ]
+  },
+  {
+    "name": "@monaco-editor/react",
+    "version": "4.7.0",
+    "license": "MIT",
+    "notices": [
+      "dependencias/monaco-editor__react-4.7.0/LICENSE"
+    ]
+  },
+  {
+    "name": "@supabase/auth-js",
+    "version": "2.116.0",
+    "license": "MIT",
+    "notices": [
+      "dependencias/supabase__auth-js-2.116.0/LICENSE"
+    ]
+  },
+  {
+    "name": "@supabase/functions-js",
+    "version": "2.116.0",
+    "license": "MIT",
+    "notices": [
+      "dependencias/supabase__functions-js-2.116.0/LICENSE"
+    ]
+  },
+  {
+    "name": "@supabase/phoenix",
+    "version": "0.4.5",
+    "license": "MIT",
+    "notices": [
+      "dependencias/supabase__phoenix-0.4.5/LICENSE.md"
+    ]
+  },
+  {
+    "name": "@supabase/postgrest-js",
+    "version": "2.116.0",
+    "license": "MIT",
+    "notices": [
+      "dependencias/supabase__postgrest-js-2.116.0/LICENSE"
+    ]
+  },
+  {
+    "name": "@supabase/realtime-js",
+    "version": "2.116.0",
+    "license": "MIT",
+    "notices": [
+      "dependencias/supabase__realtime-js-2.116.0/LICENSE"
+    ]
+  },
+  {
+    "name": "@supabase/storage-js",
+    "version": "2.116.0",
+    "license": "MIT",
+    "notices": [
+      "dependencias/supabase__storage-js-2.116.0/LICENSE"
+    ]
+  },
+  {
+    "name": "@supabase/supabase-js",
+    "version": "2.116.0",
+    "license": "MIT",
+    "notices": [
+      "dependencias/supabase__supabase-js-2.116.0/LICENSE"
+    ]
+  },
+  {
+    "name": "cookie",
+    "version": "1.1.1",
+    "license": "MIT",
+    "notices": [
+      "dependencias/cookie-1.1.1/LICENSE"
+    ]
+  },
+  {
+    "name": "iceberg-js",
+    "version": "0.8.1",
+    "license": "MIT",
+    "notices": [
+      "dependencias/iceberg-js-0.8.1/LICENSE"
+    ]
+  },
+  {
+    "name": "lucide-react",
+    "version": "1.46.0",
+    "license": "ISC",
+    "notices": [
+      "dependencias/lucide-react-1.46.0/LICENSE"
+    ]
+  },
+  {
+    "name": "monaco-editor",
+    "version": "0.52.2",
+    "license": "MIT",
+    "notices": [
+      "dependencias/monaco-editor-0.52.2/LICENSE"
+    ]
+  },
+  {
+    "name": "react",
+    "version": "19.3.0",
+    "license": "MIT",
+    "notices": [
+      "dependencias/react-19.3.0/LICENSE"
+    ]
+  },
+  {
+    "name": "react-dom",
+    "version": "19.3.0",
+    "license": "MIT",
+    "notices": [
+      "dependencias/react-dom-19.3.0/LICENSE"
+    ]
+  },
+  {
+    "name": "react-router",
+    "version": "7.18.3",
+    "license": "MIT",
+    "notices": [
+      "dependencias/react-router-7.18.3/LICENSE.md"
+    ]
+  },
+  {
+    "name": "react-router-dom",
+    "version": "7.18.3",
+    "license": "MIT",
+    "notices": [
+      "dependencias/react-router-dom-7.18.3/LICENSE.md"
+    ]
+  },
+  {
+    "name": "scheduler",
+    "version": "0.28.0",
+    "license": "MIT",
+    "notices": [
+      "dependencias/scheduler-0.28.0/LICENSE"
+    ]
+  },
+  {
+    "name": "set-cookie-parser",
+    "version": "2.7.2",
+    "license": "MIT",
+    "notices": [
+      "dependencias/set-cookie-parser-2.7.2/LICENSE"
+    ]
+  },
+  {
+    "name": "state-local",
+    "version": "1.0.7",
+    "license": "MIT",
+    "notices": [
+      "dependencias/state-local-1.0.7/LICENSE"
+    ]
+  },
+  {
+    "name": "tslib",
+    "version": "2.8.1",
+    "license": "0BSD",
+    "notices": [
+      "dependencias/tslib-2.8.1/LICENSE.txt"
+    ]
+  }
+]

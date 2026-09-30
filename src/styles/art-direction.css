@@ -1,0 +1,219 @@
+/* BITIRO Lab — art direction. Visual values come from tokens.css. */
+body{background:var(--surface-page)}
+h1,h2,h3{font-family:var(--font-display);font-feature-settings:'ss01' 1,'ss02' 1}
+
+/* Primary action = live signal, not generic AI gradient. */
+.primary{
+  background:linear-gradient(180deg,var(--action-primary-strong) 0%,var(--action-primary) 100%);
+  background-size:100% 100%;
+  border-color:var(--action-primary-border);
+  box-shadow:0 6px 16px var(--alpha-action-16);
+}
+.primary:hover{
+  background:linear-gradient(180deg,var(--action-primary-hover) 0%,var(--action-primary) 100%);
+  border-color:var(--action-primary-border-hover);
+  box-shadow:var(--signal-shadow);
+  transform:translateY(-1px);
+}
+.primary:focus-visible{outline-color:var(--lab-signal)}
+.text-link:hover{color:var(--action-primary-border-hover)}
+
+/* Header: quiet product chrome. */
+.topbar{height:66px;background:var(--overlay-header);border-bottom-color:var(--alpha-line-12);box-shadow:none}
+.topbar:after{height:2px;left:0;right:0;background:linear-gradient(90deg,var(--brand-blue) 0 18%,var(--brand-cyan) 18% 20%,transparent 20% 100%);opacity:.72}
+.brand-icon{border-radius:9px;background:var(--neutral-white);border-color:var(--border-subtle);box-shadow:0 2px 8px var(--alpha-ink-05)}
+.brand-lockup strong{letter-spacing:-.55px}
+.brand-lockup small{color:var(--text-tertiary)}
+.level-badge{background:var(--surface-panel-soft);border-color:var(--border-subtle);border-radius:8px;color:var(--text-secondary)}
+.guide-button{background:var(--instrument-panel-soft);border-color:var(--instrument-panel-soft);border-radius:8px;box-shadow:none}
+.guide-button:hover{background:var(--instrument-panel-raised);border-color:var(--instrument-panel-raised)}
+.breadcrumbs strong{background:var(--surface-page);border-color:var(--border-subtle);border-radius:5px}
+
+/* Explorer: paper-like technical board, not SaaS cards. */
+.explorer{max-width:1460px;padding-top:30px;color:var(--text-primary);overflow-x:clip}
+.explorer-grid{
+  inset:0 -80px auto;
+  height:610px;
+  opacity:1;
+  background-image:
+    linear-gradient(var(--alpha-line-035) 1px,transparent 1px),
+    linear-gradient(90deg,var(--alpha-line-035) 1px,transparent 1px),
+    radial-gradient(circle,var(--alpha-blue-11) 1px,transparent 1.5px),
+    radial-gradient(circle at 72% 8%,var(--alpha-cyan-10),transparent 24%);
+  background-size:44px 44px,44px 44px,88px 88px,auto;
+  mask-image:linear-gradient(to bottom,var(--neutral-black) 0%,var(--neutral-black) 70%,transparent 100%);
+}
+.session-hero{grid-template-columns:minmax(0,1fr) 270px;gap:60px;min-height:245px;padding:8px 0 24px}
+.session-hero h1{font-size:clamp(38px,3.2vw,50px);line-height:1.01;letter-spacing:-2px;margin:12px 0 14px;max-width:760px}
+.session-hero h1 span{color:var(--text-secondary)}
+.session-hero p{max-width:610px;color:var(--text-secondary)}
+.hero-actions{margin-top:20px}
+.hero-signal{opacity:.22;filter:saturate(.4)}
+.progress-card{border-left-color:var(--readout-border);padding-left:26px}
+.progress-total strong{font-size:48px;color:var(--text-primary)}
+.progress-rail{height:3px;background:var(--border-default)}
+.progress-rail span{background:var(--lab-signal)}
+.progress-nodes i{background:var(--border-default)}
+.progress-nodes i.done{background:var(--brand-blue)}
+.progress-nodes i.next{background:var(--lab-signal);box-shadow:0 0 0 3px var(--alpha-action-10)}
+.next-mission{color:var(--lab-signal)}
+.path-heading{padding-top:20px;border-top-color:var(--border-default)}
+.path-heading h2{font-size:18px}
+.path-meta{color:var(--text-secondary)}
+
+.curriculum-layout{grid-template-columns:minmax(350px,.76fr) minmax(0,1.24fr);gap:48px;padding-bottom:32px}
+.session-featured{
+  background:linear-gradient(180deg,var(--instrument-panel-soft) 0%,var(--instrument-bg) 100%);
+  border:1px solid var(--border-instrument);
+  border-radius:var(--radius-panel);
+  box-shadow:var(--shadow-none);
+  padding:22px;
+}
+.session-featured:before{width:3px;background:var(--lab-signal)}
+.session-featured:after{display:none}
+.featured-heading .eyebrow{color:var(--instrument-text-muted)}
+.featured-index{border-radius:var(--radius-control);color:var(--action-primary-soft-2);border-color:var(--instrument-line-strong);background:var(--instrument-panel-deep)}
+.featured-title p{color:var(--instrument-text-muted)}
+.featured-preview{border-radius:var(--radius-panel);border-color:var(--instrument-line-strong);background:var(--instrument-panel)}
+.preview-top,.preview-caption{border-color:var(--instrument-line-strong)}
+.preview-canvas{height:190px;background:
+ linear-gradient(var(--alpha-paper-035) 1px,transparent 1px),
+ linear-gradient(90deg,var(--alpha-paper-035) 1px,transparent 1px),var(--instrument-panel-soft);background-size:22px 22px}
+.preview-canvas img{box-shadow:none;max-height:178px}
+.preview-caption span{color:var(--lcd-border);border-color:var(--border-instrument-strong);border-radius:4px}
+.featured-cta{box-shadow:none}
+.session-featured>small{color:var(--instrument-text-soft)}
+
+/* PCB-like curriculum path. */
+.curriculum-heading{margin-bottom:0;padding:0 2px}
+.curriculum-heading:after{background:var(--readout-border)}
+.curriculum-track:before{left:17px;background:var(--lcd-bg);width:1px}
+.session-row{
+  grid-template-columns:34px 30px 34px minmax(0,1fr) auto 60px;
+  min-height:68px;
+  border-bottom:1px solid var(--border-default);
+  border-radius:0;
+  padding:8px 4px 8px 0;
+  background:transparent;
+  box-shadow:none;
+  overflow:hidden;
+}
+.session-row::before{content:'';position:absolute;left:17px;top:50%;width:28px;height:1px;background:var(--lcd-bg);z-index:0}
+.session-row::after{content:'';position:absolute;left:16px;top:calc(50% - 2px);width:4px;height:4px;border-radius:50%;background:var(--lab-signal);opacity:0;transform:translateX(0);pointer-events:none}
+.session-row:hover{background:var(--overlay-hover);box-shadow:none;color:inherit}
+.session-row:hover::after{opacity:1;animation:signal-travel .7s var(--ease-out) both}
+.path-node i{width:10px;height:10px;background:var(--lab-warm-bg);border-color:var(--border-strong)}
+.session-row:hover .path-node i{border-color:var(--lab-signal);background:var(--action-primary-soft-2);box-shadow:0 0 0 4px var(--alpha-action-08)}
+.session-row.is-visited .path-node i{background:var(--brand-blue);border-color:var(--brand-blue)}
+.skill-icon-wrap{border-radius:6px;background:var(--readout-surface);color:var(--text-secondary)}
+.session-row:hover .skill-icon-wrap{color:var(--lab-signal);background:var(--surface-selected)}
+.session-number{color:var(--instrument-text-soft)}
+.row-state{color:var(--text-tertiary)}
+.session-row.is-visited .row-state{color:var(--brand-blue)}
+.row-action{color:var(--text-tertiary)}
+.session-row:hover .row-action{color:var(--lab-signal)}
+.session-row:hover .row-arrow{transform:translate(2px,-2px)}
+.page-foot{border-color:var(--border-default)}
+
+/* Workspace: an instrument, not a marketing page. */
+.workspace{background:var(--surface-page);gap:8px;padding:10px 16px 12px}
+.workspace-heading{min-height:42px;padding:0 2px}
+.workspace-heading h1{font-size:22px;letter-spacing:-.55px}
+.workspace-heading .eyebrow{color:var(--text-secondary)}
+.mission-guide{color:var(--text-secondary)}
+.workspace-grid{gap:8px}
+.code-panel,.simulation-panel{border-radius:var(--radius-panel)}
+.code-panel{background:var(--instrument-bg);border-color:var(--instrument-line);box-shadow:var(--shadow-none)}
+.file-bar,.editor-toolbar,.editor-bottom-bar,.editor-mission,.runtime-diagnostics{border-color:var(--border-instrument)}
+.file-bar{background:var(--instrument-panel-deep)}
+.editor-toolbar{background:var(--instrument-panel-soft)}
+.file-tab i{background:var(--lab-signal);box-shadow:0 0 0 4px var(--alpha-action-08)}
+.file-tab:after{background:var(--lab-signal)}
+.runtime-target i{color:var(--status-danger-border);background:var(--instrument-panel-raised);border-color:var(--instrument-line-strong)}
+.editor-tools button{color:var(--instrument-text-muted)}
+.editor-bottom-bar{background:var(--instrument-panel-deep)}
+.review-button{background:var(--text-primary);border-color:var(--instrument-line-strong);color:var(--border-default)}
+.review-button:hover{background:var(--instrument-panel-raised);border-color:var(--border-instrument-strong)}
+.execute-button{background:linear-gradient(180deg,var(--action-primary-strong),var(--action-primary))!important;border-color:var(--action-primary-border)!important;box-shadow:0 6px 18px var(--alpha-action-18)!important}
+.stop-button{background:var(--instrument-panel);border-color:var(--border-instrument-strong);color:var(--status-danger-border)}
+
+.simulation-panel{background:var(--surface-panel);border-color:var(--border-default);box-shadow:var(--shadow-none)}
+.simulator-toolbar{background:var(--surface-panel);border-color:var(--border-default)}
+.viewport-id{background:var(--instrument-text);border-color:var(--lcd-bg);color:var(--border-instrument-strong);border-radius:5px}
+.viewport-tools{color:var(--text-secondary)}
+.toolbar-separator{background:var(--readout-border)}
+.calibration-toggle.active{color:var(--lab-signal);background:var(--surface-selected);border-color:var(--status-danger-border)}
+.simulation-body{background:var(--surface-panel-muted)}
+.viewport-column{background:
+ linear-gradient(var(--alpha-line-035) 1px,transparent 1px),
+ linear-gradient(90deg,var(--alpha-line-035) 1px,transparent 1px),
+ var(--readout-surface);background-size:26px 26px}
+.arena-note{color:var(--text-secondary)}
+.arena-live{position:absolute;z-index:3;left:14px;top:14px;display:flex;align-items:center;gap:7px;font:600 9px var(--font-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--action-primary-text);background:var(--overlay-action-soft);border:1px solid var(--status-danger-border);border-radius:999px;padding:5px 8px;opacity:0;transform:translateY(-4px);transition:opacity 160ms,transform 160ms;pointer-events:none}
+.arena-live i{width:6px;height:6px;border-radius:50%;background:var(--lab-signal)}
+.arena.is-running .arena-live{opacity:1;transform:none}
+.arena.is-running .arena-live i{animation:live-pulse 1.3s ease-out infinite}
+
+/* Instrument HUD */
+.telemetry-panel,.calibration-panel{background:var(--surface-panel);border-color:var(--border-default);border-radius:0;box-shadow:var(--shadow-none)}
+.robot-hud{color:var(--text-primary)}
+.hud-heading{border-color:var(--readout-border)}
+.hud-kicker,.hud-label,.servo-state span{color:var(--text-tertiary)}
+.hud-label code{background:var(--instrument-text);color:var(--text-tertiary)}
+.hud-section{border-color:var(--readout-border)}
+.line-values{gap:4px}
+.sensor-value{border-radius:var(--radius-panel);background:var(--readout-surface);border:1px solid var(--readout-border);padding:7px 4px}
+.sensor-value span{color:var(--text-tertiary)}
+.sensor-reading{font-size:18px;color:var(--instrument-line)}
+.sensor-reading{animation:sensor-copper-flash 220ms var(--ease-out)}
+.sonar-reading strong{font-family:var(--font-mono);font-weight:500;color:var(--instrument-panel-raised)}
+.lcd{border-radius:var(--radius-panel);border:1px solid var(--lcd-border);background:var(--lcd-bg);color:var(--lcd-text);box-shadow:inset 0 0 0 1px var(--alpha-white-35)}
+.lcd-on{box-shadow:inset 0 0 0 1px var(--alpha-white-35),0 0 15px var(--alpha-success-10)}
+.ir-buttons button{border-radius:var(--radius-panel);background:var(--readout-surface);border-color:var(--readout-border)}
+.ir-buttons button[aria-pressed=true]{background:var(--lab-signal-soft);border-color:var(--border-strong);color:var(--action-primary-text)}
+.ir-buttons button i.on{background:var(--lab-signal);box-shadow:0 0 0 4px var(--alpha-action-10)}
+.button-sensor{border-radius:var(--radius-panel);background:var(--surface-panel-muted);border-color:var(--readout-border)}
+
+.runtime-bar{background:var(--surface-panel);border-color:var(--border-default);box-shadow:var(--shadow-none)}
+.runtime-actions button,.runtime-actions label{border-radius:6px;background:var(--surface-panel);border-color:var(--readout-border)}
+.runtime-running .status-badge{color:var(--action-primary-text)}
+.runtime-running .status-badge i{background:var(--lab-signal);animation:live-pulse 1.3s ease-out 1}
+.feedback-panel{background:var(--surface-panel-soft);border-color:var(--border-default);box-shadow:var(--shadow-none)}
+.feedback-icon{border-radius:6px;background:var(--instrument-text);color:var(--text-secondary)}
+.feedback-panel.running{background:var(--status-warning-soft)}.feedback-panel.running .feedback-icon{background:var(--status-warning-border);color:var(--action-primary-text)}
+
+/* Calibration becomes a deliberate lab mode. */
+.calibration-banner{background:var(--instrument-panel);color:var(--action-primary-soft-2);border-color:var(--instrument-line-strong)}
+.calibration-panel{background:var(--surface-panel-soft)}
+.calibration-icon{background:var(--surface-selected);color:var(--lab-signal);border-color:var(--status-danger-border);border-radius:7px}
+.calibration-panel .eyebrow{color:var(--action-primary-text)}
+.calibration-live{border-color:var(--border-strong);background:var(--action-primary-soft-2);border-radius:var(--radius-panel)}
+.calibration-live strong{color:var(--action-primary-border-hover)}
+.calibration-panel tr.selected{background:var(--surface-selected)}
+.calibration-panel tr.selected button{color:var(--action-primary-text)}
+.calibration-panel tr.selected button i{background:var(--lab-signal);border-color:var(--lab-signal)}
+.save-thresholds{background:linear-gradient(180deg,var(--action-primary-strong),var(--action-primary))!important;border-color:var(--action-primary-border)!important}
+
+/* Tooltips without custom SVG/assets. */
+.icon-button[title],.calibration-toggle[title],button[title]{position:relative}
+
+@keyframes signal-travel{0%{transform:translateX(0);opacity:0}18%{opacity:1}100%{transform:translateX(42px);opacity:0}}
+@keyframes live-pulse{0%{box-shadow:0 0 0 0 var(--alpha-action-38)}70%,100%{box-shadow:0 0 0 8px var(--alpha-action-0)}}
+@keyframes sensor-copper-flash{0%{color:var(--action-primary-border-hover);background:var(--surface-selected)}100%{color:var(--instrument-line);background:transparent}}
+
+@media(max-width:1023px){.session-hero{min-height:0}.curriculum-layout{gap:26px}.workspace{padding:10px}.workspace-heading{min-height:40px}}
+@media(max-width:767px){.explorer{padding-top:22px}.session-hero h1{font-size:36px}.session-row{grid-template-columns:30px 28px 32px minmax(0,1fr) 42px}.row-state{display:none}.workspace{padding:10px 8px 18px}.workspace-heading h1{font-size:21px}.topbar{height:62px}.session-featured{border-radius:10px}}
+@media(prefers-reduced-motion:reduce){.session-row:hover::after{animation:none;display:none}.arena.is-running .arena-live i{animation:none}.sensor-reading{animation:none}}
+
+/* v5.2 progress states — state is visible without hover. */
+.availability.is-next{color:var(--action-primary-strong)}
+.availability.is-next i{background:var(--action-primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--action-primary) 14%,transparent)}
+.session-row.is-next .path-node i{
+  background:var(--surface-page);
+  border-color:var(--action-primary);
+  box-shadow:inset 0 0 0 2px var(--surface-page),0 0 0 2px var(--action-primary);
+}
+.session-row.is-next .row-state{color:var(--action-primary-text);font-weight:600}
+.session-row.is-next .row-state:before{background:var(--action-primary)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--action-primary) 10%,transparent)}
+.session-row.is-visited .path-node i{background:var(--brand-blue);border-color:var(--brand-blue);box-shadow:none}
+.session-row.is-visited .row-state{color:var(--brand-blue)}

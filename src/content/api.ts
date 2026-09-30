@@ -1,0 +1,25 @@
+export interface ApiEntry {name:string;signature:string;description:string;example:string;since:number}
+export const api:ApiEntry[]=[
+ {name:'avanzar',signature:'avanzar(int vel) / avanzar(int izq, int der)',description:'Hace avanzar ambos motores. Rango educativo 0–100. El valor 0 mantiene PWM 50: usa detenerse() para frenar.',example:'avanzar(40);',since:1},
+ {name:'retroceder',signature:'retroceder(int vel) / retroceder(int izq, int der)',description:'Mueve las ruedas hacia atrás. Puedes dar una velocidad distinta a cada rueda.',example:'retroceder(30);',since:1},
+ {name:'detenerse',signature:'detenerse()',description:'Frena ambos motores y espera 70 ms en la librería física.',example:'detenerse();',since:1},
+ {name:'girarIzquierda',signature:'girarIzquierda(int vel)',description:'Gira sobre su centro: rueda izquierda hacia atrás y derecha hacia delante.',example:'girarIzquierda(30);',since:1},
+ {name:'girarDerecha',signature:'girarDerecha(int vel)',description:'Gira sobre su centro hacia la derecha. La velocidad no indica un ángulo.',example:'girarDerecha(30);',since:1},
+ {name:'leerSensorObstaculoIzquierdo',signature:'int leerSensorObstaculoIzquierdo()',description:'Devuelve 1 cuando detecta y 0 cuando está libre. Usa mayoría de tres lecturas separadas por 200 µs.',example:'int ir = leerSensorObstaculoIzquierdo();',since:1},
+ {name:'leerSensorObstaculoDerecho',signature:'int leerSensorObstaculoDerecho()',description:'Lee el IR derecho con el mismo filtro de tres muestras y lógica activa en 1.',example:'int ir = leerSensorObstaculoDerecho();',since:1},
+ {name:'leerSensorLineaCentral',signature:'int leerSensorLineaCentral()',description:'Lectura analógica 0–1023. Calibra el umbral: el material S01 muestra negro alto y blanco bajo.',example:'int centro = leerSensorLineaCentral();',since:1},
+ {name:'leerSensorLineaIzquierdo',signature:'int leerSensorLineaIzquierdo()',description:'Lee el sensor analógico de línea izquierdo.',example:'int izq = leerSensorLineaIzquierdo();',since:1},
+ {name:'leerSensorLineaDerecho',signature:'int leerSensorLineaDerecho()',description:'Lee el sensor analógico de línea derecho.',example:'int der = leerSensorLineaDerecho();',since:1},
+ {name:'leerDistanciaSonar',signature:'int leerDistanciaSonar()',description:'Distancia entera en cm. Devuelve 0 sin eco válido o a 5 cm o menos; máximo configurado 300 cm.',example:'int distancia = leerDistanciaSonar();',since:1},
+ {name:'escribirPantalla',signature:'escribirPantalla(int col, int fil, texto o entero)',description:'Escribe desde una columna 0–15 y una fila 0–1. No borra automáticamente el texto anterior.',example:'escribirPantalla(0, 0, "Hola IROH");',since:1},
+ {name:'borrarPantalla',signature:'borrarPantalla()',description:'Borra ambas filas de la pantalla.',example:'borrarPantalla();',since:1},
+ {name:'moverServoGolpe',signature:'moverServoGolpe(int pos)',description:'-1 izquierda, 0 centro, 1 derecha. Inicializa el servo antes de usarlo y deja tiempo para que se mueva.',example:'moverServoGolpe(1);',since:1},
+ {name:'pausa',signature:'pausa(int tiempo)',description:'Espera el número indicado de milisegundos. Las órdenes de motor permanecen activas durante la pausa.',example:'pausa(200);',since:1},
+ {name:'leerBoton',signature:'int leerBoton()',description:'Devuelve 1 si el pulsador está presionado y 0 si está libre.',example:'int boton = leerBoton();',since:1},
+ {name:'botonInicio',signature:'botonInicio()',description:'Espera al pulsador sin congelar la simulación.',example:'botonInicio();',since:1},
+ {name:'millis',signature:'long millis()',description:'Milisegundos de tiempo simulado desde el inicio del programa. Se congela al pausar.',example:'long inicio = millis();',since:1},
+ {name:'finPrograma',signature:'finPrograma()',description:'Frena, borra y apaga la LCD y termina la ejecución.',example:'finPrograma();',since:1},
+ {name:'apagarPantalla',signature:'apagarPantalla()',description:'Apaga la iluminación sin borrar los caracteres.',example:'apagarPantalla();',since:1},
+ {name:'prenderPantalla',signature:'prenderPantalla()',description:'Enciende la iluminación y conserva el contenido.',example:'prenderPantalla();',since:1},
+ ...['Movimiento' ,'Sensores','Pantalla','Golpe'].map(part=>({name:`inicializar${part}`,signature:`inicializar${part}()`,description:`Prepara ${part.toLowerCase()} del robot. Se usa en setup().`,example:`inicializar${part}();`,since:1}))
+];

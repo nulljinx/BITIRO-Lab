@@ -1,0 +1,1698 @@
+/* Integrated laboratory: meaningful viewport controls, no new palette. */
+.workspace-view-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
+.workspace-view-actions .button{padding:7px 10px;min-height:35px;font-size:11px;white-space:nowrap}
+.workspace-view-actions .button[aria-pressed="true"]{border-color:var(--action-primary);color:var(--action-primary)}
+.workspace:fullscreen{height:100dvh;width:100vw;padding:12px;background:var(--surface-page)}
+.workspace.is-simulation-focused .workspace-grid{grid-template-columns:minmax(0,1fr)}
+.workspace.is-simulation-focused .editor-column{display:none}
+.workspace.is-simulation-focused .simulation-column{display:flex;flex-direction:column;min-height:0}
+.workspace.is-simulation-focused .simulation-panel{flex:1}
+.workspace.is-simulation-focused .viewport-column{min-width:0}
+.workspace.is-simulation-focused .workspace-tabs{display:none}
+.perspective-switch{display:flex;flex-shrink:0;gap:5px;padding:5px 9px;border-bottom:1px solid var(--border-subtle);background:var(--surface-panel-raised)}
+.perspective-switch button{min-height:30px;font-size:11px;padding:5px 9px;gap:6px;background:transparent}
+.perspective-switch button[aria-pressed=true]{border-color:var(--brand-blue);color:var(--brand-blue);background:var(--status-info-soft)}
+.arena-3d{position:relative;flex:1;min-width:0;min-height:0;background:var(--brand-ink-2);overflow:hidden}
+.arena-3d canvas{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+.arena-3d canvas:active{cursor:grabbing}
+.arena-3d-presets{position:absolute;z-index:2;right:10px;top:10px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;max-width:calc(100% - 20px)}
+.arena-3d-presets button{font-size:10px;min-height:29px;padding:5px 8px;background:var(--brand-ink-2);color:var(--neutral-white);border-color:var(--instrument-line-strong)}
+.arena-3d-presets button[aria-pressed=true]{border-color:var(--brand-cyan);color:var(--brand-cyan)}
+@media(max-width:767px){
+ .workspace-heading{flex-direction:column}.workspace-view-actions{width:100%;justify-content:flex-start}
+ .workspace-view-actions .workspace-availability{display:none}
+ .workspace.is-simulation-focused .workspace-grid{display:block}
+ .workspace.is-simulation-focused .simulation-column{display:block;height:auto}
+ .workspace.is-simulation-focused .simulation-panel{min-height:650px}
+ .workspace.is-simulation-focused .viewport-column{height:min(75vh,700px)}
+ .arena-3d-presets{left:6px;right:6px;top:5px;justify-content:center}
+ .arena-3d-presets button{font-size:9px;padding:4px 6px}
+}
+@media(prefers-reduced-motion:reduce){.workspace-view-actions .button,.perspective-switch button{transition:none}}
+.mission-panel{border-top:1px solid var(--border-subtle);background:var(--surface-panel-raised);padding:0 12px;flex-shrink:0;max-height:135px;overflow:auto}
+.mission-panel summary{min-height:34px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;color:var(--text-secondary);font-size:11px}
+.mission-panel-title{display:flex;align-items:center;gap:7px;font-weight:600;color:var(--text-primary)}
+.mission-panel ol{list-style:none;padding:0 0 6px;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 15px}
+.mission-panel li{display:flex;gap:5px;align-items:start;font-size:10px;color:var(--text-secondary)}
+.mission-panel li svg{min-width:15px}
+.mission-panel li:has(svg.lucide-check){color:var(--status-success-strong)}
+.mission-panel p{font-size:10px;color:var(--text-secondary);margin:3px 0 8px}
+.mission-panel p button{font-size:10px;min-height:24px;padding:2px 5px}
+@media(max-width:767px){.mission-panel{max-height:none}.mission-panel ol{grid-template-columns:1fr}.mission-panel li,.mission-panel p{font-size:11px}}
+
+/* BITIRO 7.3 — integrated simulator visual pass */
+.simulation-panel.is-3d-view{background:#0f1e29;border-color:#314652;box-shadow:0 18px 42px rgba(5,17,27,.14)}
+.simulation-panel.is-3d-view .perspective-switch{background:#122632;border-color:#304652;padding:7px 10px}
+.simulation-panel.is-3d-view .perspective-switch button{color:#b8c8d0;border-color:transparent;border-radius:7px}
+.simulation-panel.is-3d-view .perspective-switch button[aria-pressed=true]{background:#eef4f6;color:#102634;border-color:#eef4f6}
+.simulation-panel.is-3d-view .simulator-toolbar{background:#f7f6f2;border-bottom-color:#d7dde0}
+.simulation-panel.is-3d-view .viewport-column{background:#142632}
+.arena-3d{background:linear-gradient(180deg,#172b38 0%,#0f1c25 100%)}
+.arena-3d:after{content:'';position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.035),inset 0 -80px 90px rgba(4,12,18,.12)}
+.arena-3d-presets{right:14px;top:14px;gap:6px}
+.arena-3d-presets button{min-height:34px;padding:7px 10px;border-radius:7px;background:rgba(9,23,32,.86);border-color:rgba(176,204,216,.18);color:#d9e5ea;backdrop-filter:blur(8px)}
+.arena-3d-presets button:hover{background:rgba(24,47,61,.94);border-color:rgba(176,204,216,.34)}
+.arena-3d-presets button[aria-pressed=true]{background:#eef4f6;border-color:#eef4f6;color:#112734}
+.institution-shell.theme-mustakis .simulation-panel.is-3d-view .perspective-switch button[aria-pressed=true]{background:#fff;color:var(--mustakis-navy);border-color:#fff}
+.institution-shell.theme-mustakis .arena-3d-presets button[aria-pressed=true]{background:#fff;color:var(--mustakis-navy);border-color:#fff}
+@media(min-width:1024px){
+ .workspace.is-simulation-focused .simulation-body{grid-template-columns:minmax(0,1fr) 240px}
+ .workspace.is-simulation-focused .viewport-column{min-height:540px}
+}
+@media(max-width:767px){
+ .arena-3d-presets{top:8px;left:8px;right:8px;justify-content:center}
+ .arena-3d-presets button{min-height:32px;padding:6px 8px}
+}
+
+/* BITIRO 7.4 — integrated 3D framing polish */
+.simulation-panel.is-3d-view .arena-3d-presets{
+  top:12px;
+  right:12px;
+  gap:5px;
+}
+.simulation-panel.is-3d-view .arena-3d-presets button{
+  min-height:30px;
+  padding:5px 8px;
+  font-size:9.5px;
+  border-radius:6px;
+  background:rgba(8,22,31,.78);
+  box-shadow:0 4px 14px rgba(0,0,0,.08);
+}
+.simulation-panel.is-3d-view .arena-3d-presets button[aria-pressed=true]{
+  background:rgba(245,249,250,.96);
+}
+.arena-3d:before{
+  content:'';
+  position:absolute;
+  inset:0;
+  z-index:1;
+  pointer-events:none;
+  background:radial-gradient(circle at 50% 42%,transparent 42%,rgba(4,12,18,.10) 100%);
+}
+.arena-3d canvas{position:relative;z-index:0;}
+@media(max-width:767px){
+  .simulation-panel.is-3d-view .arena-3d-presets{
+    top:7px;
+    left:auto;
+    right:7px;
+    justify-content:flex-end;
+  }
+  .simulation-panel.is-3d-view .arena-3d-presets button{
+    min-height:29px;
+    padding:4px 7px;
+    font-size:9px;
+  }
+}
+
+/* BITIRO 7.5 — reliable fullscreen + shared 2D/3D zoom */
+.workspace:fullscreen,
+.workspace.is-lab-fullscreen{
+  position:fixed!important;
+  inset:0!important;
+  z-index:10000!important;
+  width:100vw!important;
+  height:100dvh!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:10px!important;
+  overflow:hidden!important;
+  background:var(--surface-page)!important;
+}
+.workspace:fullscreen .workspace-grid,
+.workspace.is-lab-fullscreen .workspace-grid{
+  flex:1;
+  min-height:0;
+}
+.workspace:fullscreen .simulation-column,
+.workspace.is-lab-fullscreen .simulation-column,
+.workspace:fullscreen .simulation-panel,
+.workspace.is-lab-fullscreen .simulation-panel{
+  min-height:0;
+}
+.workspace:fullscreen .workspace-fullscreen-button,
+.workspace.is-lab-fullscreen .workspace-fullscreen-button{
+  border-color:var(--action-primary);
+  color:var(--action-primary);
+}
+.workspace.is-lab-fullscreen::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  box-shadow:inset 0 0 0 1px var(--border-subtle);
+}
+.simulation-panel.is-3d-view .zoom-tools output{
+  min-width:42px;
+  color:var(--text-primary);
+  font-weight:600;
+}
+.simulation-panel.is-3d-view .zoom-tools .icon-button:not(:disabled){
+  color:var(--text-primary);
+}
+@media(max-width:767px){
+  .workspace:fullscreen,
+  .workspace.is-lab-fullscreen{
+    padding:7px!important;
+    overflow:auto!important;
+  }
+  .workspace:fullscreen .viewport-column,
+  .workspace.is-lab-fullscreen .viewport-column{
+    height:min(68dvh,640px);
+  }
+}
+
+/* BITIRO 7.6 — simulator fullscreen control + 3D color containment */
+/* Only the 3D viewport is dark. Telemetry, runtime and feedback keep their
+   readable instrument surfaces instead of inheriting the viewport background. */
+.simulation-panel.is-3d-view{
+  background:var(--surface-panel-raised);
+  color:var(--text-primary);
+}
+.simulation-panel.is-3d-view .telemetry-panel{
+  background:var(--surface-panel-soft);
+  color:var(--text-primary);
+}
+.simulation-panel.is-3d-view .robot-hud,
+.simulation-panel.is-3d-view .hud-heading strong,
+.simulation-panel.is-3d-view .sensor-reading,
+.simulation-panel.is-3d-view .sonar-reading strong,
+.simulation-panel.is-3d-view .servo-state strong{
+  color:var(--text-primary);
+}
+.simulation-panel.is-3d-view .runtime-bar,
+.simulation-panel.is-3d-view .feedback-panel,
+.simulation-panel.is-3d-view .mission-panel{
+  background:var(--surface-panel-raised);
+  color:var(--text-primary);
+}
+.simulation-panel.is-3d-view .feedback-panel.running{
+  background:var(--status-info-soft);
+}
+.institution-shell.theme-mustakis .simulation-panel.is-3d-view .simulator-toolbar{
+  background:#F7F6F2;
+  border-bottom-color:#D7DDE0;
+  color:var(--text-primary);
+}
+.institution-shell.theme-mustakis .simulation-panel.is-3d-view .simulator-toolbar .zoom-tools{
+  background:#FFFFFF;
+  border-color:#D7DDE0;
+}
+.institution-shell.theme-mustakis .simulation-panel.is-3d-view .simulator-toolbar .zoom-tools output{
+  color:var(--text-secondary);
+  font-weight:600;
+}
+.institution-shell.theme-mustakis .simulation-panel.is-3d-view .simulator-toolbar .zoom-tools .icon-button{
+  color:var(--text-primary);
+  background:transparent;
+}
+.institution-shell.theme-mustakis .simulation-panel.is-3d-view .simulator-toolbar .zoom-tools .icon-button:hover:not(:disabled){
+  background:var(--surface-panel-muted);
+}
+.institution-shell.theme-mustakis .simulation-panel.is-3d-view .simulator-toolbar .calibration-toggle{
+  color:var(--text-secondary);
+}
+
+/* The expand icon in the simulator toolbar now controls the simulator panel
+   itself. Native Fullscreen API is preferred; is-panel-fullscreen is the
+   functional fallback when the browser rejects native fullscreen. */
+.simulation-panel:fullscreen,
+.simulation-panel.is-panel-fullscreen{
+  position:fixed!important;
+  inset:0!important;
+  z-index:20000!important;
+  width:100vw!important;
+  height:100dvh!important;
+  max-width:none!important;
+  min-height:0!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:0!important;
+  overflow:hidden!important;
+  background:var(--surface-panel-raised)!important;
+  box-shadow:none!important;
+}
+.simulation-panel:fullscreen .simulation-body,
+.simulation-panel.is-panel-fullscreen .simulation-body{
+  flex:1!important;
+  min-height:0!important;
+}
+.simulation-panel:fullscreen .viewport-column,
+.simulation-panel.is-panel-fullscreen .viewport-column{
+  min-height:0!important;
+}
+.simulation-panel:fullscreen .arena-3d,
+.simulation-panel.is-panel-fullscreen .arena-3d{
+  min-height:0!important;
+}
+.simulation-panel:fullscreen .simulator-toolbar,
+.simulation-panel.is-panel-fullscreen .simulator-toolbar{
+  flex-shrink:0;
+}
+@media(min-width:768px){
+  .simulation-panel:fullscreen .simulation-body,
+  .simulation-panel.is-panel-fullscreen .simulation-body{
+    grid-template-columns:minmax(0,1fr) minmax(220px,280px);
+  }
+}
+@media(max-width:767px){
+  .simulation-panel:fullscreen,
+  .simulation-panel.is-panel-fullscreen{
+    overflow:auto!important;
+  }
+  .simulation-panel:fullscreen .simulation-body,
+  .simulation-panel.is-panel-fullscreen .simulation-body{
+    flex:none!important;
+  }
+  .simulation-panel:fullscreen .viewport-column,
+  .simulation-panel.is-panel-fullscreen .viewport-column{
+    height:72dvh!important;
+    min-height:420px!important;
+  }
+}
+
+/* BITIRO 7.7 — simulator-first laboratory workflow
+   Desktop prioritizes the simulator and moves programming below it so neither
+   the 3D viewport nor Monaco is compressed into a narrow side column. */
+.workspace-editor-heading{display:none;}
+
+@media(min-width:1024px){
+  .workspace{
+    height:auto;
+    min-height:calc(100dvh - var(--header-height));
+    overflow:visible;
+  }
+  .workspace-grid.workspace-grid-stacked{
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto auto;
+    gap:24px;
+    flex:none;
+    min-height:0;
+  }
+  .workspace-grid-stacked .simulation-column,
+  .workspace-grid-stacked .editor-column{
+    width:100%;
+    height:auto;
+    min-height:0;
+  }
+  .workspace-grid-stacked .simulation-panel{
+    height:clamp(680px,72dvh,840px);
+    min-height:680px;
+  }
+  .workspace-grid-stacked .simulation-body{
+    grid-template-columns:minmax(0,1fr) minmax(220px,260px);
+  }
+  .workspace-grid-stacked .viewport-column{
+    min-height:480px;
+  }
+  .workspace-grid-stacked .editor-column{
+    display:grid;
+    grid-template-rows:auto auto;
+    gap:10px;
+  }
+  .workspace-editor-heading{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:18px;
+    padding:4px 2px 0;
+  }
+  .workspace-editor-heading>div{
+    display:grid;
+    gap:4px;
+  }
+  .workspace-editor-heading .eyebrow{
+    font-size:10px;
+    letter-spacing:.11em;
+  }
+  .workspace-editor-heading strong{
+    font-size:18px;
+    line-height:1.25;
+    color:var(--text-primary);
+  }
+  .workspace-editor-heading>span{
+    font:11px var(--font-mono);
+    color:var(--text-secondary);
+    padding-bottom:2px;
+  }
+  .workspace-grid-stacked .code-panel{
+    height:640px;
+    min-height:600px;
+  }
+  .workspace-grid-stacked .editor-wrap{
+    min-height:360px;
+  }
+  .workspace.is-simulation-focused .workspace-grid-stacked{
+    grid-template-rows:auto;
+  }
+  .workspace.is-simulation-focused .simulation-panel{
+    height:calc(100dvh - var(--header-height) - 150px);
+    min-height:620px;
+  }
+  .workspace.is-simulation-focused .editor-column{
+    display:none;
+  }
+}
+
+@media(min-width:1440px){
+  .workspace-grid-stacked .simulation-panel{
+    height:clamp(720px,74dvh,900px);
+  }
+  .workspace-grid-stacked .simulation-body{
+    grid-template-columns:minmax(0,1fr) 270px;
+  }
+  .workspace-grid-stacked .code-panel{
+    height:680px;
+  }
+}
+
+/* The whole-lab fullscreen mode now supports the vertical simulator/editor
+   workflow. The simulator has its own dedicated fullscreen button when the
+   student wants a viewport-only experience. */
+@media(min-width:1024px){
+  .workspace:fullscreen:not(.is-simulation-focused),
+  .workspace.is-lab-fullscreen:not(.is-simulation-focused){
+    overflow:auto!important;
+  }
+  .workspace:fullscreen:not(.is-simulation-focused) .workspace-grid-stacked,
+  .workspace.is-lab-fullscreen:not(.is-simulation-focused) .workspace-grid-stacked{
+    flex:none;
+  }
+  .workspace:fullscreen:not(.is-simulation-focused) .simulation-panel,
+  .workspace.is-lab-fullscreen:not(.is-simulation-focused) .simulation-panel{
+    height:calc(100dvh - 155px);
+    min-height:620px;
+  }
+}
+
+
+/* BITIRO 7.11 — viewport + editor stability */
+@media(min-width:1024px){
+  /* Keep a generous simulator viewport; do not shrink the 3D stage to make
+     room for the editor. The page scroll is the intended transition. */
+  .workspace-grid-stacked .simulation-panel{
+    height:clamp(680px,72dvh,840px);
+    min-height:680px;
+  }
+  .workspace-grid-stacked .viewport-column{
+    min-height:480px;
+  }
+
+  /* Let the editor card grow around its chrome. Only Monaco receives a fixed
+     working height. This guarantees Review/Run remain visible. */
+  .workspace-grid-stacked .code-panel{
+    height:auto;
+    min-height:0;
+  }
+  .workspace-grid-stacked .editor-wrap{
+    flex:0 0 380px;
+    height:380px;
+    min-height:380px;
+  }
+  .workspace-grid-stacked .editor-bottom-bar{
+    flex-wrap:nowrap;
+    min-height:60px;
+    padding:10px 14px;
+    gap:10px;
+  }
+  .workspace-grid-stacked .editor-bottom-bar button{
+    min-height:40px;
+    padding:8px 12px;
+    font-size:11px;
+  }
+  .workspace-grid-stacked .editor-bottom-bar .review-button{
+    flex:0 0 auto;
+  }
+  .workspace-grid-stacked .editor-bottom-bar .execute-button,
+  .workspace-grid-stacked .editor-bottom-bar .stop-button{
+    min-width:240px;
+    margin-left:auto;
+    flex:1 1 auto;
+  }
+}
+
+@media(min-width:1440px){
+  .workspace-grid-stacked .simulation-panel{
+    height:clamp(720px,74dvh,900px);
+  }
+  .workspace-grid-stacked .editor-wrap{
+    flex-basis:420px;
+    height:420px;
+    min-height:420px;
+  }
+}
+
+@media(min-width:1024px) and (max-width:1180px){
+  .workspace-grid-stacked .editor-bottom-bar{
+    flex-wrap:wrap;
+  }
+  .workspace-grid-stacked .editor-bottom-bar .execute-button,
+  .workspace-grid-stacked .editor-bottom-bar .stop-button{
+    flex:1 1 240px;
+    min-width:220px;
+    margin-left:0;
+  }
+}
+
+/* BITIRO 7.12 — return to simulator after successful execution */
+@media(min-width:768px){
+  .workspace-grid-stacked .simulation-column{
+    scroll-margin-top:calc(var(--header-height) + 16px);
+  }
+}
+
+
+/* BITIRO 7.13 — rebalance simulator space, surface the button control sooner,
+   and compact the editor status chrome without destabilizing Monaco. */
+@media(min-width:1024px){
+  .workspace-grid-stacked .simulation-panel{
+    height:clamp(760px,78dvh,960px);
+    min-height:760px;
+  }
+  .workspace-grid-stacked .simulation-body{
+    grid-template-columns:minmax(0,1fr) minmax(236px,252px);
+  }
+  .workspace-grid-stacked .viewport-column{
+    min-height:560px;
+  }
+  .workspace.is-simulation-focused .simulation-panel{
+    height:calc(100dvh - var(--header-height) - 132px);
+    min-height:700px;
+  }
+
+  .workspace-grid-stacked .telemetry-panel{
+    border-left:1px solid var(--border-subtle);
+    background:var(--surface-panel-raised);
+  }
+  .workspace-grid-stacked .robot-hud{
+    padding:7px 9px 10px;
+  }
+  .workspace-grid-stacked .hud-heading{
+    padding-bottom:6px;
+    margin-bottom:0;
+  }
+  .workspace-grid-stacked .hud-heading strong{
+    font-size:11px;
+  }
+  .workspace-grid-stacked .hud-kicker,
+  .workspace-grid-stacked .status-badge,
+  .workspace-grid-stacked .hud-label>span,
+  .workspace-grid-stacked .hud-label code{
+    font-size:8px;
+  }
+  .workspace-grid-stacked .hud-section{
+    padding:6px 0;
+  }
+  .workspace-grid-stacked .hud-label{
+    margin-bottom:4px;
+  }
+  .workspace-grid-stacked .line-values,
+  .workspace-grid-stacked .ir-buttons{
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .workspace-grid-stacked .sensor-value{
+    padding:5px 2px 4px;
+  }
+  .workspace-grid-stacked .sensor-reading{
+    font-size:15px;
+  }
+  .workspace-grid-stacked .sonar-reading strong{
+    font-size:18px;
+  }
+  .workspace-grid-stacked .sonar-reading span{
+    font-size:10px;
+  }
+  .workspace-grid-stacked .button-sensor,
+  .workspace-grid-stacked .ir-buttons button{
+    min-height:36px;
+    padding:5px 6px;
+    font-size:10px;
+  }
+  .workspace-grid-stacked .button-sensor{
+    gap:6px;
+  }
+  .workspace-grid-stacked .button-sensor strong,
+  .workspace-grid-stacked .ir-buttons .ir-name,
+  .workspace-grid-stacked .servo-state,
+  .workspace-grid-stacked .lcd{
+    font-size:9px;
+  }
+  .workspace-grid-stacked .servo-state{
+    margin-top:5px;
+    gap:6px;
+  }
+  .workspace-grid-stacked .lcd{
+    min-height:34px;
+    padding:5px 6px;
+    line-height:1.45;
+  }
+
+  .workspace-grid-stacked .runtime-bar{
+    min-height:36px;
+    padding:4px 8px;
+    gap:8px;
+  }
+  .workspace-grid-stacked .runtime-actions button,
+  .workspace-grid-stacked .runtime-actions label{
+    min-height:27px;
+  }
+  .workspace-grid-stacked .runtime-actions button{
+    padding:4px 7px;
+    font-size:10px;
+  }
+  .workspace-grid-stacked .runtime-actions label{
+    padding-inline:7px;
+  }
+  .workspace-grid-stacked .runtime-actions select{
+    min-height:24px;
+    font-size:10px;
+  }
+  .workspace-grid-stacked .runtime-clock,
+  .workspace-grid-stacked .runtime-clock time{
+    font-size:10px;
+  }
+  .workspace-grid-stacked .feedback-panel{
+    min-height:38px;
+    max-height:48px;
+    padding:5px 8px;
+    gap:7px;
+  }
+  .workspace-grid-stacked .feedback-icon{
+    width:22px;
+    height:22px;
+  }
+  .workspace-grid-stacked .feedback-panel h3,
+  .workspace-grid-stacked .feedback-panel p{
+    font-size:9px;
+    line-height:1.35;
+  }
+  .workspace-grid-stacked .mission-panel{
+    max-height:110px;
+  }
+  .workspace-grid-stacked .mission-panel summary{
+    min-height:30px;
+    font-size:10px;
+  }
+
+  .workspace-grid-stacked .file-bar{
+    min-height:40px;
+    padding-inline:14px;
+  }
+  .workspace-grid-stacked .file-tab{
+    padding-block:10px;
+  }
+  .workspace-grid-stacked .saved,
+  .workspace-grid-stacked .cloud-save-status{
+    font-size:10px;
+  }
+  .workspace-grid-stacked .cloud-alert,
+  .workspace-grid-stacked .cloud-progress{
+    padding:4px 14px;
+    font-size:10px;
+    line-height:1.35;
+  }
+  .workspace-grid-stacked .editor-toolbar{
+    min-height:38px;
+    padding:2px 14px 4px;
+  }
+  .workspace-grid-stacked .runtime-target{
+    gap:6px;
+    font-size:11px;
+  }
+  .workspace-grid-stacked .runtime-target i{
+    font-size:9px;
+    padding:2px 5px;
+  }
+  .workspace-grid-stacked .editor-toolbar button{
+    min-height:32px;
+    padding:6px 8px;
+    font-size:11px;
+  }
+}
+
+@media(min-width:1440px){
+  .workspace-grid-stacked .simulation-body{
+    grid-template-columns:minmax(0,1fr) minmax(244px,264px);
+  }
+}
+
+
+/* BITIRO 7.14 — compact telemetry dashboard + comfortable 3D stage */
+@media(min-width:1024px){
+  .workspace-grid-stacked .simulation-body{
+    grid-template-columns:minmax(0,1fr) minmax(268px,286px);
+  }
+  .workspace-grid-stacked .viewport-column{
+    min-height:575px;
+  }
+  .workspace-grid-stacked .telemetry-panel{
+    overflow:auto;
+    scrollbar-gutter:stable;
+  }
+  .workspace-grid-stacked .robot-hud{
+    padding:10px 12px 12px;
+  }
+  .workspace-grid-stacked .hud-heading{
+    padding-bottom:9px;
+  }
+  .workspace-grid-stacked .hud-heading strong{
+    font-size:13px;
+  }
+  .workspace-grid-stacked .hud-kicker,
+  .workspace-grid-stacked .status-badge{
+    font-size:9px;
+  }
+  .workspace-grid-stacked .hud-section{
+    padding:8px 0;
+  }
+  .workspace-grid-stacked .hud-label{
+    margin-bottom:6px;
+  }
+  .workspace-grid-stacked .hud-label>span{
+    font-size:9px;
+  }
+  .workspace-grid-stacked .hud-label code{
+    font-size:8px;
+  }
+  .workspace-grid-stacked .line-values{
+    border-radius:6px;
+    overflow:hidden;
+  }
+  .workspace-grid-stacked .sensor-value{
+    min-height:58px;
+    justify-content:center;
+  }
+  .workspace-grid-stacked .sensor-reading{
+    font-size:18px;
+  }
+  .workspace-grid-stacked .hud-control-grid{
+    display:grid;
+    grid-template-columns:minmax(0,.92fr) minmax(0,1.08fr);
+    gap:8px;
+    padding:8px 0;
+    border-top:1px solid var(--border-default);
+  }
+  .workspace-grid-stacked .hud-control-grid .hud-section{
+    padding:9px;
+    border:1px solid var(--border-default);
+    border-radius:8px;
+    background:var(--surface-panel-soft);
+    min-width:0;
+  }
+  .workspace-grid-stacked .hud-control-grid .hud-label{
+    margin-bottom:7px;
+  }
+  .workspace-grid-stacked .hud-control-grid .sonar-reading{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    grid-template-areas:'icon value' 'caption caption';
+    gap:2px 7px;
+    align-items:center;
+  }
+  .workspace-grid-stacked .hud-control-grid .sonar-reading svg{grid-area:icon;}
+  .workspace-grid-stacked .hud-control-grid .sonar-reading strong{
+    grid-area:value;
+    font-size:20px;
+  }
+  .workspace-grid-stacked .hud-control-grid .sonar-reading span{
+    grid-area:caption;
+    margin:3px 0 0;
+    font-size:9px;
+  }
+  .workspace-grid-stacked .hud-control-grid .button-sensor{
+    min-height:36px;
+    padding:6px 8px;
+    border-radius:6px;
+    background:var(--surface-panel-raised);
+  }
+  .workspace-grid-stacked .hud-control-grid .button-sensor strong{
+    font:9px var(--font-mono);
+  }
+  .workspace-grid-stacked .hud-control-grid .servo-state{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    margin-top:6px;
+    font-size:8.5px;
+  }
+  .workspace-grid-stacked .hud-control-grid .servo-state strong{
+    text-align:right;
+    white-space:nowrap;
+    font-size:8.5px;
+  }
+  .workspace-grid-stacked .ir-section{
+    padding-top:8px;
+  }
+  .workspace-grid-stacked .ir-buttons{
+    gap:6px;
+  }
+  .workspace-grid-stacked .ir-buttons button{
+    min-height:42px;
+    border-radius:7px;
+    padding:6px 7px;
+  }
+  .workspace-grid-stacked .lcd-section{
+    padding-bottom:4px;
+  }
+  .workspace-grid-stacked .lcd{
+    min-height:46px;
+    border-radius:6px;
+  }
+}
+
+@media(min-width:1440px){
+  .workspace-grid-stacked .simulation-body{
+    grid-template-columns:minmax(0,1fr) 286px;
+  }
+}
+
+
+/* BITIRO 7.16 — guided line-sensor calibration */
+.calibration-steps{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:5px;
+  margin:9px 0 8px;
+}
+.calibration-steps span{
+  display:flex;
+  align-items:center;
+  gap:5px;
+  min-width:0;
+  padding:6px 7px;
+  border:1px solid var(--border-default);
+  border-radius:6px;
+  background:var(--surface-panel-raised);
+  color:var(--text-secondary);
+  font-size:9px;
+  line-height:1.2;
+  white-space:nowrap;
+}
+.calibration-steps b{
+  display:grid;
+  place-items:center;
+  width:17px;
+  height:17px;
+  flex:0 0 17px;
+  border-radius:50%;
+  background:var(--surface-panel-muted);
+  color:var(--text-secondary);
+  font:600 9px var(--font-mono);
+}
+.calibration-steps span.active{
+  border-color:var(--action-primary);
+  background:var(--surface-selected);
+  color:var(--text-primary);
+}
+.calibration-steps span.active b{
+  background:var(--action-primary);
+  color:var(--text-on-action);
+}
+.calibration-steps span.done{
+  border-color:var(--status-success-border);
+  color:var(--status-success-strong);
+}
+.calibration-steps span.done b{
+  background:var(--status-success-soft);
+  color:var(--status-success-strong);
+}
+.calibration-intro span{
+  display:grid;
+  gap:2px;
+}
+.calibration-intro strong{
+  color:var(--text-primary);
+  font-weight:600;
+}
+.calibration-intro small{
+  color:var(--text-secondary);
+  font-size:10px;
+  line-height:1.4;
+}
+.calibration-explain{
+  display:grid;
+  gap:2px;
+  margin:7px 0 8px;
+  padding:7px 8px;
+  border:1px solid var(--border-default);
+  border-radius:5px;
+  background:var(--surface-panel-soft);
+  font-size:10px;
+  line-height:1.4;
+}
+.calibration-explain strong{color:var(--text-primary);}
+.calibration-explain span{color:var(--text-secondary);}
+
+@media(min-width:768px){
+  .is-calibrating .simulation-body{
+    grid-template-columns:minmax(0,1fr) minmax(300px,324px);
+  }
+  .calibration-panel{
+    padding:10px 12px 12px;
+  }
+  .calibration-heading{
+    gap:7px;
+  }
+  .calibration-icon{
+    width:31px;
+    height:31px;
+  }
+  .calibration-heading h2{
+    font-size:17px;
+    margin-top:2px;
+  }
+  .calibration-heading .eyebrow{
+    font-size:9px;
+  }
+  .calibration-intro{
+    margin:7px 0!important;
+    font-size:10px;
+    line-height:1.4;
+  }
+  .calibration-live{
+    padding:7px 8px;
+    margin-bottom:6px;
+  }
+  .calibration-live strong{
+    font-size:23px;
+  }
+  .calibration-live span,
+  .calibration-live small{
+    font-size:9px;
+  }
+  .calibration-panel table{
+    margin:6px 0;
+    font-size:10px;
+  }
+  .calibration-panel thead th{
+    font-size:8px;
+  }
+  .calibration-panel th,
+  .calibration-panel td{
+    padding:4px 2px;
+  }
+  .calibration-panel th button{
+    min-height:34px;
+    font-size:10px;
+  }
+  .calibration-panel input{
+    width:50px;
+    min-height:36px;
+    padding:4px 3px;
+    font-size:10px;
+  }
+  .calibration-panel caption{
+    font-size:9px;
+    padding-top:6px;
+  }
+  .calibration-actions{
+    gap:6px;
+    margin:7px 0;
+  }
+  .calibration-actions button{
+    min-height:36px;
+    padding:6px;
+    font-size:10px;
+  }
+  .save-thresholds{
+    min-height:40px;
+    font-size:11px;
+  }
+  .calibration-message{
+    margin-top:6px;
+    min-height:0;
+    font-size:9px;
+    line-height:1.4;
+  }
+  .institution-shell.theme-mustakis .calibration-toggle.active{
+    background:#fff;
+    border-color:rgba(255,255,255,.75);
+    color:var(--mustakis-navy);
+  }
+  .institution-shell.theme-mustakis .calibration-toggle.active:hover{
+    background:var(--surface-panel-muted);
+    color:var(--mustakis-navy);
+  }
+}
+
+@media(min-width:1600px){
+  .is-calibrating .simulation-body{
+    grid-template-columns:minmax(0,1fr) 330px;
+  }
+}
+
+/* BITIRO 7.17 — pedagogical threshold workflow */
+.calibration-steps.calibration-steps-five{
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:4px;
+}
+.calibration-steps-five span{
+  justify-content:center;
+  flex-direction:column;
+  gap:3px;
+  padding:5px 2px;
+  text-align:center;
+  white-space:normal;
+  font-size:8px;
+}
+.calibration-steps-five b{
+  width:16px;
+  height:16px;
+  flex-basis:16px;
+  font-size:8px;
+}
+.threshold-learning{
+  display:grid;
+  gap:7px;
+  margin:8px 0;
+  padding:9px;
+  border:1px solid var(--border-default);
+  border-radius:7px;
+  background:var(--surface-panel-soft);
+}
+.threshold-learning-heading{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  color:var(--text-primary);
+}
+.threshold-learning-heading>span{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  font-size:10px;
+  font-weight:600;
+}
+.threshold-learning-heading small{
+  font:9px var(--font-mono);
+  color:var(--text-secondary);
+}
+.threshold-learning>p{
+  font-size:9.5px;
+  line-height:1.45;
+  color:var(--text-secondary);
+}
+.threshold-scale-labels{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  font-size:8.5px;
+  color:var(--text-secondary);
+}
+.threshold-scale-labels b{
+  color:var(--text-primary);
+  font-family:var(--font-mono);
+}
+.threshold-slider{
+  width:100%!important;
+  min-height:24px!important;
+  height:24px;
+  padding:0!important;
+  border:0!important;
+  background:transparent!important;
+  accent-color:var(--action-primary);
+  cursor:pointer;
+}
+.threshold-choice{
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:center;
+  gap:2px 8px;
+  padding:6px 8px;
+  border:1px solid var(--border-default);
+  border-radius:5px;
+  background:var(--surface-panel-raised);
+}
+.threshold-choice>span{
+  font-size:8.5px;
+  color:var(--text-secondary);
+}
+.threshold-choice>strong{
+  grid-row:1/3;
+  grid-column:2;
+  font:600 18px var(--font-mono);
+  color:var(--action-primary-text);
+}
+.threshold-choice b{
+  font-family:var(--font-mono);
+  color:var(--text-primary);
+}
+.threshold-recommended,.threshold-check{
+  width:100%;
+  min-height:33px;
+  padding:6px 8px;
+  justify-content:flex-start;
+  font-size:9.5px;
+  border-radius:5px;
+}
+.threshold-recommended{
+  background:var(--surface-panel-raised);
+}
+.threshold-check{
+  background:var(--mustakis-navy,var(--action-primary));
+  border-color:var(--mustakis-navy,var(--action-primary));
+  color:var(--text-on-action);
+  font-weight:600;
+}
+.threshold-check:hover{
+  background:var(--action-primary-hover);
+  color:var(--text-on-action);
+}
+.threshold-rule{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:5px;
+}
+.threshold-rule span{
+  padding:6px;
+  border:1px solid var(--border-default);
+  border-radius:5px;
+  background:var(--surface-panel-raised);
+  font-size:8.5px;
+  line-height:1.35;
+  color:var(--text-secondary);
+}
+.threshold-rule b{
+  font-family:var(--font-mono);
+  color:var(--text-primary);
+}
+.threshold-check-result{
+  display:flex;
+  align-items:flex-start;
+  gap:6px;
+  padding:7px 8px;
+  border-radius:5px;
+  font-size:9px;
+  line-height:1.4;
+}
+.threshold-check-result.pass{
+  color:var(--status-success-strong);
+  background:var(--status-success-soft);
+  border:1px solid var(--status-success-border);
+}
+.threshold-check-result.fail{
+  color:var(--status-danger-strong);
+  background:var(--status-danger-soft);
+  border:1px solid var(--status-danger-border);
+}
+.threshold-check-result>span:first-child{
+  display:grid;
+  place-items:center;
+  width:14px;
+  height:14px;
+  flex:0 0 14px;
+  border:1px solid currentColor;
+  border-radius:50%;
+  font-weight:700;
+}
+.threshold-code{
+  display:grid;
+  gap:6px;
+  margin:8px 0;
+  padding:8px;
+  border:1px solid var(--border-default);
+  border-left:3px solid var(--action-primary);
+  border-radius:5px;
+  background:var(--surface-panel-raised);
+}
+.threshold-code>div{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:10px;
+  color:var(--text-primary);
+}
+.threshold-code pre{
+  margin:0;
+  padding:7px 8px;
+  border-radius:4px;
+  background:var(--brand-ink);
+  color:var(--instrument-text);
+  font:8.5px/1.5 var(--font-mono);
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+.threshold-code small{
+  font-size:8.5px;
+  line-height:1.4;
+  color:var(--text-secondary);
+}
+
+@media(min-width:768px){
+  .is-calibrating .simulation-body{
+    grid-template-columns:minmax(0,1fr) minmax(320px,344px);
+  }
+  .calibration-panel{
+    padding-bottom:14px;
+  }
+}
+@media(min-width:1600px){
+  .is-calibrating .simulation-body{
+    grid-template-columns:minmax(0,1fr) 348px;
+  }
+}
+@media(max-width:767px){
+  .calibration-steps-five span{
+    font-size:9px;
+  }
+  .threshold-learning{
+    padding:10px;
+  }
+  .threshold-learning>p,
+  .threshold-check-result,
+  .threshold-code small{
+    font-size:10px;
+  }
+  .threshold-recommended,.threshold-check{
+    min-height:42px;
+    font-size:11px;
+  }
+  .threshold-code pre{
+    font-size:10px;
+  }
+}
+
+
+/* BITIRO 7.18 — spatial calibration pedagogy + automatic return */
+.calibration-variation-note{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:8px;margin:0 0 10px;padding:8px 9px;border:1px solid var(--status-info-border);border-radius:7px;background:var(--status-info-soft);color:var(--text-secondary);}
+.calibration-variation-note>svg{color:var(--brand-blue);margin-top:1px;}
+.calibration-variation-note>div{display:grid;gap:2px;}
+.calibration-variation-note strong{font-size:9.5px;color:var(--text-primary);}
+.calibration-variation-note span{font-size:8.8px;line-height:1.4;}
+.calibration-variation-note>b{font:600 9px var(--font-mono);white-space:nowrap;color:var(--status-info-strong);}
+.calibration-applied-banner{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--status-success-border);background:var(--status-success-soft);color:var(--status-success-strong);font-size:10px;font-weight:600;flex-shrink:0;}
+@media(max-width:767px){.calibration-variation-note{grid-template-columns:auto minmax(0,1fr);}.calibration-variation-note>b{grid-column:2;}}
+
+/* BITIRO 7.19 — individual line-sensor calibration */
+.calibration-sensor-note{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:8px;margin:-3px 0 10px;padding:8px 9px;border:1px solid color-mix(in srgb,var(--brand-blue) 34%,var(--border-subtle));border-radius:7px;background:color-mix(in srgb,var(--brand-blue) 7%,var(--surface-raised));color:var(--text-secondary);}
+.calibration-sensor-note>svg{color:var(--brand-blue);margin-top:1px;}
+.calibration-sensor-note>div{display:grid;gap:2px;}
+.calibration-sensor-note strong{font-size:9.5px;color:var(--text-primary);}
+.calibration-sensor-note span{font-size:8.8px;line-height:1.4;}
+.calibration-sensor-note>b{font:600 9px var(--font-mono);white-space:nowrap;color:var(--brand-blue);}
+.threshold-learning>p strong{color:var(--text-primary);}
+@media(max-width:767px){.calibration-sensor-note{grid-template-columns:auto minmax(0,1fr);}.calibration-sensor-note>b{grid-column:2;}}
+
+/* BITIRO 7.20 — calibration focus mode
+   When calibration is active, hide programming chrome and give the simulator
+   full prominence so the student can concentrate on sensing and thresholds. */
+.workspace.is-calibration-workspace .workspace-grid,
+.workspace.is-calibration-workspace .workspace-grid-stacked{
+  grid-template-columns:minmax(0,1fr);
+}
+.workspace.is-calibration-workspace .editor-column{
+  display:none;
+}
+.workspace.is-calibration-workspace .workspace-tabs button[disabled]{
+  opacity:.45;
+  cursor:not-allowed;
+}
+.workspace.is-calibration-workspace .workspace-focus-button{
+  display:none;
+}
+@media(min-width:1024px){
+  .workspace.is-calibration-workspace .simulation-column{
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .workspace.is-calibration-workspace .simulation-panel{
+    height:clamp(860px,85dvh,1100px);
+    min-height:860px;
+    flex:1;
+  }
+  .workspace.is-calibration-workspace .simulation-body{
+    grid-template-columns:minmax(0,1fr) 330px;
+  }
+  .workspace.is-calibration-workspace .viewport-column{
+    min-height:660px;
+  }
+  .workspace.is-calibration-workspace .calibration-panel{
+    border-left:1px solid var(--border-default);
+  }
+}
+@media(min-width:1440px){
+  .workspace.is-calibration-workspace .simulation-body{
+    grid-template-columns:minmax(0,1fr) 356px;
+  }
+}
+@media(max-width:1023px){
+  .workspace.is-calibration-workspace .workspace-grid{display:block;}
+}
+
+/* BITIRO 7.21 — calibration simplification + clearer learning panel */
+.simulation-panel.is-calibrating .simulation-status{display:none;}
+.simulation-panel.is-calibrating .runtime-bar,
+.simulation-panel.is-calibrating .runtime-actions,
+.simulation-panel.is-calibrating .runtime-readout{display:none;}
+
+.calibration-panel{
+  background:linear-gradient(180deg,color-mix(in srgb,var(--surface-panel) 94%,white),var(--surface-panel));
+}
+.calibration-heading{
+  margin-bottom:8px;
+}
+.calibration-heading h2{
+  letter-spacing:-0.02em;
+}
+.calibration-intro,
+.threshold-learning,
+.threshold-code{
+  border-radius:12px;
+  border:1px solid color-mix(in srgb,var(--border-subtle) 82%,var(--brand-blue));
+  background:color-mix(in srgb,var(--surface-raised) 92%,white);
+  box-shadow:0 8px 18px color-mix(in srgb,var(--alpha-ink-08) 60%,transparent);
+}
+.calibration-intro{
+  padding:10px 11px;
+}
+.calibration-variation-note,
+.calibration-sensor-note{
+  border-radius:12px;
+  padding:10px 11px;
+}
+.calibration-live{
+  border-radius:12px;
+  border-left-width:3px;
+  padding:10px 12px;
+}
+.calibration-panel table{
+  border:1px solid var(--border-subtle);
+  border-radius:12px;
+  overflow:hidden;
+  background:color-mix(in srgb,var(--surface-raised) 96%,white);
+}
+.calibration-panel thead th{
+  background:color-mix(in srgb,var(--brand-blue) 3%,var(--surface-panel));
+}
+.calibration-panel tbody tr.selected{
+  background:color-mix(in srgb,var(--action-primary-soft) 65%,white);
+}
+.calibration-actions.calibration-actions-simple{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+}
+.calibration-actions.calibration-actions-simple button{
+  min-height:42px;
+}
+.save-thresholds{
+  min-height:48px;
+  font-size:12px;
+}
+.calibration-message{
+  padding-inline:2px;
+}
+
+/* Editor mission panel polish */
+.editor-mission{
+  background:linear-gradient(180deg,var(--brand-ink-2),color-mix(in srgb,var(--brand-ink-2) 88%,black));
+}
+.editor-mission summary{
+  align-items:center;
+  gap:10px;
+}
+.editor-mission .mission-count{
+  margin-left:auto;
+  margin-right:4px;
+}
+.editor-mission-body{
+  display:grid;
+  gap:12px;
+}
+.editor-mission .mission-objectives{
+  list-style:none;
+  padding:0;
+  margin:0;
+  display:grid;
+  gap:8px;
+}
+.editor-mission .mission-objectives li{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:10px;
+  align-items:flex-start;
+  padding:9px 10px;
+  border:1px solid color-mix(in srgb,var(--border-instrument-strong) 80%,var(--brand-blue));
+  border-radius:10px;
+  background:color-mix(in srgb,var(--brand-ink) 82%,var(--brand-blue));
+  color:var(--lcd-bg);
+}
+.editor-mission .mission-step{
+  width:22px;
+  height:22px;
+  border-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font:700 11px var(--font-sans);
+  background:var(--brand-gradient-horizontal);
+  color:white;
+  box-shadow:0 0 0 1px var(--alpha-white-16);
+}
+.editor-mission .mission-help{
+  display:grid;
+  gap:10px;
+  padding:10px;
+  border:1px solid var(--border-instrument-strong);
+  border-radius:10px;
+  background:color-mix(in srgb,var(--brand-ink) 88%,black);
+}
+.editor-mission .mission-guide-link{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  width:max-content;
+  font-weight:600;
+}
+.editor-mission .mission-hint{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin:0;
+}
+.editor-mission .mission-hint span{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:5px 8px;
+  border-radius:999px;
+  background:var(--instrument-line-strong);
+  color:var(--instrument-text-soft);
+}
+.editor-mission .mission-hint kbd{
+  font:600 10px var(--font-mono);
+  padding:2px 5px;
+  border-radius:6px;
+  border:1px solid var(--border-instrument-strong);
+  background:var(--brand-ink-2);
+  color:var(--status-info-soft);
+}
+
+@media(max-width:767px){
+  .editor-mission .mission-hint{flex-direction:column;}
+  .calibration-actions.calibration-actions-simple{grid-template-columns:1fr;}
+}
+
+/* BITIRO 7.22 — final calibration refinement */
+.calibration-learning-note{
+  display:grid;
+  gap:8px;
+  margin:0 0 10px;
+  padding:10px 11px;
+  border:1px solid color-mix(in srgb,var(--brand-blue) 28%,var(--border-subtle));
+  border-radius:12px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--brand-blue) 7%,white),color-mix(in srgb,var(--surface-panel) 94%,white));
+}
+.calibration-learning-head{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  gap:7px;
+  align-items:center;
+  color:var(--text-primary);
+}
+.calibration-learning-head>svg{color:var(--brand-blue);}
+.calibration-learning-head>strong{font-size:9.7px;}
+.calibration-learning-head>b{
+  font:600 9px var(--font-mono);
+  color:var(--brand-blue);
+  white-space:nowrap;
+}
+.calibration-learning-points{
+  display:grid;
+  gap:6px;
+  padding-left:21px;
+}
+.calibration-learning-points>div{
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr);
+  gap:7px;
+  align-items:start;
+}
+.calibration-learning-points svg{color:var(--brand-blue);margin-top:2px;}
+.calibration-learning-points p{
+  margin:0;
+  font-size:8.8px;
+  line-height:1.42;
+  color:var(--text-secondary);
+}
+.calibration-learning-points strong{color:var(--text-primary);}
+.learning-dot{
+  width:6px;
+  height:6px;
+  margin:5px 3px 0;
+  border-radius:50%;
+  background:var(--status-info-border);
+}
+.previous-threshold{
+  display:inline-flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:1px;
+  font-size:7.8px;
+  line-height:1.15;
+  color:var(--text-soft);
+  white-space:nowrap;
+}
+.previous-threshold b{
+  font:600 9px var(--font-mono);
+  color:var(--text-secondary);
+}
+.calibration-panel .calibration-caption{
+  gap:6px;
+}
+.calibration-panel .calibration-caption>span:first-child{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.calibration-panel .calibration-pending{
+  white-space:nowrap;
+}
+.simulation-panel.is-calibrating .arena-note{
+  padding-block:7px;
+  font-size:9px;
+  letter-spacing:.01em;
+}
+
+@media(max-width:767px){
+  .calibration-learning-head{grid-template-columns:auto minmax(0,1fr);}
+  .calibration-learning-head>b{grid-column:2;}
+  .calibration-learning-points{padding-left:0;}
+}
+
+/* BITIRO 7.25 — S02 scenario guidance */
+.s02-ir-guide{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:2px 8px;
+  align-items:center;
+  margin:0 0 8px;
+  padding:7px 8px;
+  border:1px solid color-mix(in srgb,var(--brand-blue) 24%,var(--border-default));
+  border-radius:7px;
+  background:color-mix(in srgb,var(--brand-blue) 5%,var(--surface-panel-raised));
+}
+.s02-ir-guide span{font-size:8.5px;color:var(--text-secondary);}
+.s02-ir-guide strong{font:600 10px var(--font-mono);color:var(--action-primary-text);white-space:nowrap;}
+.s02-ir-guide small{grid-column:1/-1;font-size:8px;color:var(--text-soft);line-height:1.35;}
+
+/* BITIRO 7.26 — loaded program / replay workflow */
+.program-load-state,
+.runtime-loaded{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  white-space:nowrap;
+  border-radius:999px;
+  font:600 9px var(--font-sans);
+}
+.program-load-state{
+  padding:4px 7px;
+  border:1px solid var(--border-instrument-strong);
+  background:var(--brand-ink-2);
+  color:var(--instrument-text-muted);
+}
+.program-load-state.is-loaded{
+  border-color:color-mix(in srgb,var(--status-success-border) 50%,var(--border-instrument-strong));
+  color:var(--status-success-border);
+}
+.program-load-state.has-changes{
+  border-color:color-mix(in srgb,var(--status-warning-border) 55%,var(--border-instrument-strong));
+  color:var(--status-warning-border);
+}
+.program-load-state.is-empty{opacity:.72;}
+.runtime-loaded{
+  padding:3px 7px;
+  border:1px solid var(--status-success-border);
+  background:var(--status-success-soft);
+  color:var(--status-success-strong);
+}
+.runtime-actions button:disabled{
+  cursor:not-allowed;
+}
+@media(max-width:767px){
+  .program-load-state{display:none;}
+  .runtime-loaded{font-size:8.5px;}
+}
+
+/* BITIRO 7.27 — source loading and trial execution are separate actions */
+.runtime-actions .run-loaded-button{
+  border-color:color-mix(in srgb,var(--status-success-border) 48%,var(--border-default));
+  background:var(--status-success-soft);
+  color:var(--status-success-strong);
+  font-weight:600;
+}
+.runtime-actions .run-loaded-button:hover{
+  border-color:var(--status-success-border);
+  background:color-mix(in srgb,var(--status-success-soft) 78%,white);
+}
+
+/* BITIRO 7.28 — S02 scenario clarity */
+.s02-ir-guide{
+  transition:border-color var(--motion-hover),background var(--motion-hover);
+}
+.s02-ir-guide.is-pending{
+  border-color:var(--status-warning-border);
+  background:var(--status-warning-soft);
+}
+.s02-ir-guide.is-pending strong{color:var(--status-warning-strong);}
+.s02-ir-guide.is-ready{
+  border-color:var(--status-success-border);
+  background:var(--status-success-soft);
+}
+.s02-ir-guide.is-ready strong{color:var(--status-success-strong);}
+
+/* BITIRO 7.31 — S03 challenge setup */
+.s03-scenario-banner{
+  display:flex;align-items:center;gap:9px;padding:8px 14px;
+  background:color-mix(in srgb,var(--action-primary-soft) 55%,var(--surface-panel));
+  border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);
+  color:var(--text-secondary);font-size:11px;
+}
+.s03-scenario-banner strong{color:var(--text-primary);}
+.s03-scenario-banner button{margin-left:auto;border:0;background:transparent;color:var(--action-primary-text);font-weight:600;cursor:pointer;}
+.s03-scenario-panel{
+  min-width:0;padding:16px 16px 14px;overflow:auto;background:var(--surface-panel);
+  border-left:1px solid var(--border-subtle);display:flex;flex-direction:column;gap:12px;
+}
+.s03-scenario-heading h2{margin:3px 0 7px;font-size:18px;color:var(--brand-ink);letter-spacing:-.02em;}
+.s03-scenario-heading p{margin:0;color:var(--text-secondary);font-size:11px;line-height:1.5;}
+.s03-progress-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.s03-progress-grid>div{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:7px;padding:10px;border:1px solid var(--border-subtle);border-radius:10px;background:var(--surface-panel-raised);}
+.s03-progress-grid span{font-size:10px;color:var(--text-secondary);}.s03-progress-grid strong{font:700 11px var(--font-mono);color:var(--brand-ink);}
+.s03-progress-grid .is-complete{border-color:color-mix(in srgb,var(--status-success-strong) 42%,var(--border-subtle));background:color-mix(in srgb,var(--status-success-soft) 25%,white);}
+.s03-toolbox{display:grid;gap:8px;}
+.s03-toolbox button{display:grid;grid-template-columns:auto 1fr;column-gap:9px;row-gap:2px;text-align:left;padding:10px 11px;border:1px solid var(--border-subtle);border-radius:10px;background:var(--surface-panel-raised);color:var(--text-primary);cursor:pointer;}
+.s03-toolbox button svg{grid-row:1/3;align-self:center;color:var(--text-soft);}.s03-toolbox button span{font-weight:600;font-size:11px}.s03-toolbox button small{font-size:9px;color:var(--text-soft)}
+.s03-toolbox button.is-active{border-color:var(--action-primary-text);box-shadow:0 0 0 1px color-mix(in srgb,var(--action-primary-text) 18%,transparent);background:color-mix(in srgb,var(--action-primary-soft) 50%,white);}
+.s03-toolbox button.is-active svg{color:var(--action-primary-text)}
+.s03-placement-note{display:grid;grid-template-columns:auto 1fr;gap:9px;padding:10px;border-radius:10px;background:#EEF5FF;border:1px solid #C8DAF7;color:#244B72;}
+.s03-placement-note p{margin:0;font-size:10px;line-height:1.45}.s03-placement-note svg{margin-top:1px;color:#2C68B7}
+.s03-scenario-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.s03-scenario-actions button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;border:1px solid var(--border-subtle);border-radius:9px;background:var(--surface-panel-raised);font-weight:600;cursor:pointer;}
+.s03-ready{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;border:0;border-radius:9px;background:var(--action-primary);color:white;font-weight:700;cursor:pointer;}
+.s03-ready:disabled{background:var(--surface-panel-muted);color:var(--text-soft);cursor:not-allowed;}
+.s03-scenario-footnote{margin:0;color:var(--text-soft);font-size:9px;line-height:1.45;}
+.scenario-placement-enabled canvas{cursor:crosshair;}
+.s03-guide-note pre{margin:.55rem 0 .85rem;}
+@media(max-width:1023px){.s03-scenario-panel{border-left:0;border-top:1px solid var(--border-subtle)}}
+
+/* BITIRO 7.36 — mentor-only reference solution */
+.mentor-solution{
+  margin:0;
+  border-top:1px solid var(--border-instrument-strong);
+  background:linear-gradient(180deg,#111d32,#0d1728);
+  color:#f4f7fb;
+}
+.mentor-solution>summary{
+  list-style:none;
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  cursor:pointer;
+  padding:12px 16px;
+  user-select:none;
+}
+.mentor-solution>summary::-webkit-details-marker{display:none;}
+.mentor-solution>summary>span:nth-child(2){display:grid;gap:2px;}
+.mentor-solution>summary strong{font-size:12px;color:#f8fbff;}
+.mentor-solution>summary small{font-size:10px;color:#aebbd0;font-weight:400;}
+.mentor-solution[open]>summary>svg{transform:rotate(180deg);}
+.mentor-solution-icon{
+  width:30px;height:30px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;
+  background:rgba(111,139,255,.13);border:1px solid rgba(143,164,255,.24);color:#b7c8ff;
+}
+.mentor-solution-body{padding:0 16px 16px;display:grid;gap:12px;}
+.mentor-solution-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding-top:4px;}
+.mentor-solution-heading h3{margin:3px 0 4px;font-size:15px;color:#fff;}
+.mentor-solution-heading p{margin:0;max-width:680px;font-size:11px;line-height:1.5;color:#b9c5d8;}
+.mentor-solution-heading .eyebrow{font-size:9px;color:#91a9ff;}
+.mentor-solution-actions{display:flex;gap:8px;flex:0 0 auto;}
+.mentor-solution-actions button{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:0 11px;border-radius:8px;}
+.mentor-solution-body pre{
+  margin:0;max-height:360px;overflow:auto;padding:14px 16px;border-radius:10px;
+  border:1px solid rgba(255,255,255,.10);background:#0a1019;color:#dbe6f4;
+  font:11px/1.65 "IBM Plex Mono",monospace;white-space:pre;
+}
+.mentor-solution-warning{margin:0;font-size:9.5px;color:#8e9caf;}
+@media(max-width:760px){
+  .mentor-solution-heading{align-items:stretch;flex-direction:column;}
+  .mentor-solution-actions{width:100%;}
+  .mentor-solution-actions button{flex:1;justify-content:center;}
+}
+
+/* BITIRO 7.38 — simpler run/replay language for students */
+.runtime-actions .run-loaded-button{
+  order:-2;
+  font-weight:700;
+}
+.runtime-actions .reset-scene-button{
+  order:-1;
+}
+.program-load-state.is-loaded::before,
+.program-load-state.has-changes::before,
+.program-load-state.is-empty::before{
+  content:'';
+  width:6px;
+  height:6px;
+  border-radius:999px;
+  display:inline-block;
+  margin-right:5px;
+  background:currentColor;
+  opacity:.72;
+}
+.editor-bottom-bar .execute-button{
+  min-width:150px;
+}
+
+/* BITIRO 7.40 — stable calibration viewport
+   Calibration must show the whole plotter without growing with the pedagogical
+   panel. Keep the simulator tied to the visible viewport and let only the
+   calibration inspector scroll. */
+@media(min-width:1024px){
+  .workspace.is-calibration-workspace .simulation-panel{
+    height:clamp(640px,calc(100dvh - 150px),900px);
+    min-height:640px;
+    max-height:900px;
+    flex:none;
+  }
+  .workspace.is-calibration-workspace .simulation-body{
+    min-height:0;
+    overflow:hidden;
+  }
+  .workspace.is-calibration-workspace .viewport-column{
+    min-height:0;
+    height:auto;
+    overflow:hidden;
+  }
+  .workspace.is-calibration-workspace .arena{
+    min-height:0;
+    height:100%;
+  }
+  .workspace.is-calibration-workspace .calibration-panel{
+    min-height:0;
+    max-height:100%;
+    overflow:auto;
+  }
+}

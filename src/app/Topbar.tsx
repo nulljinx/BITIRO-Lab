@@ -1,0 +1,17 @@
+import {Link,NavLink} from 'react-router-dom';
+import {BookOpen,ChevronRight,UserRound,Building2,UsersRound,UserPlus} from 'lucide-react';
+import {Brand} from '../components/Brand';
+import {useAuth} from '../features/auth/AuthProvider';
+import type {SessionDefinition} from '../content/sessions';
+import type {WorkspaceSummary} from '../features/workspaces/workspace-types';
+import {workspacePath} from '../features/workspaces/workspace-paths';
+
+export function Topbar({session,workspace,onGuide}:{session?:SessionDefinition;workspace?:WorkspaceSummary;onGuide:()=>void}) {
+  const {status,profile,membership}=useAuth();
+  const authenticated=status==='authenticated';
+  const mustakis=workspace?.organization_id==='mustakis';
+  return <header className={`topbar ${session?'topbar-lab':''} ${mustakis?'topbar-mustakis':''}`}><Brand/>
+    {session?<nav className={`lab-breadcrumbs ${mustakis?'institution-breadcrumbs':''}`} aria-label="Ruta de navegación"><Link to="/espacios">Mis espacios</Link><ChevronRight size={14}/>{workspace&&<><Link to={workspacePath(workspace)}>{mustakis?'Fundación Mustakis':workspace.organization_name}</Link><ChevronRight size={14}/></>}<span>{session.id.toUpperCase()}</span></nav>:workspace?<nav className={`workspace-breadcrumbs ${mustakis?'institution-breadcrumbs':''}`} aria-label="Ruta de navegación"><Link to="/espacios">Mis espacios</Link><ChevronRight size={14}/><span>{mustakis?'Fundación Mustakis':workspace.organization_name}</span><ChevronRight size={14}/><span>{workspace.program_name}</span></nav>:<nav className="primary-nav" aria-label="Navegación principal"><NavLink to="/" end>Inicio</NavLink>{authenticated&&<NavLink to="/espacios">Mis espacios</NavLink>}</nav>}
+    <div className="topbar-actions">{workspace&&<span className="workspace-chip"><Building2 size={14}/>{workspace.site_name??workspace.organization_name}</span>}{membership&&membership.role!=='participant'&&!workspace&&<Link className="icon-button team-link" to="/equipo" aria-label="Gestión de plataforma"><UsersRound size={19}/></Link>}{session&&<button className="guide-button" aria-label="Abrir guía y conceptos" onClick={onGuide}><BookOpen size={18}/><span>Guía</span></button>}{authenticated?<Link aria-label="Mi cuenta" className="account-button" to="/cuenta"><UserRound size={17}/><span>{profile?.display_name?.split(' ')[0]||'Mi cuenta'}</span></Link>:<><Link className="header-register" aria-label="Crear cuenta" to="/registro?next=%2Fespacios"><UserPlus size={16}/><span>Crear cuenta</span></Link><Link aria-label="Ingresar" className="login-link" to="/login?next=%2Fespacios"><UserRound size={17}/><span>Ingresar</span></Link></>}</div>
+  </header>;
+}
