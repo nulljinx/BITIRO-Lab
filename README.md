@@ -188,3 +188,14 @@ pnpm exec supabase db push
 ```
 
 La migración solo agrega una RPC de resumen para mentores. No elimina ni reescribe cohortes, códigos o membresías existentes.
+
+
+## Licencia y propiedad intelectual
+
+Este repositorio se encuentra actualmente bajo **derechos reservados** mientras se clarifican
+la titularidad y los permisos necesarios para una eventual publicación o licencia open source.
+Los nombres, logotipos, fotografías, contenidos educativos y demás recursos institucionales de
+Fundación Gabriel & Mary Mustakis y de terceros **no** quedan licenciados por el código del proyecto.
+
+Revisa `LICENSE`, `NOTICE` y `BRAND_AND_CONTENT_LICENSE.md` antes de reutilizar o redistribuir
+material del repositorio.

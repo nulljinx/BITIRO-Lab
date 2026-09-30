@@ -24,6 +24,8 @@ const landingPartnerBrand:Record<string,{logo?:string;short:string}>={
 
 export function LandingPage(){
   const auth=useAuth(),authenticated=auth.status==='authenticated';
+  const renderSite=(site:(typeof initialSites)[number])=>{const brand=landingPartnerBrand[site.partner]??{short:site.partner};return <article className="landing-site-card" key={site.id}><div className={`landing-site-brand ${brand.logo?'has-logo':'is-wordmark'}`}>{brand.logo?<img src={brand.logo} alt={`Identidad de ${site.partner}`}/>:<span aria-hidden="true">{brand.short}</span>}</div><div><strong>{site.name}</strong><span>{site.partner}</span></div></article>;};
+
   return <main id="main" className="landing-page">
     <section className="landing-hero">
       <div className="landing-copy">
@@ -33,33 +35,70 @@ export function LandingPage(){
         <div className="button-row">{authenticated?<Link className="primary" to="/espacios">Ir a mi programa<ArrowRight size={17}/></Link>:<><Link className="primary" to="/registro?next=%2Fespacios">Crear cuenta<ArrowRight size={17}/></Link><Link className="button" to="/login?next=%2Fespacios">Ya tengo cuenta</Link></>}</div>
         <span className="landing-note">Si participas en el programa, tu mentor te entregará el código necesario para vincular tu grupo a la cuenta.</span>
       </div>
-      <figure className="landing-mascot-stage" aria-label="IROH, compañero de aprendizaje de BITIRO Lab">
-        <span className="landing-mascot-halo" aria-hidden="true"/>
-        <img className="landing-mascot-image" src="/brand/iroh/iroh-mustakis-mascot.webp" alt="IROH, robot educativo con polerón azul de Fundación Mustakis" fetchPriority="high"/>
-        <figcaption className="landing-mascot-caption"><span><Sparkles size={15}/>IROH</span><strong>Tu compañero de laboratorio</strong><small>Listo para comprender, programar y probar contigo.</small></figcaption>
-        <span className="landing-mascot-sparks" aria-hidden="true"><i/><i/><i/></span>
+
+      <figure className="landing-mascot-stage" aria-label="IROH explica el ciclo Comprende, Programa y Prueba de BITIRO Lab">
+        <span className="landing-orbit landing-orbit-main" aria-hidden="true"/>
+        <span className="landing-orbit landing-orbit-secondary" aria-hidden="true"/>
+
+        <article className="landing-hero-card is-understand">
+          <span className="landing-hero-card-badge">01</span>
+          <span className="landing-hero-card-icon"><BookOpen size={18}/></span>
+          <span className="landing-hero-card-copy"><strong>Comprende</strong><small>Entiende el desafío</small></span>
+        </article>
+
+        <article className="landing-hero-card is-program">
+          <span className="landing-hero-card-badge">02</span>
+          <span className="landing-hero-card-icon"><Code2 size={18}/></span>
+          <span className="landing-hero-card-copy"><strong>Programa</strong><small>Construye tu solución</small></span>
+        </article>
+
+        <article className="landing-hero-card is-test">
+          <span className="landing-hero-card-badge">03</span>
+          <span className="landing-hero-card-icon"><Play size={18}/></span>
+          <span className="landing-hero-card-copy"><strong>Prueba</strong><small>Observa, ajusta y mejora</small></span>
+        </article>
+
+        <img className="landing-mascot-cutout" src="/brand/iroh/iroh-mustakis-hero-cutout.webp" alt="IROH con polerón azul de Fundación Mustakis" fetchPriority="high"/>
       </figure>
     </section>
 
-    <section className="landing-flow" aria-labelledby="landing-flow-title">
-      <header><span className="eyebrow">Cómo se aprende</span><h2 id="landing-flow-title">Del desafío al movimiento.</h2><p>BITIRO organiza la práctica en un ciclo simple que invita a probar, observar y corregir.</p></header>
-      <div className="landing-flow-grid">
-        <article className="landing-step"><span className="landing-step-number">01</span><span className="landing-step-node" aria-hidden="true"/><BookOpen/><strong>Comprende</strong><small>Identifica el objetivo y lo que debe hacer el IROH.</small></article>
-        <article className="landing-step"><span className="landing-step-number">02</span><span className="landing-step-node" aria-hidden="true"/><Code2/><strong>Programa</strong><small>Construye una solución usando los conceptos de la sesión.</small></article>
-        <article className="landing-step"><span className="landing-step-number">03</span><span className="landing-step-node" aria-hidden="true"/><Play/><strong>Prueba</strong><small>Ejecuta, observa el resultado, ajusta y vuelve a intentar.</small></article>
-      </div>
-    </section>
-
     <section className="landing-institutions">
-      <div><span className="eyebrow">Programa Ciencia y Tecnología</span><h2>Una herramienta para aprender haciendo.</h2><p>El simulador, la guía y los desafíos siguen el contenido del programa de Fundación Mustakis. El foco está en experimentar con el IROH y comprender qué efecto produce cada decisión de programación.</p><div className="landing-learning-points"><span><Code2 size={16}/>Programación aplicada</span><span><Target size={16}/>Desafíos por sesión</span><span><Sparkles size={16}/>Experimentación y mejora</span></div></div>
-      <div className="institution-example"><img className="institution-example-logo" src="/brand/mustakis/mustakis-logo.webp" alt="Fundación Gabriel & Mary Mustakis"/><div><strong>Programa Ciencia y Tecnología</strong><span>Robótica Educativa</span><small>BITIRO Lab acompaña la práctica de las sesiones con simulación, programación y contenidos de apoyo.</small></div></div>
+      <div className="landing-institutions-copy">
+        <span className="eyebrow">Programa Ciencia y Tecnología</span>
+        <h2>Una herramienta para aprender haciendo.</h2>
+        <p>El simulador, la guía y los desafíos siguen el contenido del programa de Fundación Mustakis. El foco está en experimentar con el IROH y comprender qué efecto produce cada decisión de programación.</p>
+        <div className="landing-learning-points"><span><Code2 size={16}/>Programación aplicada</span><span><Target size={16}/>Desafíos por sesión</span><span><Sparkles size={16}/>Experimentación y mejora</span></div>
+      </div>
+
+      <aside className="institution-example" aria-label="Fundación Mustakis, Programa Ciencia y Tecnología">
+        <div className="institution-example-brand">
+          <span className="institution-example-kicker">Fundación Mustakis</span>
+          <img className="institution-example-logo" src="/brand/mustakis/mustakis-logo.webp" alt="Fundación Gabriel & Mary Mustakis"/>
+        </div>
+        <div className="institution-example-copy">
+          <span className="eyebrow">Programa Ciencia y Tecnología</span>
+          <strong>Robótica Educativa</strong>
+          <p>BITIRO Lab acompaña la práctica de cada sesión con simulación, programación y contenidos de apoyo.</p>
+          <span className="institution-example-signature">Comprender · programar · experimentar</span>
+        </div>
+      </aside>
     </section>
 
-    <section className="landing-sites" aria-labelledby="landing-sites-title"><header><span className="eyebrow">Programa CyT</span><h2 id="landing-sites-title">Sedes participantes</h2><p>La experiencia de Robótica Educativa se desarrolla en distintas sedes del programa. BITIRO mantiene una presentación visual uniforme mientras incorporamos los recursos institucionales aprobados.</p></header><div className="landing-sites-grid">{initialSites.map(site=>{const brand=landingPartnerBrand[site.partner]??{short:site.partner};return <article className="landing-site-card" key={site.id}><div className={`landing-site-brand ${brand.logo?'has-logo':'is-wordmark'}`}>{brand.logo?<img src={brand.logo} alt={`Identidad de ${site.partner}`}/>:<span aria-hidden="true">{brand.short}</span>}</div><div><strong>{site.name}</strong><span>{site.partner}</span></div></article>;})}</div><p className="landing-sites-note">Los logotipos adicionales se incorporarán únicamente con archivos institucionales autorizados por cada sede.</p></section>
+    <section className="landing-sites" aria-labelledby="landing-sites-title">
+      <header><span className="eyebrow">Programa CyT</span><h2 id="landing-sites-title">Sedes participantes</h2><p>La experiencia de Robótica Educativa se desarrolla en distintas sedes del programa. BITIRO mantiene una presentación visual uniforme mientras incorporamos los recursos institucionales aprobados.</p></header>
+      <div className="landing-sites-rail" tabIndex={0} aria-label="Sedes participantes. Puedes desplazarte horizontalmente para recorrerlas.">
+        <div className="landing-sites-track">
+          <div className="landing-sites-set">{initialSites.map(renderSite)}</div>
+          <div className="landing-sites-set" aria-hidden="true">{initialSites.map(site=>{const brand=landingPartnerBrand[site.partner]??{short:site.partner};return <article className="landing-site-card" key={`copy-${site.id}`}><div className={`landing-site-brand ${brand.logo?'has-logo':'is-wordmark'}`}>{brand.logo?<img src={brand.logo} alt=""/>:<span>{brand.short}</span>}</div><div><strong>{site.name}</strong><span>{site.partner}</span></div></article>;})}</div>
+        </div>
+      </div>
+      <p className="landing-sites-note">Los logotipos adicionales se incorporarán únicamente con archivos institucionales autorizados por cada sede.</p>
+    </section>
 
     <footer className="landing-footer"><div><strong>BITIRO Lab</strong><span>Fundación Mustakis · Ciencia y Tecnología · Robótica Educativa</span></div><nav aria-label="Enlaces del pie de página"><Link to="/privacidad">Privacidad</Link><Link to="/login?next=%2Fespacios">Ingresar</Link></nav></footer>
   </main>;
 }
+
 export function SpacesPage(){
   const auth=useAuth(),workspaces=useWorkspaces();
   const dialogRef=useRef<HTMLDialogElement>(null);
