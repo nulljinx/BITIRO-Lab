@@ -1,108 +1,212 @@
-import {useEffect,useState} from 'react';
+import {useEffect,useMemo,useState} from 'react';
 import {getStorageScope,scopedStorageKey} from '../code-editor/storage';
-import {Trash2,Save,Home,MousePointer2,ScanLine,CheckCircle2,Lightbulb,ShieldCheck,Code2} from 'lucide-react';
+import {CheckCircle2,Copy,Minus,MousePointer2,Plus,RotateCcw,Save,ScanLine} from 'lucide-react';
 import type {SimulationConnection} from './useSimulation';
 import type {LineThresholds} from '../../simulator/types';
+
 export type Thresholds=LineThresholds;
-type Sample={min:number;max:number;count:number};
-type CheckResult='pass'|'fail'|null;
-const empty=():Sample[]=>Array.from({length:3},()=>({min:Infinity,max:-Infinity,count:0}));
+type Reading={value:number;x:number;y:number};
+type Surface='white'|'black'|'edge';
+
 const key='bitiro-s01-calibration-v1';
+const REQUIRED_READINGS=3;
+const MIN_SAMPLE_DISTANCE_CM=5;
 const WHITE_MAX=150;
 const BLACK_MIN=220;
-export function loadThresholds():Thresholds{try{const value=JSON.parse(localStorage.getItem(scopedStorageKey(key))||'null');if(Array.isArray(value)&&value.length===3&&value.every(n=>Number.isInteger(n)&&n>=0&&n<=1023))return value as Thresholds;}catch{/* Keep default reference when storage is unavailable. */}return [200,200,200];}
+
+export function loadThresholds():Thresholds{
+ try{
+  const value=JSON.parse(localStorage.getItem(scopedStorageKey(key))||'null');
+  if(Array.isArray(value)&&value.length===3&&value.every(n=>Number.isInteger(n)&&n>=0&&n<=1023))return value as Thresholds;
+ }catch{/* Keep default reference when storage is unavailable. */}
+ return [200,200,200];
+}
+
+function surfaceFromReading(value:number):Surface{
+ if(value<=WHITE_MAX)return 'white';
+ if(value>=BLACK_MIN)return 'black';
+ return 'edge';
+}
+function farEnough(readings:Reading[],x:number,y:number){
+ return readings.every(sample=>Math.hypot(sample.x-x,sample.y-y)>=MIN_SAMPLE_DISTANCE_CM);
+}
+
 export function useCalibration(simulation:SimulationConnection,enabled:boolean){
  const [scope]=useState(getStorageScope);
  const initial=loadThresholds();
- const [samples,setSamples]=useState(empty),[thresholds,setThresholds]=useState<Thresholds>(initial),[savedThresholds,setSavedThresholds]=useState<Thresholds>(initial),[edited,setEdited]=useState(false),[message,setMessage]=useState('');
- const [decisionMade,setDecisionMade]=useState(false),[checkResult,setCheckResult]=useState<CheckResult>(null),[saved,setSaved]=useState(false),[sampledZones,setSampledZones]=useState<string[]>([]);
+ const [whiteSamples,setWhiteSamples]=useState<Reading[]>([]),[blackSamples,setBlackSamples]=useState<Reading[]>([]);
+ const [centerThreshold,setCenterThreshold]=useState(initial[1]),[savedThresholds,setSavedThresholds]=useState<Thresholds>(initial);
+ const [decisionMade,setDecisionMade]=useState(false),[testedWhite,setTestedWhite]=useState(false),[testedBlack,setTestedBlack]=useState(false),[saved,setSaved]=useState(false),[message,setMessage]=useState('');
  const {robot}=simulation.snapshot;
+ const current=robot.lineCenter;
+ const whiteReady=whiteSamples.length>=REQUIRED_READINGS,blackReady=blackSamples.length>=REQUIRED_READINGS;
+ const whiteValues=whiteSamples.map(sample=>sample.value),blackValues=blackSamples.map(sample=>sample.value);
+ const whiteMax=whiteReady?Math.max(...whiteValues):null,blackMin=blackReady?Math.min(...blackValues):null;
+ const rangesSeparate=whiteMax!==null&&blackMin!==null&&whiteMax<blackMin;
+ const ready=whiteReady&&blackReady&&rangesSeparate;
+ const thresholds=[savedThresholds[0],centerThreshold,savedThresholds[2]] as Thresholds;
+ const surface=surfaceFromReading(current);
+ const canCaptureWhite=!whiteReady&&surface==='white'&&farEnough(whiteSamples,robot.x,robot.y);
+ const canCaptureBlack=whiteReady&&!blackReady&&surface==='black'&&farEnough(blackSamples,robot.x,robot.y);
+ const checkResult=testedWhite&&testedBlack?'pass':null;
+ const canSave=ready&&decisionMade&&testedWhite&&testedBlack;
+
+ useEffect(()=>{if(simulation.engineState==='ready')simulation.send({type:'set-line-thresholds',values:savedThresholds});},[simulation.engineState,simulation.send,savedThresholds]);
  useEffect(()=>{
   if(!enabled)return;
-  const values=[robot.lineLeft,robot.lineCenter,robot.lineRight];
-  const collectingBlack=samples.every(sample=>Number.isFinite(sample.min)&&sample.min<=WHITE_MAX);
-  const accepted=collectingBlack?values.some(value=>value>=BLACK_MIN):values.some(value=>value<=WHITE_MAX);
-  setSamples(old=>{
-   const whiteComplete=old.every(sample=>Number.isFinite(sample.min)&&sample.min<=WHITE_MAX);
-   if(!whiteComplete){
-    return old.map((sample,index)=>{
-     const value=values[index];
-     if(value>WHITE_MAX)return sample;
-     return {...sample,min:Math.min(sample.min,value),count:sample.count+1};
-    });
-   }
-   return old.map((sample,index)=>{
-    const value=values[index];
-    if(value<BLACK_MIN)return sample;
-    return {...sample,max:Math.max(sample.max,value),count:sample.count+1};
-   });
-  });
-  if(accepted){
-   const height=Math.max(1,simulation.track.physicalHeightCm),zone=robot.y<height/3?'superior':robot.y<height*2/3?'media':'inferior';
-   setSampledZones(old=>old.includes(zone)?old:[...old,zone]);
+  setMessage('');
+ },[enabled]);
+
+ function capture(kind:'white'|'black'){
+  const list=kind==='white'?whiteSamples:blackSamples;
+  const expected=kind;
+  if(surface!==expected){
+   setMessage(surface==='edge'?'El sensor central está sobre el borde. Muévelo completamente al blanco o a la línea negra.':kind==='white'?'Esta lectura parece negra. Mueve el sensor central fuera de la línea.':'Esta lectura parece blanca. Coloca el sensor central sobre la línea negra.');
+   return;
   }
- },[enabled,robot.x,robot.y,robot.heading,robot.lineLeft,robot.lineCenter,robot.lineRight,simulation.track.physicalHeightCm]);
- useEffect(()=>{if(!edited)setThresholds(old=>old.map((n,i)=>samples[i].max-samples[i].min>=30?Math.round((samples[i].min+samples[i].max)/2):n) as Thresholds);},[samples,edited]);
- useEffect(()=>{if(simulation.engineState==='ready')simulation.send({type:'set-line-thresholds',values:savedThresholds});},[simulation.engineState,simulation.send,savedThresholds]);
- const whiteReady=samples.every(sample=>Number.isFinite(sample.min)&&sample.min<=WHITE_MAX);
- const blackReady=whiteReady&&samples.every(sample=>Number.isFinite(sample.max)&&sample.max>=BLACK_MIN);
- const recommended=samples.map((sample,i)=>sample.max-sample.min>=30?Math.round((sample.min+sample.max)/2):thresholds[i]) as Thresholds;
- const ready=blackReady&&samples.every(s=>s.max-s.min>=30)&&thresholds.every(n=>Number.isInteger(n)&&n>=0&&n<=1023);
- const canSave=ready&&decisionMade&&checkResult==='pass';
- function save():Thresholds|null{if(!canSave){setMessage('Antes de guardar, elige un umbral y comprueba que separa correctamente blanco y negro.');return null;}try{localStorage.setItem(scopedStorageKey(key,scope),JSON.stringify(thresholds));const applied=[...thresholds] as Thresholds;setSavedThresholds(applied);simulation.send({type:'set-line-thresholds',values:applied});setSaved(true);setMessage(`Calibración guardada. Izq ${applied[0]} · Centro ${applied[1]} · Der ${applied[2]}.`);return applied;}catch{setMessage('No se pudo guardar. Anota los umbrales para conservarlos.');return null;}}
- function clear(){setSamples(empty());setThresholds([...savedThresholds] as Thresholds);setEdited(false);setDecisionMade(false);setCheckResult(null);setSaved(false);setSampledZones([]);setMessage('Muestras borradas. Empieza buscando una superficie blanca.');}
- function update(i:number,n:number){setEdited(true);setDecisionMade(true);setCheckResult(null);setSaved(false);setMessage('');setThresholds(old=>old.map((v,j)=>i===j?n:v) as Thresholds);}
- function useRecommended(){if(!ready){setMessage('Primero registra blanco y negro en los tres sensores.');return;}setThresholds([...recommended] as Thresholds);setEdited(true);setDecisionMade(true);setCheckResult(null);setSaved(false);setMessage(`BITIRO propone ${recommended[0]}, ${recommended[1]} y ${recommended[2]} porque están aproximadamente a mitad de camino entre blanco y negro. Ahora comprueba la elección.`);}
- function check(){if(!ready){setCheckResult('fail');setMessage('Todavía faltan muestras de blanco y negro para comprobar el umbral.');return;}if(!decisionMade){setCheckResult('fail');setMessage('Elige primero un umbral: puedes modificarlo o usar el valor recomendado.');return;}const separates=thresholds.every((value,i)=>Number.isFinite(value)&&value>samples[i].min&&value<samples[i].max);setCheckResult(separates?'pass':'fail');setSaved(false);setMessage(separates?'¡Bien! Tus umbrales separan las lecturas de blanco y negro. Ahora observa cómo se usan en una condición y guarda la calibración.':'Revisa tu elección: cada umbral debe quedar entre la lectura de blanco y la lectura de negro.');}
- return {samples,thresholds,recommended,savedThresholds,save,clear,update,useRecommended,check,message,ready,canSave,decisionMade,checkResult,saved,sampledZones,whiteReady,blackReady};
+  if(!farEnough(list,robot.x,robot.y)){
+   setMessage('Prueba en otro punto de la pista para comparar una lectura diferente.');
+   return;
+  }
+  const next=[...list,{value:current,x:robot.x,y:robot.y}].slice(0,REQUIRED_READINGS);
+  if(kind==='white'){
+   setWhiteSamples(next);
+   setMessage(next.length===REQUIRED_READINGS?'Blanco listo. Ahora mide la línea negra en tres lugares distintos.':`Lectura blanca ${next.length}/${REQUIRED_READINGS} registrada.`);
+  }else{
+   setBlackSamples(next);
+   if(next.length===REQUIRED_READINGS){
+    setDecisionMade(false);
+    setMessage('Mediciones listas. Ahora calcula un valor que quede entre blanco y negro.');
+   }else setMessage(`Lectura negra ${next.length}/${REQUIRED_READINGS} registrada.`);
+  }
+  setSaved(false);
+ }
+ function update(value:number){
+  if(!Number.isFinite(value)){setMessage('Escribe un número para usarlo como umbral.');return;}
+  if(whiteMax===null||blackMin===null||!ready){setMessage('Primero registra tres lecturas blancas y tres negras.');return;}
+  const rounded=Math.round(value);
+  if(rounded<=whiteMax||rounded>=blackMin){setMessage(`Tu umbral debe ser mayor que ${whiteMax} y menor que ${blackMin}. Vuelve a calcularlo.`);return;}
+  setCenterThreshold(rounded);
+  setDecisionMade(true);setTestedWhite(false);setTestedBlack(false);setSaved(false);setMessage('Umbral elegido. Ahora compruébalo sobre blanco y sobre negro.');
+ }
+ function testCurrent(){
+  if(!ready||!decisionMade){setMessage('Primero termina las mediciones y elige tu umbral.');return;}
+  if(surface==='edge'){setMessage('Estás sobre el borde de la línea. Mueve el sensor central a una zona claramente blanca o negra.');return;}
+  const detected:Surface=current>=centerThreshold?'black':'white';
+  if(detected!==surface){
+   setMessage(`Con umbral ${centerThreshold}, esta lectura se interpreta como ${detected==='black'?'NEGRO':'BLANCO'}. Ajusta el umbral y vuelve a probar.`);
+   return;
+  }
+  if(surface==='white')setTestedWhite(true);else setTestedBlack(true);
+  const otherDone=surface==='white'?testedBlack:testedWhite;
+  setMessage(otherDone?'¡Funciona! El sensor distingue correctamente blanco y negro.':'Bien. Ahora comprueba el otro color.');
+  setSaved(false);
+ }
+ function clear(){
+  setWhiteSamples([]);setBlackSamples([]);setCenterThreshold(savedThresholds[1]);setDecisionMade(false);setTestedWhite(false);setTestedBlack(false);setSaved(false);setMessage('Mediciones reiniciadas. Empieza colocando el sensor central sobre blanco.');
+ }
+ function save():Thresholds|null{
+  if(!canSave){setMessage('Antes de guardar, prueba el umbral sobre una zona blanca y una negra.');return null;}
+  const applied=[savedThresholds[0],centerThreshold,savedThresholds[2]] as Thresholds;
+  try{
+   localStorage.setItem(scopedStorageKey(key,scope),JSON.stringify(applied));
+   setSavedThresholds(applied);simulation.send({type:'set-line-thresholds',values:applied});setSaved(true);setMessage(`Calibración guardada. Usa int umbral = ${centerThreshold}; en tu programa.`);return applied;
+  }catch{setMessage(`No se pudo guardar. Anota este valor: umbral = ${centerThreshold}.`);return null;}
+ }
+ return {whiteSamples,blackSamples,current,surface,centerThreshold,thresholds,savedThresholds,whiteReady,blackReady,whiteMax,blackMin,ready,decisionMade,testedWhite,testedBlack,checkResult,canCaptureWhite,canCaptureBlack,canSave,saved,message,capture,update,testCurrent,clear,save};
 }
-export function CalibrationPanel({simulation,calibration,activeSensor,onSensor,onSaved}:{simulation:SimulationConnection;calibration:ReturnType<typeof useCalibration>;activeSensor:number;onSensor:(index:number)=>void;onSaved:(values:Thresholds)=>void}){
- const {robot}=simulation.snapshot;
- const names=['Izquierdo','Centro','Derecho'];
- const current=[robot.lineLeft,robot.lineCenter,robot.lineRight][activeSensor];
- const readyCount=calibration.samples.filter(sample=>sample.max-sample.min>=30).length;
- const whiteReady=calibration.whiteReady;
- const blackReady=calibration.blackReady;
- const activeStep=!whiteReady?1:!blackReady?2:!calibration.decisionMade?3:calibration.checkResult!=='pass'?4:5;
- const stepText=activeStep===1?'Busca una superficie blanca y mueve los tres sensores por distintas zonas.':activeStep===2?'Bien. Ahora pasa los tres sensores por la línea negra en distintos lugares.':activeStep===3?'Compara las lecturas y elige una frontera para cada sensor.':activeStep===4?'Comprueba si tus tres umbrales separan blanco y negro.':'Observa cómo usar los umbrales en el código y guarda la calibración.';
- const activeSample=calibration.samples[activeSensor];
- const activeReady=activeSample.max-activeSample.min>=30;
- const activeThreshold=calibration.thresholds[activeSensor];
- const sliderMin=activeReady?Math.round(activeSample.min):0,sliderMax=activeReady?Math.round(activeSample.max):1023;
- const sliderValue=Number.isFinite(activeThreshold)?Math.max(sliderMin,Math.min(sliderMax,activeThreshold)):sliderMin;
+
+function SampleDots({values,tone}:{values:Reading[];tone:'white'|'black'}){
+ return <div className={`calibration-samples ${tone}`} aria-label={`${values.length} de ${REQUIRED_READINGS} lecturas registradas`}>
+  {Array.from({length:REQUIRED_READINGS},(_,index)=><span key={index} className={values[index]?'filled':''}>{values[index]?values[index].value:index+1}</span>)}
+ </div>;
+}
+
+export function CalibrationPanel({simulation,calibration,onSaved}:{simulation:SimulationConnection;calibration:ReturnType<typeof useCalibration>;onSaved:(values:Thresholds)=>void}){
+ const activeStep=!calibration.whiteReady?1:!calibration.blackReady?2:!calibration.decisionMade?3:calibration.checkResult!=='pass'?4:5;
  const stepClass=(step:number,done:boolean)=>`${activeStep===step?'active ':''}${done?'done':''}`.trim();
- const pendingLabel=!whiteReady?'Falta medir blanco':!blackReady?'Falta medir negro':'Mediciones listas';
- return <aside className="calibration-panel" aria-label="Calibración de sensores">
-  <div className="calibration-heading"><span className="calibration-icon"><ScanLine size={18}/></span><div><span className="eyebrow">Calibración</span><h2>Aprende a usar el umbral.</h2></div></div>
+ const surfaceLabel=calibration.surface==='white'?'BLANCO':calibration.surface==='black'?'NEGRO':'BORDE';
+ const detectedLabel=calibration.decisionMade?(calibration.current>=calibration.centerThreshold?'NEGRO':'BLANCO'):null;
+ const code=`int umbral = ${calibration.centerThreshold};`;
+ const [copied,setCopied]=useState(false);
+ const [thresholdDraft,setThresholdDraft]=useState('');
+ useEffect(()=>{if(activeStep===3&&!calibration.decisionMade)setThresholdDraft('');},[activeStep,calibration.decisionMade]);
+ const task=useMemo(()=>{
+  if(activeStep===1)return {title:'Mide el blanco',text:'Pon el sensor central sobre una zona blanca. Registra 3 lecturas en lugares distintos.'};
+  if(activeStep===2)return {title:'Mide la línea negra',text:'Ahora coloca el sensor central sobre la línea negra y registra 3 lecturas.'};
+  if(activeStep===3)return {title:'Calcula tu umbral',text:'Usa tus mediciones para calcular un número que quede entre el blanco y el negro.'};
+  if(activeStep===4)return {title:'Comprueba tu elección',text:'Mueve IROH entre blanco y negro y verifica que el sensor reconozca ambos.'};
+  return {title:'Calibración lista',text:'Guarda el valor y úsalo como variable umbral en tu programa de S01.'};
+ },[activeStep]);
+ async function copyCode(){try{await navigator.clipboard.writeText(code);setCopied(true);window.setTimeout(()=>setCopied(false),1500);}catch{/* Clipboard can be unavailable in embedded contexts. */}}
+ return <aside className="calibration-panel calibration-guide" aria-label="Calibración guiada del sensor central">
+  <div className="calibration-heading"><span className="calibration-icon"><ScanLine size={18}/></span><div><span className="eyebrow">Calibración S01</span><h2>Enseña al IROH a distinguir blanco y negro.</h2></div></div>
   <div className="calibration-steps calibration-steps-five" aria-label="Pasos de calibración">
-   <span className={stepClass(1,whiteReady)}><b>1</b>Blanco</span>
-   <span className={stepClass(2,blackReady)}><b>2</b>Negro</span>
-   <span className={stepClass(3,blackReady&&calibration.decisionMade)}><b>3</b>Elegir</span>
-   <span className={stepClass(4,calibration.checkResult==='pass')}><b>4</b>Probar</span>
-   <span className={stepClass(5,calibration.saved)}><b>5</b>Código</span>
+   <span className={stepClass(1,calibration.whiteReady)}><b>{calibration.whiteReady?'✓':'1'}</b>Blanco</span>
+   <span className={stepClass(2,calibration.blackReady)}><b>{calibration.blackReady?'✓':'2'}</b>Negro</span>
+   <span className={stepClass(3,calibration.decisionMade)}><b>{calibration.decisionMade?'✓':'3'}</b>Umbral</span>
+   <span className={stepClass(4,calibration.checkResult==='pass')}><b>{calibration.checkResult==='pass'?'✓':'4'}</b>Probar</span>
+   <span className={stepClass(5,calibration.saved)}><b>{calibration.saved?'✓':'5'}</b>Guardar</span>
   </div>
-  <p id="calibration-instructions" className="calibration-intro"><MousePointer2 size={15}/><span><strong>{stepText}</strong><small>Arrastra el IROH por la pista. Las flechas sirven para ajustes finos.</small></span></p>
-  <div className="calibration-learning-note">
-   <div className="calibration-learning-head"><Lightbulb size={15}/><strong>Antes de elegir el umbral</strong><b>{calibration.sampledZones.length}/3 zonas</b></div>
-   <div className="calibration-learning-points">
-    <div><span className="learning-dot"/><p><strong>La superficie varía.</strong> Papel, impresión y luz pueden cambiar un poco la lectura.</p></div>
-    <div><ScanLine size={13}/><p><strong>Cada sensor es distinto.</strong> Izquierdo, centro y derecho pueden necesitar umbrales diferentes.</p></div>
-   </div>
-  </div>
-  <div className="calibration-live"><span>Lectura activa</span><strong>{current}</strong><small>{names[activeSensor]} · {readyCount}/3 con contraste</small></div>
-  <table><caption><div className="calibration-caption"><span>{readyCount}/3 sensores con contraste.</span><span className={calibration.ready?'calibration-ready':'calibration-pending'}>{calibration.ready?<><CheckCircle2 size={12}/>Listos</>:pendingLabel}</span></div></caption><thead><tr><th scope="col">Sensor</th><th scope="col">Blanco</th><th scope="col">Negro</th><th scope="col">Umbral</th></tr></thead><tbody>{names.map((name,i)=>{const sample=calibration.samples[i],sampleReady=sample.max-sample.min>=30;return <tr key={name} className={`${activeSensor===i?'selected ':''}${sampleReady?'sample-ready':'sample-pending'}`}><th scope="row"><button aria-pressed={activeSensor===i} onClick={()=>onSensor(i)}><i/>{name}</button></th><td>{Number.isFinite(sample.min)?sample.min:'—'}</td><td>{Number.isFinite(sample.max)?sample.max:'—'}</td><td>{sampleReady?<input type="number" min={0} max={1023} aria-label={`Umbral ${name.toLowerCase()}`} value={Number.isNaN(calibration.thresholds[i])?'':calibration.thresholds[i]} onChange={e=>calibration.update(i,e.target.value===''?NaN:Number(e.target.value))}/>:<span className="previous-threshold">Anterior <b>{calibration.savedThresholds[i]}</b></span>}</td></tr>;})}</tbody></table>
-  {calibration.ready&&<section className="threshold-learning" aria-label="Aprender a elegir el umbral">
-   <div className="threshold-learning-heading"><span><Lightbulb size={14}/>3 · Elige la frontera</span><small>{names[activeSensor]}</small></div>
-   <p>El umbral es el número que separa las lecturas que interpretarás como blanco y negro. Estás ajustando <strong>{names[activeSensor]}</strong>; cada sensor puede necesitar un valor distinto.</p>
-   {activeReady&&<><div className="threshold-scale-labels"><span>Blanco <b>{sliderMin}</b></span><span>Negro <b>{sliderMax}</b></span></div><input className="threshold-slider" type="range" min={sliderMin} max={sliderMax} value={sliderValue} aria-label={`Umbral visual ${names[activeSensor].toLowerCase()}`} onChange={e=>calibration.update(activeSensor,Number(e.target.value))}/><div className="threshold-choice"><span>Tu umbral</span><strong>{Number.isFinite(activeThreshold)?activeThreshold:'—'}</strong><span>Sugerido: <b>{calibration.recommended[activeSensor]}</b></span></div></>}
-   <button type="button" className="threshold-recommended" onClick={calibration.useRecommended}><Lightbulb size={14}/>Usar valores recomendados</button>
-   {calibration.decisionMade&&Number.isFinite(activeThreshold)&&<div className="threshold-rule"><span><b>{activeThreshold}</b> o menos → blanco</span><span>más de <b>{activeThreshold}</b> → negro</span></div>}
-   <button type="button" className="threshold-check" onClick={calibration.check}><ShieldCheck size={14}/>Comprobar mi umbral</button>
-   {calibration.checkResult&&<div className={`threshold-check-result ${calibration.checkResult}`} role="status">{calibration.checkResult==='pass'?<><CheckCircle2 size={14}/><span>Funciona: el blanco queda a un lado del umbral y el negro al otro.</span></>:<><span aria-hidden="true">!</span><span>Revisa el valor: debe quedar entre blanco y negro.</span></>}</div>}
+
+  <section id="calibration-instructions" className="calibration-task">
+   <div className="calibration-task-number">{activeStep}</div><div><strong>{task.title}</strong><p>{task.text}</p></div>
+  </section>
+
+  <section className={`calibration-reading is-${calibration.surface}`} aria-live="polite">
+   <div><span>Sensor central</span><small>{calibration.decisionMade?`Con umbral ${calibration.centerThreshold}`:'Lectura actual'}</small></div>
+   <strong>{calibration.current}</strong>
+   <div className="calibration-reading-state"><span>Superficie</span><b>{surfaceLabel}</b>{detectedLabel&&<small>El programa leería: {detectedLabel}</small>}</div>
+  </section>
+
+  {activeStep===1&&<section className="calibration-step-card">
+   <div className="calibration-card-head"><strong>Lecturas sobre blanco</strong><span>{calibration.whiteSamples.length}/{REQUIRED_READINGS}</span></div>
+   <SampleDots values={calibration.whiteSamples} tone="white"/>
+   <p><MousePointer2 size={14}/>Arrastra el IROH fuera de la línea y registra una lectura. Después muévelo a otro lugar blanco.</p>
+   <button className="primary calibration-main-action" disabled={!calibration.canCaptureWhite} onClick={()=>calibration.capture('white')}>Registrar lectura blanca</button>
+   {calibration.surface!=='white'&&<small className="calibration-nudge">El sensor central aún no está completamente sobre blanco.</small>}
   </section>}
-  {calibration.checkResult==='pass'&&<section className="threshold-code"><div><Code2 size={14}/><strong>5 · Úsalos en tu programa</strong></div><pre>{`const int UMBRAL_I = ${calibration.thresholds[0]};\nconst int UMBRAL_C = ${calibration.thresholds[1]};\nconst int UMBRAL_D = ${calibration.thresholds[2]};\n\nbool negroI = leerSensorLineaIzquierdo() > UMBRAL_I;\nbool negroC = leerSensorLineaCentral() > UMBRAL_C;\nbool negroD = leerSensorLineaDerecho() > UMBRAL_D;`}</pre><small>Cada sensor conserva su propia referencia. Una lectura mayor que su umbral se interpreta como negro; la lectura ADC original no cambia.</small></section>}
-  <div className="calibration-footer"><div className="calibration-actions calibration-actions-simple"><button title="Volver a la zona de inicio" onClick={()=>simulation.send({type:'reset'})}><Home size={15}/>Inicio</button><button title="Borrar las muestras registradas" onClick={calibration.clear}><Trash2 size={15}/>Limpiar</button></div>
-  <button className="primary save-thresholds" disabled={!calibration.canSave} onClick={()=>{const saved=calibration.save();if(saved)onSaved(saved);}}><Save size={17}/>Guardar calibración y volver</button>
-  <p className={`calibration-message ${calibration.canSave?'ready':''}`} role="status">{calibration.message||(!whiteReady?'Primero registra blanco con los tres sensores.':!blackReady?'Ahora registra negro con los tres sensores.':!calibration.decisionMade?'Las mediciones están listas. Elige un umbral o usa la recomendación de BITIRO.':calibration.checkResult!=='pass'?'Comprueba tu elección antes de guardar.':'Tu umbral funciona. Observa el ejemplo de código y guarda la calibración.')}</p></div>
+
+  {activeStep===2&&<section className="calibration-step-card">
+   <div className="calibration-card-head"><strong>Lecturas sobre negro</strong><span>{calibration.blackSamples.length}/{REQUIRED_READINGS}</span></div>
+   <SampleDots values={calibration.blackSamples} tone="black"/>
+   <p><MousePointer2 size={14}/>Pon el sensor central sobre la línea negra. Registra y repite en otros dos puntos de la línea.</p>
+   <button className="primary calibration-main-action" disabled={!calibration.canCaptureBlack} onClick={()=>calibration.capture('black')}>Registrar lectura negra</button>
+   {calibration.surface!=='black'&&<small className="calibration-nudge">El sensor central aún no está completamente sobre la línea negra.</small>}
+  </section>}
+
+  {activeStep===3&&calibration.whiteMax!==null&&calibration.blackMin!==null&&<section className="calibration-step-card threshold-choice-card">
+   <div className="threshold-comparison"><div><span>Mayor lectura blanca</span><strong>{calibration.whiteMax}</strong></div><div className="threshold-gap"><span>Tu respuesta debe quedar aquí</span><i/></div><div><span>Menor lectura negra</span><strong>{calibration.blackMin}</strong></div></div>
+   <p><strong>Ahora te toca calcular.</strong> Elige un número mayor que {calibration.whiteMax} y menor que {calibration.blackMin}. No hay una única respuesta correcta.</p>
+   <form className="threshold-student-entry" onSubmit={event=>{event.preventDefault();calibration.update(Number(thresholdDraft));}}>
+    <label htmlFor="student-threshold">Escribe tu umbral</label>
+    <div className="threshold-equation" aria-label={`El umbral debe ser mayor que ${calibration.whiteMax} y menor que ${calibration.blackMin}`}>
+     <strong>{calibration.whiteMax}</strong><span>&lt;</span>
+     <input id="student-threshold" type="number" inputMode="numeric" min={calibration.whiteMax+1} max={calibration.blackMin-1} value={thresholdDraft} placeholder="?" onChange={event=>setThresholdDraft(event.target.value)} autoComplete="off"/>
+     <span>&lt;</span><strong>{calibration.blackMin}</strong>
+    </div>
+    <button className="primary calibration-main-action" type="submit" disabled={!thresholdDraft.trim()}>Usar mi umbral</button>
+   </form>
+  </section>}
+
+  {activeStep===4&&<section className="calibration-step-card calibration-test-card">
+   <div className="calibration-test-grid"><div className={calibration.testedWhite?'done':''}><span>Prueba en blanco</span>{calibration.testedWhite?<CheckCircle2 size={18}/>:<b>pendiente</b>}</div><div className={calibration.testedBlack?'done':''}><span>Prueba en negro</span>{calibration.testedBlack?<CheckCircle2 size={18}/>:<b>pendiente</b>}</div></div>
+   <p>Mueve el sensor central a blanco o negro. BITIRO comprobará si tu umbral interpreta correctamente la lectura actual.</p>
+   <button className="primary calibration-main-action" disabled={calibration.surface==='edge'} onClick={calibration.testCurrent}>Comprobar esta lectura</button>
+   <div className="calibration-test-adjust"><span>Ajustar umbral</span><div><button aria-label="Bajar umbral en 5" onClick={()=>calibration.update(calibration.centerThreshold-5)}><Minus size={13}/></button><strong>{calibration.centerThreshold}</strong><button aria-label="Subir umbral en 5" onClick={()=>calibration.update(calibration.centerThreshold+5)}><Plus size={13}/></button></div></div>
+   <div className="threshold-rule-simple"><span>Menor que {calibration.centerThreshold} → <b>BLANCO</b></span><span>{calibration.centerThreshold} o más → <b>NEGRO</b></span></div>
+  </section>}
+
+  {activeStep===5&&<section className="calibration-step-card calibration-success-card">
+   <CheckCircle2 size={24}/><div><strong>Tu umbral distingue blanco y negro.</strong><p>Este es el valor que necesitas llevar al programa de la sesión.</p></div>
+   <div className="calibration-code-value"><code>{code}</code><button type="button" onClick={()=>void copyCode()}><Copy size={14}/>{copied?'Copiado':'Copiar'}</button></div>
+  </section>}
+
+  {calibration.message&&<p className="calibration-guide-message" role="status">{calibration.message}</p>}
+
+  <div className={`calibration-guide-footer ${activeStep===5?'is-ready':''}`}>
+   <button className="calibration-reset" onClick={calibration.clear}><RotateCcw size={15}/>Reiniciar mediciones</button>
+   {activeStep===5&&<button className="primary save-thresholds" disabled={!calibration.canSave} onClick={()=>{const saved=calibration.save();if(saved)onSaved(saved);}}><Save size={17}/>Guardar calibración y volver</button>}
+  </div>
  </aside>;
 }

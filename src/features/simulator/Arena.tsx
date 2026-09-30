@@ -63,6 +63,6 @@ export function Arena({latest,calibration,send,zoom,activeSensor,thresholds,runn
     <canvas ref={canvas} role="img" aria-describedby={calibration?'calibration-instructions':undefined} aria-label={`Pista interactiva ${track.id.toUpperCase()} con robot IROH`}
       tabIndex={calibration?0:-1} onKeyDown={event=>{if(!calibration||!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;event.preventDefault();const step=event.shiftKey?5:1,robot=latest.current.robot;send({type:'pose',x:robot.x+(event.key==='ArrowLeft'?-step:event.key==='ArrowRight'?step:0),y:robot.y+(event.key==='ArrowUp'?-step:event.key==='ArrowDown'?step:0),heading:robot.heading});}}
       onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}/>
-    <span className="arena-note">{scenarioPlacement?'Haz clic sobre la pista para ubicar el elemento seleccionado':calibration?'Flechas = ajuste fino':'Vista superior · escala en centímetros'}</span>
+    <span className="arena-note">{scenarioPlacement?'Haz clic sobre la pista para ubicar el elemento seleccionado':calibration?'Arrastra IROH · flechas = ajuste fino':'Vista superior · escala en centímetros'}</span>
   </div>;
 }
