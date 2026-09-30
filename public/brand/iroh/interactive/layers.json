@@ -1,0 +1,258 @@
+{
+  "width": 900,
+  "height": 1086,
+  "notes": "Coordenadas en píxeles; izquierda/derecha desde quien mira. Pivotes sugeridos.",
+  "layers": [
+    {
+      "id": "01-sombra",
+      "name": "Sombra",
+      "x": 174,
+      "y": 902,
+      "width": 596,
+      "height": 84,
+      "pivot": [
+        470,
+        944
+      ],
+      "group": "Escena"
+    },
+    {
+      "id": "02-rueda-izquierda",
+      "name": "Rueda · izquierda de la imagen",
+      "x": 238,
+      "y": 752,
+      "width": 208,
+      "height": 196,
+      "pivot": [
+        346,
+        855
+      ],
+      "group": "Ruedas"
+    },
+    {
+      "id": "03-rueda-derecha",
+      "name": "Rueda · derecha de la imagen",
+      "x": 469,
+      "y": 777,
+      "width": 204,
+      "height": 183,
+      "pivot": [
+        579,
+        865
+      ],
+      "group": "Ruedas"
+    },
+    {
+      "id": "04-brazo-senalando",
+      "name": "Brazo señalando · mano y manga",
+      "x": 75,
+      "y": 268,
+      "width": 245,
+      "height": 325,
+      "pivot": [
+        299,
+        537
+      ],
+      "group": "Brazos"
+    },
+    {
+      "id": "05-brazo-abajo",
+      "name": "Brazo abajo · mano y manga",
+      "x": 634,
+      "y": 574,
+      "width": 153,
+      "height": 257,
+      "pivot": [
+        666,
+        607
+      ],
+      "group": "Brazos"
+    },
+    {
+      "id": "06-relleno-articulaciones",
+      "name": "Reconstrucción · bajo las articulaciones",
+      "x": 254,
+      "y": 403,
+      "width": 478,
+      "height": 357,
+      "pivot": [
+        472,
+        646
+      ],
+      "group": "Torso"
+    },
+    {
+      "id": "07-cabeza",
+      "name": "Cabeza · visor sin expresión",
+      "x": 282,
+      "y": 173,
+      "width": 493,
+      "height": 356,
+      "pivot": [
+        510,
+        478
+      ],
+      "group": "Cabeza"
+    },
+    {
+      "id": "08-torso",
+      "name": "Torso · chaqueta, cuello y logo",
+      "x": 231,
+      "y": 400,
+      "width": 511,
+      "height": 399,
+      "pivot": [
+        471,
+        684
+      ],
+      "group": "Torso"
+    },
+    {
+      "id": "09-blanco-izquierdo",
+      "name": "Blanco del ojo · izquierdo",
+      "x": 346,
+      "y": 258,
+      "width": 116,
+      "height": 125,
+      "pivot": [
+        405,
+        320
+      ],
+      "group": "Rostro"
+    },
+    {
+      "id": "09-iris-izquierdo",
+      "name": "Iris + pupila + brillos · izquierdo",
+      "x": 351,
+      "y": 269,
+      "width": 73,
+      "height": 87,
+      "pivot": [
+        405,
+        320
+      ],
+      "group": "Rostro"
+    },
+    {
+      "id": "10-blanco-derecho",
+      "name": "Blanco del ojo · derecho",
+      "x": 507,
+      "y": 299,
+      "width": 133,
+      "height": 133,
+      "pivot": [
+        575,
+        366
+      ],
+      "group": "Rostro"
+    },
+    {
+      "id": "10-iris-derecho",
+      "name": "Iris + pupila + brillos · derecho",
+      "x": 515,
+      "y": 310,
+      "width": 80,
+      "height": 90,
+      "pivot": [
+        575,
+        366
+      ],
+      "group": "Rostro"
+    },
+    {
+      "id": "11-mejilla-izquierda",
+      "name": "Luz rosada · izquierda",
+      "x": 324,
+      "y": 361,
+      "width": 64,
+      "height": 56,
+      "pivot": [
+        356,
+        389
+      ],
+      "group": "Rostro"
+    },
+    {
+      "id": "12-mejilla-derecha",
+      "name": "Luz rosada · derecha",
+      "x": 548,
+      "y": 426,
+      "width": 82,
+      "height": 54,
+      "pivot": [
+        589,
+        453
+      ],
+      "group": "Rostro"
+    },
+    {
+      "id": "13-luz-cian-izquierda",
+      "name": "Punto cian · izquierda",
+      "x": 330,
+      "y": 351,
+      "width": 15,
+      "height": 15,
+      "pivot": [
+        337,
+        358
+      ],
+      "group": "Rostro"
+    },
+    {
+      "id": "14-luz-cian-derecha",
+      "name": "Punto cian · derecha",
+      "x": 622,
+      "y": 425,
+      "width": 16,
+      "height": 16,
+      "pivot": [
+        630,
+        433
+      ],
+      "group": "Rostro"
+    },
+    {
+      "id": "15-destellos",
+      "name": "Destellos amarillos",
+      "x": 228,
+      "y": 140,
+      "width": 107,
+      "height": 118,
+      "pivot": [
+        280,
+        220
+      ],
+      "group": "Expresión"
+    },
+    {
+      "id": "ojo-cerrado-izquierdo",
+      "name": "Ojo cerrado · izquierdo",
+      "x": 346,
+      "y": 258,
+      "width": 116,
+      "height": 125,
+      "pivot": [
+        405,
+        320
+      ],
+      "group": "Ojos cerrados",
+      "visible": false,
+      "state": "closed"
+    },
+    {
+      "id": "ojo-cerrado-derecho",
+      "name": "Ojo cerrado · derecho",
+      "x": 507,
+      "y": 299,
+      "width": 133,
+      "height": 133,
+      "pivot": [
+        575,
+        366
+      ],
+      "group": "Ojos cerrados",
+      "visible": false,
+      "state": "closed"
+    }
+  ]
+}
