@@ -24,7 +24,7 @@ export async function fetchAccount(userId:string):Promise<{profile:Profile;membe
 }
 export async function signIn(email:string,password:string):Promise<void> {
   const {error}=await requireSupabase().auth.signInWithPassword({email:email.trim(),password});
-  if(error)throw new Error('No pudimos iniciar sesión. Revisa correo, contraseña y confirmación de tu correo.');
+  if(error)throw new Error('No pudimos iniciar sesión. Revisa tu correo y contraseña, o confirma tu cuenta si aún está pendiente.');
 }
 export async function signUp(input:SignUpInput):Promise<{confirmationRequired:boolean}> {
   validatePassword(input.password);const display_name=displayNameValue(input.displayName);

@@ -19,9 +19,8 @@ test('calibration keeps a stable fitted view and removes normal zoom controls',a
  await expect(panel).toHaveCount(0);await expect(page.getByRole('button',{name:'Calibrar',exact:true})).toBeVisible();
 });
 test('reduced motion, keyboard focus and guide stay accessible',async({page})=>{
- await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/intermedio');await page.keyboard.press('Tab');await expect(page.getByRole('link',{name:'Ir al contenido',exact:true})).toBeFocused();
- expect(await page.locator('.explorer').evaluate(el=>getComputedStyle(el).animationName)).toBe('none');
- // La guía forma parte del contexto de una sesión; el explorador no expone contenidos de una sesión fuera del laboratorio.
+ await page.emulateMedia({reducedMotion:'reduce'});await page.goto('/');await page.keyboard.press('Tab');await expect(page.getByRole('link',{name:'Ir al contenido',exact:true})).toBeFocused();
+ // La guía forma parte del contexto de una sesión; la portada no expone contenidos de una sesión fuera del laboratorio.
  await expect(page.getByRole('button',{name:'Abrir guía y conceptos',exact:true})).toHaveCount(0);
  await page.goto('/intermedio/s01');await expect(page.getByRole('button',{name:'Abrir guía y conceptos',exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Abrir guía y conceptos',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);

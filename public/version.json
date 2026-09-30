@@ -1,6 +1,6 @@
 {
   "product": "BITIRO Lab",
-  "version": "7.65.0",
-  "sourceHash": "login-final-polish",
-  "builtAt": "2026-09-30T17:40:00-03:00"
+  "version": "7.68.0",
+  "sourceHash": "password-toggle-fix",
+  "builtAt": "2026-09-30T18:15:00Z"
 }

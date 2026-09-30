@@ -6,7 +6,7 @@ test('public pages, honest account state and responsive accessibility',async({pa
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  for(const width of [1440,390,320]){
   await page.setViewportSize({width,height:900});
-  for(const route of ['/','/espacios','/intermedio','/registro','/login','/recuperar','/recursos','/comunidad','/privacidad','/cuenta']){
+  for(const route of ['/','/espacios','/registro','/login','/recuperar','/recursos','/comunidad','/privacidad','/cuenta']){
    await page.goto(route);await expect(page.locator('h1')).toBeVisible();await expect(page.locator('.brand-loading')).toHaveCount(0);
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
    await page.evaluate(axeSource);
@@ -14,15 +14,16 @@ test('public pages, honest account state and responsive accessibility',async({pa
    expect(violations,`${route} at ${width}px`).toEqual([]);
   }
  }
+ await page.goto('/intermedio');await expect(page).toHaveURL(/\/$/);
  await page.goto('/registro');await expect(page.getByRole('button',{name:'Crear cuenta',exact:true})).toBeDisabled();
  await expect(page.getByText(/Las cuentas no están configuradas en esta instalación/)).toBeVisible();
  await page.goto('/equipo');await expect(page).toHaveURL(/login\?next=\/equipo/);expect(errors).toEqual([]);
 });
 test('landing defers Monaco and simulator; missing route assets recover',async({page})=>{
- const requests:string[]=[];page.on('request',r=>requests.push(r.url()));await page.goto('/intermedio');await expect(page.locator('h1')).toBeVisible();
+ const requests:string[]=[];page.on('request',r=>requests.push(r.url()));await page.goto('/');await expect(page.locator('h1')).toBeVisible();
  expect(requests.some(url=>/monaco-|CodeEditor-|simulator\.worker|Simulator-/.test(url))).toBe(false);
  await page.route('**/assets/Simulator-*.js',route=>route.abort());
- await page.getByRole('link',{name:/Abrir S01:/}).click();await expect(page.locator('.recovery-page')).toBeVisible();
+ await page.goto('/intermedio/s01');await expect(page.locator('.recovery-page')).toBeVisible();
  await expect(page.locator('.recovery-page')).toContainText('guardado');
 });
 test('editor download failure preserves usable simulator and local code',async({page})=>{
@@ -59,8 +60,8 @@ test('institutional areas require an account before codes or content are availab
 });
 
 test('static release has security headers and does not expose missing assets as HTML',async({request})=>{
- const res=await request.get('/intermedio');expect(res.status()).toBe(200);
+ const res=await request.get('/');expect(res.status()).toBe(200);
  const h=res.headers();expect(h['content-security-policy']).toContain("script-src 'self'");expect(h['content-security-policy']).toContain("frame-ancestors 'none'");expect(h['x-content-type-options']).toBe('nosniff');
- expect((await request.get('/assets/missing')).status()).toBe(404);expect((await request.post('/intermedio')).status()).toBe(405);
+ expect((await request.get('/assets/missing')).status()).toBe(404);expect((await request.post('/')).status()).toBe(405);
  const version=await (await request.get('/version.json')).json();expect(version.version).toBe(packageVersion);
 });

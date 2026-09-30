@@ -92,9 +92,10 @@ Aplica en orden:
 4. `supabase/migrations/202609180003_mentor_workspace_polish.sql`
 5. `supabase/migrations/202609180004_participant_pilot.sql`
 6. `supabase/migrations/202609190001_cohort_learning.sql`
-7. `supabase/seed.sql` (catálogo seguro; sin códigos de acceso demo)
+7. `supabase/migrations/202609190002_formative_missions.sql`
+8. `supabase/seed.sql` (catálogo seguro; sin códigos de acceso demo)
 
-Después configura las variables públicas descritas en `docs/SEGURIDAD-Y-DESPLIEGUE.md`.
+Después configura las variables públicas descritas en `docs/SEGURIDAD-Y-DESPLIEGUE.md`. Para una guía directa de conexión usa `docs/SUPABASE-CONEXION.md`.
 
 ## Verificación
 
@@ -118,7 +119,6 @@ pnpm test:e2e
 | `/espacios/mustakis/grupos/mustakis-demo-talca` | Workspace institucional Mustakis |
 | `/espacios/mustakis/grupos/mustakis-demo-talca/intermedio/s01` | Laboratorio institucional con control de liberación |
 | `/espacios/mustakis/grupos/mustakis-demo-talca/mentor` | Gestión de sesiones para mentores |
-| `/intermedio` | Laboratorio legado solo para desarrollo sin Supabase |
 
 ## Estado funcional
 

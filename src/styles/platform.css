@@ -708,3 +708,124 @@ p.form-caption { margin: 9px 0 18px; }
   .auth-page--login .auth-aside h2{font-size:28px;}
 }
 
+/* BITIRO 7.67 — Supabase-ready login refinement */
+.auth-page--login .auth-layout{
+  grid-template-columns:minmax(0,1.08fr) minmax(380px,.92fr);
+}
+.auth-page--login .auth-form-panel{
+  width:min(100%,660px);
+  max-width:660px;
+  padding-right:clamp(22px,2vw,32px);
+}
+.auth-page--login .auth-aside{
+  padding-left:clamp(20px,1.8vw,28px);
+  padding-right:clamp(22px,2.2vw,34px);
+}
+.auth-page--login .auth-aside-copy{
+  max-width:390px;
+}
+.auth-page--login .auth-aside h2{
+  max-width:390px;
+}
+.auth-page--login .auth-visual-stage{
+  height:min(43vh,382px);
+  min-height:300px;
+  overflow:visible;
+}
+.auth-page--login .interactive-iroh{
+  width:min(68%,318px);
+  margin-left:clamp(18px,2.2vw,34px);
+}
+.auth-page--login .auth-visual-orbit.is-one{
+  width:70%;
+  height:57%;
+  left:3%;
+}
+.auth-page--login .auth-visual-orbit.is-two{
+  width:53%;
+  height:39%;
+  left:28%;
+}
+.auth-page--login .form-error{
+  max-width:500px;
+  margin:20px 0 18px;
+  padding:13px 16px;
+  border-radius:0 10px 10px 0;
+  line-height:1.5;
+}
+.auth-page--login .form-error + .button-row{
+  margin-top:12px;
+}
+.auth-page--login .form-message{
+  max-width:500px;
+  margin:18px 0 18px;
+  line-height:1.5;
+}
+.auth-page--login .form-field + .form-error,
+.auth-page--login .form-field + .form-message{
+  margin-top:18px;
+}
+
+@media(max-width:1100px){
+  .auth-page--login .auth-layout{grid-template-columns:minmax(0,1.04fr) minmax(360px,.96fr);}
+  .auth-page--login .interactive-iroh{width:min(66%,292px);margin-left:20px;}
+  .auth-page--login .auth-visual-orbit.is-one{width:66%;left:7%;}
+  .auth-page--login .auth-visual-orbit.is-two{width:50%;left:29%;}
+}
+@media(max-width:860px){
+  .auth-page--login .auth-layout{grid-template-columns:1fr;}
+  .auth-page--login .interactive-iroh{width:min(55%,260px);margin-left:0;}
+  .auth-page--login .auth-visual-orbit.is-one{width:64%;left:18%;}
+  .auth-page--login .auth-visual-orbit.is-two{width:48%;left:auto;right:13%;}
+}
+
+
+/* BITIRO 7.68 — stable password visibility control */
+.auth-page--login .password-field{
+  position:relative;
+}
+.auth-page--login .password-field input{
+  padding-right:60px;
+}
+.auth-page--login .password-field .password-toggle{
+  position:absolute;
+  z-index:2;
+  top:50%;
+  right:10px;
+  width:40px;
+  min-width:40px;
+  height:40px;
+  min-height:40px;
+  padding:0;
+  transform:translateY(-50%);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:0;
+  border-radius:10px;
+  background:transparent;
+  color:var(--text-primary);
+  box-shadow:none;
+  transition:color .15s ease,background .15s ease;
+}
+.auth-page--login .password-field .password-toggle:hover{
+  background:rgba(22,20,184,.055);
+  border-color:transparent;
+}
+.auth-page--login .password-field .password-toggle:active,
+.auth-page--login .password-field .password-toggle[aria-pressed="true"]{
+  background:transparent;
+}
+.auth-page--login .password-field .password-toggle:focus{
+  background:transparent;
+}
+.auth-page--login .password-field .password-toggle:focus-visible{
+  outline:2px solid rgba(22,20,184,.42);
+  outline-offset:1px;
+  background:rgba(22,20,184,.045);
+}
+.auth-page--login .password-field .password-toggle svg{
+  width:20px;
+  height:20px;
+  display:block;
+}

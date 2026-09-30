@@ -1,11 +1,7 @@
 import {test,expect} from '@playwright/test';
 test('explorer, code persistence, motion, pause, reset and guide',async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
- await page.goto('/intermedio');await expect(page.getByRole('link',{name:/Abrir S0/})).toHaveCount(8);
- await page.locator('.featured-preview img').evaluateAll(async imgs=>{await Promise.all(imgs.map(img=>(img as HTMLImageElement).decode()));});
- await page.screenshot({path:'test-results/explorador-1600.png',fullPage:true});
- await page.getByRole('link',{name:/Abrir S01:/}).click();await expect(page.locator('.monaco-editor')).toBeVisible();
- await page.goto('/intermedio/s01?debug=1');
+ await page.goto('/intermedio/s01?debug=1');await expect(page.locator('.monaco-editor')).toBeVisible();
  const editor=page.getByRole('textbox',{name:/Código Arduino/});await expect(editor).toBeVisible();await editor.focus();await page.keyboard.press('Control+Home');await page.keyboard.insertText('// prueba de persistencia\n');
  await expect.poll(()=>page.evaluate(()=>{const raw=localStorage.getItem('bitiro:v7:guest:code:s01');return raw?JSON.parse(raw).code:'';})).toContain('prueba de persistencia');
  const pose=page.getByTestId('robot-position');const initial=await pose.textContent();
@@ -18,7 +14,7 @@ await expect.poll(()=>page.evaluate(()=>{const raw=localStorage.getItem('bitiro:
  await page.getByRole('button',{name:'Abrir guía y conceptos',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
  await page.getByRole('searchbox').fill('sonar');await expect(page.getByRole('dialog').locator('summary')).toHaveCount(1);await page.getByRole('dialog').locator('summary').click();await expect(page.getByRole('dialog')).toContainText('sin eco válido');
  await page.screenshot({path:'test-results/guia.png',fullPage:true});await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);
- await page.goto('/intermedio');await expect(page.locator('.progress-card')).toContainText('01');expect(errors).toEqual([]);
+ expect(errors).toEqual([]);
 });
 test('all sessions keep separate code and truthful availability',async({page})=>{
  for(const id of ['s02','s03']){await page.goto('/intermedio/'+id);await expect(page.locator('.monaco-editor')).toBeVisible();await expect(page.locator('canvas[role="img"]')).toBeVisible();}

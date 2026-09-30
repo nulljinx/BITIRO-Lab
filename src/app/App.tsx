@@ -1,6 +1,5 @@
 import {lazy,Suspense,useEffect,useLayoutEffect,useState,type ReactNode} from 'react';
 import {Routes,Route,useParams,Navigate,useLocation,Link} from 'react-router-dom';
-import {Explorer} from '../features/session-explorer/Explorer';
 import {Guide} from '../features/guide/Guide';
 import {sessions,type SessionDefinition} from '../content/sessions';
 import {Topbar} from './Topbar';
@@ -49,12 +48,12 @@ function StaffGate({children}:{children:ReactNode}){
   if(!membership||membership.role==='participant')return <main id="main" className="recovery-page"><span className="eyebrow">Área de plataforma</span><h1>Esta sección requiere permisos.</h1><p>El acceso de equipo se administra por separado de los permisos de participante y mentor del programa.</p><Link className="button" to="/espacios">Volver a mi programa</Link></main>;
   return children;
 }
-function LegacyLabGate({session}:{session?:SessionDefinition}){
-  const {status}=useAuth();
-  if(status==='unconfigured')return <AppShell session={session}>{session?undefined:<Explorer/>}</AppShell>;
+function LegacySessionRoute(){
+  const {sessionId}=useParams();const {status}=useAuth();const session=sessions.find(s=>s.id===sessionId);
+  if(!session)return <Navigate to="/" replace/>;
+  if(status==='unconfigured')return <AppShell session={session}/>;
   return <Navigate to={status==='authenticated'?'/espacios':'/login?next=/espacios'} replace/>;
 }
-function LegacySessionRoute(){const {sessionId}=useParams();const session=sessions.find(s=>s.id===sessionId);return session?<LegacyLabGate session={session}/>:<Navigate to="/" replace/>;}
 function LegacyResourcesGate(){const {status}=useAuth();if(status==='unconfigured')return <AppShell page="resources"/>;return <Navigate to={status==='authenticated'?'/espacios':'/login?next=/espacios'} replace/>;}
 
 function findWorkspace(workspaces:WorkspaceSummary[],orgId:string|undefined,cohortId:string|undefined){return workspaces.find(item=>item.organization_id===orgId&&item.cohort_id===cohortId);}
@@ -115,7 +114,7 @@ function AppRoutes(){return <><RouteReset/><Routes>
   <Route path="/espacios/:orgId" element={<LegacyWorkspaceRedirect/>}/>
   <Route path="/espacios/:orgId/mentor" element={<LegacyWorkspaceRedirect kind="mentor"/>}/>
   <Route path="/espacios/:orgId/intermedio/:sessionId" element={<LegacyWorkspaceRedirect kind="session"/>}/>
-  <Route path="/intermedio" element={<LegacyLabGate/>}/><Route path="/intermedio/:sessionId" element={<LegacySessionRoute/>}/>
+  <Route path="/intermedio/:sessionId" element={<LegacySessionRoute/>}/>
   <Route path="/recursos" element={<LegacyResourcesGate/>}/><Route path="/comunidad" element={<AppShell page="sites"/>}/><Route path="/privacidad" element={<AppShell page="privacy"/>}/><Route path="/cuenta" element={<AccountGate next="/cuenta"><AppShell page="account"/></AccountGate>}/><Route path="/equipo" element={<AppShell page="admin"/>}/>
   {(['login','registro','recuperar','actualizar-clave','auth/callback'] as const).map((path,index)=><Route key={path} path={`/${path}`} element={<ErrorBoundary><Suspense fallback={<LoadingView/>}><AuthPage mode={(['login','register','reset','update','callback'] as const)[index]}/></Suspense></ErrorBoundary>}/>) }
   <Route path="*" element={<Navigate to="/" replace/>}/>
