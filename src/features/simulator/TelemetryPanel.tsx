@@ -17,14 +17,15 @@ export function RobotHUD({simulation}:{simulation:SimulationConnection}){
  const isS01=simulation.track.id==='s01';
  const isS02=simulation.track.id==='s02';
  const isS03=simulation.track.id==='s03';
+ const isS04=simulation.track.id==='s04';
  return <div className="robot-hud">
   <div className="hud-heading"><div><span className="hud-kicker">Robot</span><strong><Activity size={15}/>IROH</strong></div><StatusBadge status={status}/></div>
   <section className={`hud-section line-section ${isS01?'is-center-only':''}`}><div className="hud-label"><span><ScanLine size={15}/>{isS01?'Sensor de línea central':'Sensores de línea'}</span><code>ADC</code></div><div className="line-values">{isS01?<SensorValue label="C" name="Centro" value={displayedLineCenter}/>:<><SensorValue label="L" name="Izquierdo" value={displayedLineLeft}/><SensorValue label="C" name="Centro" value={displayedLineCenter}/><SensorValue label="R" name="Derecho" value={displayedLineRight}/></>}</div></section>
-  <div className="hud-control-grid is-single">
+  {!isS04&&<div className="hud-control-grid is-single">
    <section className="hud-section hud-card actuator-section"><div className="hud-label"><span><CircleDot size={15}/>Pulsador</span></div><button className="button-sensor" aria-pressed={robot.buttonPressed} onClick={()=>simulation.send({type:'button',value:!robot.buttonPressed})}><span>{robot.buttonPressed?'Presionado':'Libre'}</span><strong>{robot.buttonPressed?'ON':'OFF'}</strong></button>{isS01&&<div className="servo-state"><span>Golpe</span><strong>{robot.strikeServoPosition===0?'Centro':robot.strikeServoPosition===1?'Derecha':'Izquierda'} · {Math.round(robot.strikeServoAngle)}°</strong></div>}</section>
-  </div>
-  {!isS03&&<section className="hud-section ir-section"><div className="hud-label"><span><Disc3 size={15}/>Estímulo IR</span></div><div className="ir-buttons">{(['left','right'] as const).map(side=>{const active=side==='left'?robot.irLeft:robot.irRight;return <button key={side} aria-label={`IR ${side==='left'?'izquierdo':'derecho'}`} aria-pressed={active} onClick={()=>simulation.send({type:'ir',side,value:!active})}><i className={active?'on':''}/><span className="ir-name">{side==='left'?'IZQ':'DER'}</span><span>{active?'Activo':'Libre'}</span></button>;})}</div></section>}
-  <LCDDisplay robot={robot}/>
+  </div>}
+  {!isS03&&!isS04&&<section className="hud-section ir-section"><div className="hud-label"><span><Disc3 size={15}/>Estímulo IR</span></div><div className="ir-buttons">{(['left','right'] as const).map(side=>{const active=side==='left'?robot.irLeft:robot.irRight;return <button key={side} aria-label={`IR ${side==='left'?'izquierdo':'derecho'}`} aria-pressed={active} onClick={()=>simulation.send({type:'ir',side,value:!active})}><i className={active?'on':''}/><span className="ir-name">{side==='left'?'IZQ':'DER'}</span><span>{active?'Activo':'Libre'}</span></button>;})}</div></section>}
+  {!isS04&&<LCDDisplay robot={robot}/>}
  </div>;
 }
 

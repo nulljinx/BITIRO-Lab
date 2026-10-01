@@ -1,0 +1,29 @@
+{
+  "id":"s04",
+  "physicalWidthCm":100,
+  "physicalHeightCm":200,
+  "source":"Copia de ROB-002-S04-plotter100x200.pdf",
+  "sourceSha256":"0f046012b3ca22538e7a888be3c4d08594b51d6fc56cd246093fd39fc2b84657",
+  "paths":[
+    {"id":"start-line","widthCm":2.8,"lineCap":"butt","points":[{"x":50,"y":166.4},{"x":50,"y":146.6}]},
+    {"id":"after-gap-one","widthCm":2.8,"lineCap":"butt","points":[{"x":50,"y":136.6},{"x":50,"y":119.3}]},
+    {"id":"intersection-one","widthCm":2.8,"lineCap":"butt","points":[{"x":40,"y":119.3},{"x":60,"y":119.3}]},
+    {"id":"intersection-two","widthCm":2.8,"lineCap":"butt","points":[{"x":40,"y":101.0},{"x":60,"y":101.0}]},
+    {"id":"upper-route","widthCm":2.8,"lineCap":"round","points":[
+      {"x":50.7,"y":101.0},{"x":50.7,"y":98.85},{"x":50.85,"y":97.53},{"x":51.2,"y":95.41},{"x":51.75,"y":93.3},{"x":52.62,"y":91.18},{"x":54.66,"y":88.69},{"x":61.15,"y":87.56},{"x":67.11,"y":84.86},{"x":68.46,"y":82.71},{"x":69.26,"y":80.6},{"x":69.65,"y":78.48},{"x":69.74,"y":76.36},{"x":69.49,"y":74.25},{"x":68.89,"y":72.13},{"x":67.85,"y":70.01},{"x":65.76,"y":67.67},{"x":54.95,"y":65.51},{"x":42.61,"y":63.97},{"x":38.19,"y":61.65},{"x":35.58,"y":59.47},{"x":33.83,"y":57.32},{"x":32.84,"y":55.2},{"x":32.57,"y":53.08},{"x":32.87,"y":50.97},{"x":33.88,"y":48.85},{"x":35.35,"y":46.73},{"x":37.4,"y":44.56},{"x":40.06,"y":42.43},{"x":43.19,"y":40.48},{"x":46.04,"y":38.34},{"x":48.21,"y":36.15},{"x":49.43,"y":34.03},{"x":50.0,"y":31.92},{"x":50.0,"y":29.2}
+    ]},
+    {"id":"intersection-three","widthCm":2.8,"lineCap":"butt","points":[{"x":39.8,"y":29.2},{"x":60.0,"y":29.2}]}
+  ],
+  "finishZones":[{"id":"base-final","label":"Base final","x":39.8,"y":8.1,"width":20.4,"height":19.8,"kind":"finish-green"}],
+  "markers":[{"id":"base-inicial","label":"","x":40.0,"y":166.4,"width":20.0,"height":20.0,"kind":"start-red"}],
+  "missionZones":[
+    {"id":"gap1","x":43.0,"y":136.0,"width":14.0,"height":11.2},
+    {"id":"intersection1","x":37.0,"y":116.0,"width":26.0,"height":7.0},
+    {"id":"gap2","x":42.0,"y":102.0,"width":16.0,"height":16.0},
+    {"id":"intersection2","x":37.0,"y":97.5,"width":26.0,"height":7.0},
+    {"id":"intersection3","x":37.0,"y":25.5,"width":26.0,"height":7.5}
+  ],
+  "start":{"x":50.0,"y":159.5,"heading":-1.5707963267948966},
+  "obstacles":[],
+  "notes":"Pista S04 100 × 200 cm reconstruida desde el plotter oficial entregado por el usuario. Conserva base roja, primer gap, primera intersección, segundo gap, segunda intersección, tramo curvo y tercera intersección/base verde."
+}

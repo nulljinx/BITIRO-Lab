@@ -1,3 +1,11 @@
+## v7.95 · S04 Gaps y funciones
+
+- S04 pasa de placeholder a laboratorio interactivo.
+- Plotter oficial 100 × 200 cm con dos gaps y tres intersecciones.
+- Referencia docente con cuarto caso del seguidor, funciones y `while`.
+- Evaluación de 4 objetivos alineada a la pauta de S04.
+- Telemetría S04 reducida a los tres sensores de línea y calibración I/C/D reutilizada.
+
 ## v7.94 · S03 garra con contacto garantizado
 
 - La detección del sonar ya no marca el obstáculo como resuelto de inmediato.

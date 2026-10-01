@@ -184,10 +184,12 @@ export class SimulationEngine {
    }
   }
   if(this.programControlled)this.mission.observeTick(this.robot);
-  const line=[this.robot.lineLeft,this.robot.lineCenter,this.robot.lineRight].some((value,index)=>value>=this.lineThresholds[index]);
-  // A one-sensor zig-zag intentionally spends short instants over white. Only
-  // report a lost line after a sustained all-white reading, otherwise S01
-  // teaches the wrong lesson by flagging its normal correction movement.
+  const sensedLine=[this.robot.lineLeft,this.robot.lineCenter,this.robot.lineRight].some((value,index)=>value>=this.lineThresholds[index]);
+  const lineFront={x:this.robot.x+Math.cos(this.robot.heading)*ROBOT.lineFrontCm,y:this.robot.y+Math.sin(this.robot.heading)*ROBOT.lineFrontCm};
+  const intentionalGap=this.track.id==='s04'&&!!this.track.missionZones?.some(zone=>(zone.id==='gap1'||zone.id==='gap2')&&lineFront.x>=zone.x&&lineFront.x<=zone.x+zone.width&&lineFront.y>=zone.y&&lineFront.y<=zone.y+zone.height);
+  const line=sensedLine||intentionalGap;
+  // A one-sensor zig-zag intentionally spends short instants over white. S04
+  // also contains two intentional all-white gaps, which are part of the task.
   if(line){
    this.offLineMs=0;
    if(!this.onLine){this.onLine=true;this.emit({type:'LINE_FOUND'});}

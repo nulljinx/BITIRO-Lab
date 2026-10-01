@@ -185,10 +185,12 @@ export function renderScene3D(canvas:HTMLCanvasElement,track:TrackDefinition,rob
  // Compact IR modules at the front corners.
  orientedBox(4.72,-4.15,3.65,1.05,.9,.65,robot.irLeft?'#D65D58':'#444D53','#293137');
  orientedBox(4.72,4.15,3.65,1.05,.9,.65,robot.irRight?'#D65D58':'#444D53','#293137');
- // Golpe servo and arm. Puede coexistir visualmente con el cono del sonar.
- const {pivot,tip}=strikeTip(robot),pivotWorld=V(X(pivot.x),3.65,Z(pivot.y)),tipWorld=V(X(tip.x),3.65,Z(tip.y));
- orientedBox(5.1,0,3.15,1.6,2.2,1.6,'#376AA5','#244B77','#1B385A');
- segmentBar(pivotWorld,tipWorld,3.55,.9,.72,'#DDE4E7','#9DA9B0');
+ if(track.id==='s01'||track.id==='s03'){
+  // Golpe servo and arm. S04 no lo utiliza, por eso se oculta en esa sesión.
+  const {pivot,tip}=strikeTip(robot),pivotWorld=V(X(pivot.x),3.65,Z(pivot.y)),tipWorld=V(X(tip.x),3.65,Z(tip.y));
+  orientedBox(5.1,0,3.15,1.6,2.2,1.6,'#376AA5','#244B77','#1B385A');
+  segmentBar(pivotWorld,tipWorld,3.55,.9,.72,'#DDE4E7','#9DA9B0');
+ }
  // Painter's algorithm is sufficient for this modest scene.
  const sorted=faces.map(face=>{
   const vertices=face.points.map(project);

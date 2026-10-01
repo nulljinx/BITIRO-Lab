@@ -4,10 +4,11 @@ import {isInsideFinishZone} from '../simulator/finish';
 import {hasSimulation,trackForSession} from '../content/tracks';
 
 describe('interactive track registry',()=>{
- it('exposes S01, S02 and S03',()=>{
+ it('exposes S01, S02, S03 and S04',()=>{
   expect(hasSimulation('s01')).toBe(true);
   expect(hasSimulation('s02')).toBe(true);
   expect(hasSimulation('s03')).toBe(true);
+  expect(hasSimulation('s04')).toBe(true);
  });
 
  it('loads the official S03 plotter at 100 × 180 cm',()=>{
@@ -23,6 +24,17 @@ describe('interactive track registry',()=>{
   expect(snapshot.robot.lineCenter).toBeGreaterThan(300);
   expect(snapshot.obstacles).toHaveLength(3);
   expect(snapshot.scenarioIntersections).toHaveLength(3);
+ });
+ it('loads the official S04 gap plotter at 100 × 200 cm',()=>{
+  const track=trackForSession('s04');
+  expect(track.physicalWidthCm).toBe(100);
+  expect(track.physicalHeightCm).toBe(200);
+  expect(track.paths.some(path=>path.id==='intersection-one')).toBe(true);
+  expect(track.paths.some(path=>path.id==='intersection-two')).toBe(true);
+  expect(track.paths.some(path=>path.id==='intersection-three')).toBe(true);
+  expect(track.missionZones?.filter(zone=>zone.id.startsWith('gap'))).toHaveLength(2);
+  const snapshot=new SimulationEngine(track).snapshot();
+  expect(snapshot.robot.lineCenter).toBeGreaterThan(300);
  });
  it('loads S02 with the three target bases and physical dimensions',()=>{
   const track=trackForSession('s02');

@@ -225,7 +225,7 @@ export function S02CalibrationPanel({calibration,onSaved,sessionId='s02'}:{calib
   </section>}
 
   {activeStep===5&&<section className="calibration-step-card calibration-success-card">
-   <CheckCircle2 size={24}/><div><strong>Tus tres sensores ya están calibrados.</strong><p>Estos son los valores que debes usar en el seguidor de línea de S02.</p></div>
+   <CheckCircle2 size={24}/><div><strong>Tus tres sensores ya están calibrados.</strong><p>Estos son los valores que debes usar en el seguidor de línea de {sessionLabel}.</p></div>
    <div className="calibration-code-value s02-code-value"><pre>{code}</pre><button type="button" onClick={()=>void copyCode()}><Copy size={14}/>{copied?'Copiado':'Copiar'}</button></div>
   </section>}
 

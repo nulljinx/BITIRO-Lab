@@ -5,7 +5,7 @@ import {SimulationEngine} from '../../simulator/SimulationEngine';
 import {ProgramRuntime} from '../../simulator/runtime/ProgramRuntime';
 
 describe('mentor reference solutions',()=>{
-  for(const sessionId of ['s01','s02','s03'] as const){
+  for(const sessionId of ['s01','s02','s03','s04'] as const){
     it(`${sessionId} is accepted by the educational runtime`,()=>{
       const engine=new SimulationEngine(trackForSession(sessionId));
       const runtime=new ProgramRuntime(engine);
@@ -14,7 +14,7 @@ describe('mentor reference solutions',()=>{
   }
 
   it('keeps every configured robot centre on the plotter while allowing chassis overhang',()=>{
-    for(const sessionId of ['s01','s02','s03'] as const){
+    for(const sessionId of ['s01','s02','s03','s04'] as const){
       const track=trackForSession(sessionId),engine=new SimulationEngine(track);
       expect(engine.robot.x).toBeGreaterThanOrEqual(0);
       expect(engine.robot.y).toBeGreaterThanOrEqual(0);
@@ -142,4 +142,23 @@ it('S01 mentor solution refuses an invalid initial IR scenario instead of choosi
   expect(engine.robot.rightMotor).toBe(0);
   expect(engine.robot.lcd[0]).toContain('ELIGE UN IR');
   expect(engine.snapshot().mission.status).toBe('in_progress');
+});
+
+it('S04 mentor solution uses functions, detects the gap case and completes the official route',()=>{
+  const source=mentorSolutions.s04.source;
+  expect(source).toContain('void leerSensores()');
+  expect(source).toContain('void avanzarDerecho(int izquierda, int derecha)');
+  expect(source).toContain('void seguirLinea()');
+  expect(source).toContain('while (!(sensorI >= umbralI &&');
+  expect(source).toContain('sensorI < umbralI &&');
+  const engine=new SimulationEngine(trackForSession('s04'));
+  const runtime=new ProgramRuntime(engine);
+  expect(runtime.run(source)).toEqual([]);
+  for(let i=0;i<12000&&engine.snapshot().mission.status!=='completed';i++)runtime.step(10);
+  expect(runtime.diagnostic).toBeNull();
+  const evidence=engine.snapshot().mission;
+  expect(evidence.status).toBe('completed');
+  expect(evidence.checks).toHaveLength(4);
+  expect(evidence.checks.every(check=>check.passed)).toBe(true);
+  expect(engine.events.filter(event=>event.type==='LINE_LOST')).toHaveLength(0);
 });

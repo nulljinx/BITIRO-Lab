@@ -362,6 +362,137 @@ void loop() {
 `,
   },
 
+  s04:{
+    title:'Solución de referencia · S04',
+    note:'Referencia alineada con S04: incorpora el cuarto caso del seguidor (blanco-blanco-blanco = gap), reutiliza el ciclo while de S03 para atravesar el segundo gap y organiza el programa con funciones sin parámetros y con parámetros.',
+    source:`// BITIRO Lab · Sesión 04
+// Solución de referencia para mentor
+#include <KnightRoboticsLibs_Iroh.h>
+
+int sensorI;
+int sensorC;
+int sensorD;
+
+// Reemplazar por los valores obtenidos al calibrar cada sensor.
+int umbralI = 200;
+int umbralC = 200;
+int umbralD = 200;
+
+int intersecciones = 0;
+int terminado = 0;
+
+// En el IROH físico estos valores se ajustan a prueba y error
+// para que ambos motores avancen realmente en línea recta.
+int velocidadI = 14;
+int velocidadD = 14;
+
+void leerSensores() {
+  sensorI = leerSensorLineaIzquierdo();
+  sensorC = leerSensorLineaCentral();
+  sensorD = leerSensorLineaDerecho();
+}
+
+void avanzarDerecho(int izquierda, int derecha) {
+  avanzar(izquierda, derecha);
+}
+
+void seguirLinea() {
+  // CASO 1: línea al centro.
+  if (sensorI < umbralI &&
+      sensorC >= umbralC &&
+      sensorD < umbralD) {
+    avanzar(14);
+  }
+
+  // CASO 2: línea a la derecha.
+  else if (sensorI < umbralI &&
+           sensorC < umbralC &&
+           sensorD >= umbralD) {
+    girarDerecha(10);
+  }
+
+  // CASO 3: línea a la izquierda.
+  else if (sensorI >= umbralI &&
+           sensorC < umbralC &&
+           sensorD < umbralD) {
+    girarIzquierda(10);
+  }
+}
+
+void setup() {
+  // En setup solo inicializamos las partes que usaremos.
+  inicializarMovimiento();
+  inicializarSensores();
+}
+
+void loop() {
+
+  if (terminado == 0) {
+    leerSensores();
+
+    // INTERSECCIÓN: los tres sensores ven negro.
+    if (sensorI >= umbralI &&
+        sensorC >= umbralC &&
+        sensorD >= umbralD) {
+
+      // PRIMERA INTERSECCIÓN.
+      if (intersecciones == 0) {
+        detenerse();
+        pausa(1000);
+        intersecciones = 1;
+
+        // Salimos de la franja negra y comenzamos el segundo gap.
+        avanzarDerecho(velocidadI, velocidadD);
+        pausa(350);
+        leerSensores();
+
+        // Mientras NO encontremos la segunda intersección,
+        // seguimos avanzando derecho por el gap.
+        while (!(sensorI >= umbralI &&
+                 sensorC >= umbralC &&
+                 sensorD >= umbralD)) {
+          avanzarDerecho(velocidadI, velocidadD);
+          pausa(20);
+          leerSensores();
+        }
+
+        // SEGUNDA INTERSECCIÓN.
+        detenerse();
+        pausa(1000);
+        intersecciones = 2;
+
+        // Salimos de la segunda intersección y retomamos la línea.
+        avanzar(14);
+        pausa(450);
+      }
+
+      // TERCERA INTERSECCIÓN: fin del desafío.
+      else if (intersecciones == 2) {
+        detenerse();
+        terminado = 1;
+      }
+    }
+
+    // NUEVO CASO S04: GAP = los tres sensores ven blanco.
+    else if (sensorI < umbralI &&
+             sensorC < umbralC &&
+             sensorD < umbralD) {
+      avanzarDerecho(velocidadI, velocidadD);
+    }
+
+    // Los tres casos normales se resuelven en una función.
+    else {
+      seguirLinea();
+    }
+  }
+
+  else {
+    detenerse();
+  }
+}
+`,
+  },
+
 };
 
 export function mentorSolutionFor(sessionId:string){return mentorSolutions[sessionId]??null;}

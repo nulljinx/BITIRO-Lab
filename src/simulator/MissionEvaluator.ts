@@ -40,11 +40,20 @@ export class MissionEvaluator {
  private s03IntersectionHeading=0;
  private s03IntersectionTurned=false;
  private s03IntersectionResponses=0;
+ private s04Gap1Seen=false;
+ private s04Gap1Crossed=false;
+ private s04Gap2Seen=false;
+ private s04Intersection1=false;
+ private s04Intersection2=false;
+ private s04Intersection3=false;
+ private s04Intersection1StopMs=0;
+ private s04Intersection2StopMs=0;
+ private s04Intersection3StopMs=0;
  private lineThresholds:LineThresholds=[ROBOT.threshold,ROBOT.threshold,ROBOT.threshold];
  constructor(private track:TrackDefinition){}
  setLineThresholds(values:LineThresholds){this.lineThresholds=[...values] as LineThresholds;}
  setScenarioIntersections(values:readonly ScenarioIntersection[]){this.scenarioIntersections=values.map(item=>({...item}));}
- reset(){this.active=false;this.initialIR=null;this.initialButton=false;this.reads.clear();this.buttonRead=false;this.lineReads.clear();this.lineLostEvents=0;this.movedSides.clear();this.lcdDecision=false;this.intersection=false;this.intersectionStopMs=0;this.distance=0;this.last=null;this.lastTickMs=0;this.completed=false;this.destinationReached=false;this.invalid=false;this.obstacleDetections.clear();this.obstacleReadEvents=0;this.lcdNumber=null;this.s03IntersectionActive=null;this.s03IntersectionHeading=0;this.s03IntersectionTurned=false;this.s03IntersectionResponses=0;}
+ reset(){this.active=false;this.initialIR=null;this.initialButton=false;this.reads.clear();this.buttonRead=false;this.lineReads.clear();this.lineLostEvents=0;this.movedSides.clear();this.lcdDecision=false;this.intersection=false;this.intersectionStopMs=0;this.distance=0;this.last=null;this.lastTickMs=0;this.completed=false;this.destinationReached=false;this.invalid=false;this.obstacleDetections.clear();this.obstacleReadEvents=0;this.lcdNumber=null;this.s03IntersectionActive=null;this.s03IntersectionHeading=0;this.s03IntersectionTurned=false;this.s03IntersectionResponses=0;this.s04Gap1Seen=false;this.s04Gap1Crossed=false;this.s04Gap2Seen=false;this.s04Intersection1=false;this.s04Intersection2=false;this.s04Intersection3=false;this.s04Intersection1StopMs=0;this.s04Intersection2StopMs=0;this.s04Intersection3StopMs=0;}
  start(robot:RobotState){this.reset();this.active=true;this.initialIR={left:robot.irLeft,right:robot.irRight};this.initialButton=robot.buttonPressed;this.last={x:robot.x,y:robot.y};this.lastTickMs=robot.simTimeMs;}
  invalidate(){this.invalid=true;this.active=false;}
  observeEvent(event:SimulationEvent){
@@ -99,6 +108,18 @@ export class MissionEvaluator {
   const currentS03=nearestS03&&nearestS03.distance<=12?nearestS03.item:null;
   const atIntersection=this.track.id==='s03'?!!currentS03&&allLineSensorsBlack:insideIntersection&&allLineSensorsBlack;
   if(atIntersection){this.intersection=true;if(robot.leftMotor===0&&robot.rightMotor===0)this.intersectionStopMs+=elapsed;}
+  if(this.track.id==='s04'){
+   const zoneById=(id:string)=>this.track.missionZones?.find(zone=>zone.id===id);
+   const inside=(id:string)=>{const zone=zoneById(id);return !!zone&&lineFront.x>=zone.x&&lineFront.x<=zone.x+zone.width&&lineFront.y>=zone.y&&lineFront.y<=zone.y+zone.height;};
+   const allWhite=[robot.lineLeft,robot.lineCenter,robot.lineRight].every((value,index)=>value<this.lineThresholds[index]);
+   if(inside('gap1')&&allWhite)this.s04Gap1Seen=true;
+   const gap1=zoneById('gap1');
+   if(this.s04Gap1Seen&&gap1&&lineFront.y<gap1.y-.5)this.s04Gap1Crossed=true;
+   if(inside('gap2')&&allWhite)this.s04Gap2Seen=true;
+   if(inside('intersection1')&&allLineSensorsBlack){this.s04Intersection1=true;if(robot.leftMotor===0&&robot.rightMotor===0)this.s04Intersection1StopMs+=elapsed;}
+   if(inside('intersection2')&&allLineSensorsBlack){this.s04Intersection2=true;if(robot.leftMotor===0&&robot.rightMotor===0)this.s04Intersection2StopMs+=elapsed;}
+   if(inside('intersection3')&&allLineSensorsBlack){this.s04Intersection3=true;if(robot.leftMotor===0&&robot.rightMotor===0)this.s04Intersection3StopMs+=elapsed;}
+  }
   if(this.track.id==='s03'){
    // Start the observation only when the three line sensors really recognise the
    // horizontal intersection. Once the turn begins, keep observing by position:
@@ -146,6 +167,11 @@ export class MissionEvaluator {
    check('obstacles',`Detectar 3 obstáculos con sonar (${Math.min(3,this.obstacleDetections.size)}/3)`,this.obstacleDetections.size>=3);
    check('lcd','Mostrar en la LCD el total correcto de obstáculos',this.obstacleDetections.size>=3&&this.lcdNumber===3);
    check('intersections',`Responder a 3 intersecciones con un cambio de sentido de 180° (${Math.min(3,this.s03IntersectionResponses)}/3)`,this.s03IntersectionResponses>=3);
+   }else if(this.track.id==='s04'){
+   check('line','Seguir la línea usando los tres sensores',this.lineReads.size===3&&this.distance>=95&&this.lineLostEvents===0);
+   check('gap1','Cruzar correctamente el primer gap',this.s04Gap1Seen&&this.s04Gap1Crossed&&this.s04Intersection1);
+   check('gap2','Atravesar el segundo gap usando while y alcanzar la segunda intersección',this.s04Intersection1StopMs>=900&&this.s04Gap2Seen&&this.s04Intersection2&&this.s04Intersection2StopMs>=900);
+   check('finish','Detenerse al llegar a la tercera intersección',this.s04Intersection3&&this.s04Intersection3StopMs>=200&&stationary);
   }
   if(this.active&&!this.invalid&&checks.length>0&&checks.every(item=>item.passed))this.completed=true;
   const progress=this.track.id==='s03'?{obstaclesDetected:Math.min(3,this.obstacleDetections.size),obstacleReads:this.obstacleReadEvents,intersectionsResponded:Math.min(3,this.s03IntersectionResponses),lcdValue:this.lcdNumber,duplicateObstacleRead:this.obstacleReadEvents>this.obstacleDetections.size}:undefined;
