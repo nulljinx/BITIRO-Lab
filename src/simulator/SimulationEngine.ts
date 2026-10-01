@@ -15,6 +15,8 @@ export class SimulationEngine {
  private lineThresholds:LineThresholds=[ROBOT.threshold,ROBOT.threshold,ROBOT.threshold];
  private offLineMs=0;
  private s03ObstaclePoints:Point[]=[];private scenarioIntersections:ScenarioIntersection[]=[];
+ private s03ConsumedIntersections=new Set<string>();private s03IntersectionTurn:{id:string;heading:number}|null=null;
+ private s03AutoStrike:{obstacleId:string;side:-1|1;contactAt:number;releaseAt:number;returnAt:number;finishAt:number;contacted:boolean;released:boolean}|null=null;
  readonly mission:MissionEvaluator;
  constructor(public readonly track:TrackDefinition){
   this.mission=new MissionEvaluator(track);
@@ -26,7 +28,8 @@ export class SimulationEngine {
   this.reset();
  }
  reset(){
-  this.obstacles=this.track.id==='s01'?[]:this.track.id==='s03'&&this.s03ObstaclePoints.length?this.s03ObstaclePoints.map((point,index)=>({id:`s03-obstacle-${index+1}`,x:point.x-3,y:point.y-3,width:6,height:6,movable:true,blocking:true,vx:0,vy:0})):this.track.obstacles.map(o=>({...o,vx:0,vy:0}));
+  this.s03ConsumedIntersections.clear();this.s03IntersectionTurn=null;
+  this.obstacles=this.track.id==='s01'?[]:this.track.id==='s03'&&this.s03ObstaclePoints.length?this.s03ObstaclePoints.map((point,index)=>({id:`s03-obstacle-${index+1}`,x:point.x-3,y:point.y-3,width:6,height:6,movable:false,blocking:true,vx:0,vy:0})):this.track.obstacles.map(o=>({...o,vx:0,vy:0}));
   // The plotter is a sheet on the floor, not a wall. The IROH body may overhang
   // the paper while its centre is still on the usable surface. Clamp the centre
   // to the sheet instead of forcing the complete robot footprint inside it.
@@ -34,12 +37,15 @@ export class SimulationEngine {
   const safeStart={...this.track.start,
    x:Math.max(0,Math.min(this.track.physicalWidthCm,this.track.start.x)),
    y:Math.max(0,Math.min(this.track.physicalHeightCm,this.track.start.y))};
-  this.robot=updateSensors({...safeStart,leftMotor:0,rightMotor:0,lineLeft:0,lineCenter:0,lineRight:0,irLeft:false,irRight:false,sonarCm:0,lcd:['                ','                '],lcdBacklight:false,strikeServoPosition:0,strikeServoAngle:90,strikeServoAttached:false,buttonPressed:false,simTimeMs:0},this.scene());
+  this.robot=updateSensors({...safeStart,leftMotor:0,rightMotor:0,lineLeft:0,lineCenter:0,lineRight:0,irLeft:false,irRight:false,sonarCm:0,lcd:['                ','                '],lcdBacklight:false,strikeServoPosition:0,strikeServoAngle:90,strikeServoAttached:this.track.id==='s03',buttonPressed:false,simTimeMs:0},this.scene());
   this.mission.reset();this.status='idle';this.ticks=0;this.collisions=0;this.events=[];this.sequence=0;this.instructions=0;this.programControlled=false;this.struck.clear();this.touching=false;this.lastZone=null;this.onLine=true;this.sonarReported.clear();
-  this.offLineMs=0;
+  this.offLineMs=0;this.s03AutoStrike=null;
   this.feedback='Robot en el inicio. Escribe tu programa y pulsa Ejecutar en simulador.';
  }
- private scene():TrackDefinition{return withScenarioIntersections({...this.track,obstacles:this.obstacles},this.scenarioIntersections);}
+ private scene():TrackDefinition{
+  const intersections=this.track.id==='s03'?this.scenarioIntersections.filter(item=>!this.s03ConsumedIntersections.has(item.id)):this.scenarioIntersections;
+  return withScenarioIntersections({...this.track,obstacles:this.obstacles},intersections);
+ }
  /** Keep the S01 physical scenario tied to the one IR chosen before running. */
  syncS01Scenario(){
   if(this.track.id!=='s01')return;
@@ -64,9 +70,35 @@ export class SimulationEngine {
  setLCD(rows:[string,string]){this.robot.lcd=[rows[0],rows[1]];this.emit({type:'LCD_UPDATED',rows:[...rows]});}
  readSonar(){
   const distance=this.robot.sonarCm;
-  if(distance>0&&distance<25){
-   const id=sonarHit(this.robot,this.scene()).obstacleId;
-   if(id&&!this.sonarReported.has(id)){this.sonarReported.add(id);this.emit({type:'OBSTACLE_DETECTED',distance,obstacleId:id});}
+  // En S03 usamos el mismo rango válido trabajado en clase. En vez de hacer
+  // desaparecer la caja, ahora la garra la aparta visualmente de la pista.
+  const validDetection=this.track.id==='s03'?distance>5&&distance<12:distance>0&&distance<25;
+  if(validDetection){
+   const hit=sonarHit(this.robot,this.scene());
+   const id=hit.obstacleId;
+   if(id&&!this.sonarReported.has(id)){
+    this.sonarReported.add(id);
+    this.emit({type:'OBSTACLE_DETECTED',distance,obstacleId:id});
+    if(this.track.id==='s03'){
+     const obstacle=this.obstacles.find(item=>item.id===id);
+     if(obstacle&&!this.s03AutoStrike){
+      const center={x:obstacle.x+obstacle.width/2,y:obstacle.y+obstacle.height/2};
+      const outward={x:center.x-this.track.physicalWidthCm/2,y:center.y-this.track.physicalHeightCm/2};
+      const right={x:-Math.sin(this.robot.heading),y:Math.cos(this.robot.heading)};
+      // La garra elige el lado que aparta la caja hacia el exterior del recorrido.
+      const side: -1|1 = outward.x*right.x+outward.y*right.y>=0?1:-1;
+      // Secuencia visual controlada: primero barre la garra, luego hace contacto,
+      // después desplaza la caja y finalmente vuelve al centro. La caja no se
+      // marca como despejada hasta que el movimiento realmente ocurrió.
+      obstacle.movable=false;
+      obstacle.vx=0;obstacle.vy=0;
+      this.robot.strikeServoAttached=true;
+      this.setServo(side);
+      const now=this.robot.simTimeMs;
+      this.s03AutoStrike={obstacleId:id,side,contactAt:now+260,releaseAt:now+680,returnAt:now+720,finishAt:now+1120,contacted:false,released:false};
+     }
+    }
+   }
   }
   return distance;
  }
@@ -93,6 +125,31 @@ export class SimulationEngine {
  }
  tick(){
   if(this.status!=='running')return;
+  if(this.track.id==='s03'&&this.s03AutoStrike){
+   const strike=this.s03AutoStrike;
+   const obstacle=this.obstacles.find(item=>item.id===strike.obstacleId);
+   const now=this.robot.simTimeMs;
+   if(obstacle&&!strike.contacted&&now>=strike.contactAt){
+    // Contacto garantizado: la animación no depende de una intersección geométrica
+    // demasiado estricta entre el brazo y el centro de la caja.
+    obstacle.movable=true;
+    const lateral={x:-Math.sin(this.robot.heading)*strike.side,y:Math.cos(this.robot.heading)*strike.side};
+    obstacle.vx=lateral.x*32;
+    obstacle.vy=lateral.y*32;
+    this.struck.add(obstacle.id);
+    strike.contacted=true;
+    this.emit({type:'OBSTACLE_HIT',obstacleId:obstacle.id,side:strike.side===-1?'left':'right'});
+    this.emit({type:'OBSTACLE_MOVED',obstacleId:obstacle.id,side:strike.side===-1?'left':'right'});
+   }
+   if(obstacle&&strike.contacted&&!strike.released&&now>=strike.releaseAt){
+    // Solo después de ver la caja desplazarse dejamos libre el recorrido. Así el
+    // while del alumno observa el obstáculo durante el barrido y termina después.
+    obstacle.blocking=false;
+    strike.released=true;
+   }
+   if(now>=strike.returnAt&&this.robot.strikeServoPosition!==0)this.setServo(0);
+   if(now>=strike.finishAt&&Math.abs(this.robot.strikeServoAngle-90)<1.5)this.s03AutoStrike=null;
+  }
   advanceActuators(this.robot,this.obstacles,this.track,PHYSICS_STEP_MS/1000,this.struck,e=>this.emit(e));
   const next=integrate(this.robot,PHYSICS_STEP_MS/1000);
   // The printed plotter has no physical wall: allow the chassis to overhang the
@@ -110,6 +167,22 @@ export class SimulationEngine {
    if(!this.programControlled){this.robot.leftMotor=0;this.robot.rightMotor=0;this.status='idle';this.feedback='El robot tocó un límite o una caja. Prueba retroceder y girar.';}
   }else{this.robot=next;this.touching=false;}
   this.robot=updateSensors(this.robot,this.scene());
+  if(this.track.id==='s03'){
+   const activeIntersections=this.scenarioIntersections.filter(item=>!this.s03ConsumedIntersections.has(item.id));
+   const nearest=activeIntersections.map(item=>({item,distance:Math.hypot(this.robot.x-item.x,this.robot.y-item.y)})).sort((a,b)=>a.distance-b.distance)[0];
+   const allBlack=[this.robot.lineLeft,this.robot.lineCenter,this.robot.lineRight].every((value,index)=>value>=this.lineThresholds[index]);
+   if(!this.s03IntersectionTurn&&nearest&&nearest.distance<=12&&allBlack)this.s03IntersectionTurn={id:nearest.item.id,heading:this.robot.heading};
+   if(this.s03IntersectionTurn){
+    const delta=Math.abs(Math.atan2(Math.sin(this.robot.heading-this.s03IntersectionTurn.heading),Math.cos(this.robot.heading-this.s03IntersectionTurn.heading)));
+    if(delta>=2.55){
+     this.s03ConsumedIntersections.add(this.s03IntersectionTurn.id);
+     this.s03IntersectionTurn=null;
+     // La franja sigue dibujada para que el mapa no cambie, pero deja de actuar
+     // como una segunda intersección cuando el IROH vuelve por el mismo lugar.
+     this.robot=updateSensors(this.robot,this.scene());
+    }
+   }
+  }
   if(this.programControlled)this.mission.observeTick(this.robot);
   const line=[this.robot.lineLeft,this.robot.lineCenter,this.robot.lineRight].some((value,index)=>value>=this.lineThresholds[index]);
   // A one-sensor zig-zag intentionally spends short instants over white. Only

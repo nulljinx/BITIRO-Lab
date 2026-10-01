@@ -74,7 +74,7 @@ export function useS02Calibration(simulation:SimulationConnection,enabled:boolea
  const canSave=ready&&decisionMade&&checkResult==='pass';
 
  useEffect(()=>{
-  if(simulation.track.id==='s02'&&simulation.engineState==='ready')simulation.send({type:'set-line-thresholds',values:savedThresholds});
+  if((simulation.track.id==='s02'||simulation.track.id==='s03')&&simulation.engineState==='ready')simulation.send({type:'set-line-thresholds',values:savedThresholds});
  },[simulation.engineState,simulation.send,simulation.track.id,savedThresholds]);
  useEffect(()=>{if(enabled)setMessage('');},[enabled]);
 
@@ -121,11 +121,11 @@ export function useS02Calibration(simulation:SimulationConnection,enabled:boolea
 
  function testCurrent(){
   if(!decisionMade){setMessage('Primero calcula y registra los tres umbrales.');return;}
-  if(!currentPattern){setMessage('Esta posición mezcla casos. Mueve un poco el IROH hasta obtener uno de los cuatro casos de S02.');return;}
+  if(!currentPattern){setMessage(`Esta posición mezcla casos. Mueve un poco el IROH hasta obtener uno de los cuatro casos de ${simulation.track.id.toUpperCase()}.`);return;}
   const next=testedPatterns.includes(currentPattern)?testedPatterns:[...testedPatterns,currentPattern];
   setTestedPatterns(next);setSaved(false);
   const label=PATTERNS.find(([id])=>id===currentPattern)?.[1]??currentPattern;
-  setMessage(next.length===PATTERNS.length?'¡Listo! Tus umbrales reconocen los cuatro casos de S02.':`${label} comprobado. Te faltan ${PATTERNS.length-next.length} caso(s).`);
+  setMessage(next.length===PATTERNS.length?`¡Listo! Tus umbrales reconocen los cuatro casos de ${simulation.track.id.toUpperCase()}.`:`${label} comprobado. Te faltan ${PATTERNS.length-next.length} caso(s).`);
  }
 
  function clear(){
@@ -163,23 +163,24 @@ function PatternPreview({current,thresholds,currentPattern}:{current:S02Threshol
  </div>;
 }
 
-export function S02CalibrationPanel({calibration,onSaved}:{calibration:ReturnType<typeof useS02Calibration>;onSaved:(values:S02Thresholds)=>void}){
+export function S02CalibrationPanel({calibration,onSaved,sessionId='s02'}:{calibration:ReturnType<typeof useS02Calibration>;onSaved:(values:S02Thresholds)=>void;sessionId?:string}){
  const activeStep=!calibration.whiteReady?1:!calibration.blackReady?2:!calibration.decisionMade?3:calibration.checkResult!=='pass'?4:5;
  const stepClass=(step:number,done:boolean)=>`${activeStep===step?'active ':''}${done?'done':''}`.trim();
  const [drafts,setDrafts]=useState<[string,string,string]>(['','','']);
  const [copied,setCopied]=useState(false);
  useEffect(()=>{if(activeStep===3&&!calibration.decisionMade)setDrafts(['','','']);},[activeStep,calibration.decisionMade]);
+ const sessionLabel=sessionId.toUpperCase();
  const task=useMemo(()=>{
   if(activeStep===1)return {title:'Mide el blanco',text:'Pon los tres sensores sobre blanco y registra 3 mediciones en puntos distintos.'};
   if(activeStep===2)return {title:'Mide el negro',text:'Usa una franja negra transversal para que I, C y D estén sobre negro al mismo tiempo.'};
   if(activeStep===3)return {title:'Calcula tres umbrales',text:'Cada sensor responde distinto. Calcula un valor intermedio para I, C y D.'};
   if(activeStep===4)return {title:'Prueba los cuatro casos',text:'Comprueba centro, derecha, izquierda e intersección como los trabajaste en clase.'};
-  return {title:'Calibración lista',text:'Guarda tus tres valores y llévalos al programa de S02.'};
- },[activeStep]);
+  return {title:'Calibración lista',text:`Guarda tus tres valores y llévalos al programa de ${sessionLabel}.`};
+ },[activeStep,sessionLabel]);
  const code=`int umbralI = ${calibration.thresholds[0]};\nint umbralC = ${calibration.thresholds[1]};\nint umbralD = ${calibration.thresholds[2]};`;
  async function copyCode(){try{await navigator.clipboard.writeText(code);setCopied(true);window.setTimeout(()=>setCopied(false),1500);}catch{/* Clipboard can be unavailable in embedded contexts. */}}
- return <aside className="calibration-panel calibration-guide s02-calibration-guide" aria-label="Calibración guiada de los tres sensores de S02">
-  <div className="calibration-heading"><span className="calibration-icon"><ScanLine size={18}/></span><div><span className="eyebrow">Calibración S02</span><h2>Compara los tres sensores del IROH.</h2></div></div>
+ return <aside className="calibration-panel calibration-guide s02-calibration-guide" aria-label={`Calibración guiada de los tres sensores de ${sessionLabel}`}>
+  <div className="calibration-heading"><span className="calibration-icon"><ScanLine size={18}/></span><div><span className="eyebrow">Calibración {sessionLabel}</span><h2>Compara los tres sensores del IROH.</h2></div></div>
   <div className="calibration-steps calibration-steps-five" aria-label="Pasos de calibración">
    <span className={stepClass(1,calibration.whiteReady)}><b>{calibration.whiteReady?'✓':'1'}</b>Blanco</span>
    <span className={stepClass(2,calibration.blackReady)}><b>{calibration.blackReady?'✓':'2'}</b>Negro</span>

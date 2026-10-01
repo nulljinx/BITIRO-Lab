@@ -7,6 +7,11 @@ import {sessions,starterCode} from '../../content/sessions';
 it('S02 starter scaffold stays within the language taught in class and is accepted by the runtime',()=>{
  const session=sessions.find(item=>item.id==='s02')!;
  const source=starterCode(session);
+ expect(source).toContain('int sensorI;');
+ expect(source).toContain('int sensorC;');
+ expect(source).toContain('int sensorD;');
+ expect(source).toContain('int irIzq;');
+ expect(source).toContain('int irDer;');
  expect(source).toContain('int destino = 0;');
  expect(source).toContain('int estado = 0;');
  expect(source).toContain('int umbralI = 200;');

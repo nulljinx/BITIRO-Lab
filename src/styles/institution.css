@@ -441,7 +441,7 @@
 .institution-shell.theme-mustakis .perspective-switch button[aria-pressed=true]{color:var(--mustakis-navy);border-color:var(--mustakis-yellow);background:var(--mustakis-yellow-soft);}
 .institution-shell.theme-mustakis .mission-panel{border-color:var(--alpha-mustakis-navy-14);}
 @media(max-width:767px){
-  .institution-shell.theme-mustakis .workspace-heading{padding:12px 12px 30px;}
+  .institution-shell.theme-mustakis .workspace-heading{padding:12px 12px 30px 18px;}
   .institution-shell.theme-mustakis .workspace-heading:after{left:12px;right:auto;bottom:9px;}
 }
 
@@ -854,7 +854,7 @@
 /* Mentor and laboratory institutional styling: no yellow/teal accents. */
 .mentor-page.theme-mustakis .mentor-heading{padding:24px 28px;background:#F5F5FA;border-left:5px solid var(--mustakis-blue);}
 .mentor-page.theme-mustakis .mentor-kpis svg,.mentor-page.theme-mustakis .mentor-invite-heading>svg{color:var(--mustakis-blue);}
-.institution-shell.theme-mustakis .workspace-heading{padding:10px 14px 12px;border-left:5px solid var(--mustakis-blue);background:#F8F8FB;}
+.institution-shell.theme-mustakis .workspace-heading{padding:10px 14px 12px 22px;border-left:5px solid var(--mustakis-blue);background:#F8F8FB;}
 .institution-shell.theme-mustakis .workspace-heading .eyebrow{color:var(--mustakis-blue);}
 .institution-shell.theme-mustakis .workspace-availability{color:var(--mustakis-navy);background:var(--mustakis-blue-soft);border-color:#BFC0E8;}
 .institution-shell.theme-mustakis .workspace-tabs button[aria-pressed=true]{color:var(--mustakis-navy);background:var(--mustakis-blue-soft);}

@@ -142,7 +142,7 @@ export class MissionEvaluator {
    check('cross','Reconocer el cruce central y detenerse al menos 0,3 s',this.intersection&&this.intersectionStopMs>=300);
    check('finish',expectedLabel?`Llegar a ${expectedLabel} y detener ambos motores`:'Llegar a la base indicada y detener ambos motores',stationary&&!!expected&&this.destinationReached);
   }else if(this.track.id==='s03'){
-   check('line','Recorrer la pista leyendo los tres sensores de línea',this.lineReads.size===3&&this.distance>=140);
+   check('line','Recorrer la pista siguiendo la línea con los tres sensores',this.lineReads.size===3&&this.distance>=140);
    check('obstacles',`Detectar 3 obstáculos con sonar (${Math.min(3,this.obstacleDetections.size)}/3)`,this.obstacleDetections.size>=3);
    check('lcd','Mostrar en la LCD el total correcto de obstáculos',this.obstacleDetections.size>=3&&this.lcdNumber===3);
    check('intersections',`Responder a 3 intersecciones con un cambio de sentido de 180° (${Math.min(3,this.s03IntersectionResponses)}/3)`,this.s03IntersectionResponses>=3);

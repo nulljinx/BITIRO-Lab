@@ -6,17 +6,18 @@ export function strikeTip(robot:RobotState){const pivot={x:robot.x+Math.cos(robo
 export function advanceActuators(robot:RobotState,boxes:DynamicObstacle[],track:TrackDefinition,dt:number,struck:Set<string>,emit:(e:EventPayload)=>void){
  const target=servoAngle(robot.strikeServoPosition),diff=target-robot.strikeServoAngle;
  const moving=robot.strikeServoAttached&&Math.abs(diff)>.001;
- if(moving){robot.strikeServoAngle+=Math.sign(diff)*Math.min(Math.abs(diff),STRIKE.degreesPerSecond*dt);
+ const servoSpeed=track.id==='s03'?220:STRIKE.degreesPerSecond;
+ if(moving){robot.strikeServoAngle+=Math.sign(diff)*Math.min(Math.abs(diff),servoSpeed*dt);
   if(robot.strikeServoPosition!==0){const {pivot,tip}=strikeTip(robot);for(const box of boxes){
    if(!box.movable||struck.has(box.id))continue;
    const center={x:box.x+box.width/2,y:box.y+box.height/2};
    // Deterministic capsule approximation of the swept arm against a box.
    if(distanceToSegment(center,pivot,tip)<=Math.min(box.width,box.height)/2+1){
     const side=robot.strikeServoPosition===-1?'left':'right';const sign=robot.strikeServoPosition;
-    box.vx=-Math.sin(robot.heading)*sign*STRIKE.impulseCmS;box.vy=Math.cos(robot.heading)*sign*STRIKE.impulseCmS;struck.add(box.id);
-    // In S03, a successful fan strike means the obstacle has been cleared from
-    // the route. Keep rendering and animating the box, but do not let the
-    // displaced box trap the robot later on the closed circuit.
+    const impulse=track.id==='s03'?42:STRIKE.impulseCmS;
+    box.vx=-Math.sin(robot.heading)*sign*impulse;box.vy=Math.cos(robot.heading)*sign*impulse;struck.add(box.id);
+    // En S03 la caja permanece visible: el golpe la desplaza físicamente de
+    // forma progresiva y, una vez contactada, deja libre la línea para el IROH.
     if(track.id==='s03')box.blocking=false;
     emit({type:'OBSTACLE_HIT',obstacleId:box.id,side});emit({type:'OBSTACLE_MOVED',obstacleId:box.id,side});
    }
@@ -24,7 +25,8 @@ export function advanceActuators(robot:RobotState,boxes:DynamicObstacle[],track:
  }
  for(const box of boxes){
   box.x=Math.max(0,Math.min(track.physicalWidthCm-box.width,box.x+box.vx*dt));box.y=Math.max(0,Math.min(track.physicalHeightCm-box.height,box.y+box.vy*dt));
-  box.vx*=Math.exp(-STRIKE.drag*dt);box.vy*=Math.exp(-STRIKE.drag*dt);
+  const drag=track.id==='s03'?3.8:STRIKE.drag;
+  box.vx*=Math.exp(-drag*dt);box.vy*=Math.exp(-drag*dt);
   if(Math.abs(box.vx)<.01)box.vx=0;if(Math.abs(box.vy)<.01)box.vy=0;
  }
 }

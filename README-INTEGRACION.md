@@ -1,3 +1,24 @@
+## v7.94 · S03 garra con contacto garantizado
+
+- La detección del sonar ya no marca el obstáculo como resuelto de inmediato.
+- La garra hace un barrido visible antes de mover la caja.
+- El contacto con la caja está garantizado por una secuencia temporal controlada, evitando bloqueos del `while`.
+- La caja permanece visible, se desplaza lateralmente y solo después deja libre el recorrido.
+- La garra vuelve al centro al finalizar el movimiento.
+
+## v7.92 · S03 movimiento fluido de la garra
+
+- El sonar inicia el barrido del servo, pero la caja no se mueve hasta que la garra la alcanza físicamente.
+- El desplazamiento de la caja usa impulso lateral y desaceleración progresiva, evitando el salto instantáneo.
+- La garra vuelve al centro después del barrido y el cono del sonar permanece visible.
+- La caja sigue visible fuera de la pista después de ser apartada.
+
+## v7.91 · S03 garra mueve el objeto
+
+- En S03, al detectar un obstáculo con sonar, la garra ahora se anima y aparta visualmente la caja.
+- La caja deja de bloquear el recorrido, pero permanece visible y se desplaza fuera de la pista.
+- Se conserva el cono visual del sonar y la caja ya no desaparece del mapa.
+
 # BITIRO Lab — Entrega integrada v6.6
 
 Esta carpeta conserva las capacidades institucionales previas de v6.5 y añade una **experiencia institucional Mustakis diferenciada** en el hub, el espacio de grupo, la mentoría y el laboratorio, sin alterar el modelo de permisos ni convertir BITIRO en una marca exclusiva de una institución.

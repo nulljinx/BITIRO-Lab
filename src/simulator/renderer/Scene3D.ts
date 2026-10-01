@@ -91,9 +91,22 @@ export function renderScene3D(canvas:HTMLCanvasElement,track:TrackDefinition,rob
  }}
  // Obstacles with an explicit footprint shadow and slightly bevel-like color split.
  for(const obstacle of obstacles){
-  addBox(faces,X(obstacle.x)+.45,-.16,Z(obstacle.y)+.55,obstacle.width,1.2,obstacle.height,['rgba(39,48,55,.16)','rgba(39,48,55,.14)','rgba(39,48,55,.12)']);
-  addBox(faces,X(obstacle.x),0,Z(obstacle.y),obstacle.width,10,obstacle.height,['#D7AA72','#A96E42','#845536'],'#75472D');
-  addBox(faces,X(obstacle.x)+.35,10,Z(obstacle.y)+.35,Math.max(.1,obstacle.width-.7),.18,Math.max(.1,obstacle.height-.7),['#E4BD86','#D7A86F','#BF8654']);
+  const cleared=track.id==='s03'&&obstacle.blocking===false;
+  addBox(faces,X(obstacle.x)+.45,-.16,Z(obstacle.y)+.55,obstacle.width,1.2,obstacle.height,[cleared?'rgba(39,48,55,.10)':'rgba(39,48,55,.16)',cleared?'rgba(39,48,55,.09)':'rgba(39,48,55,.14)',cleared?'rgba(39,48,55,.08)':'rgba(39,48,55,.12)']);
+  addBox(faces,X(obstacle.x),0,Z(obstacle.y),obstacle.width,10,obstacle.height,cleared?['#E7C99D','#C99263','#A56D46']:['#D7AA72','#A96E42','#845536'],cleared?'#B67846':'#75472D');
+  addBox(faces,X(obstacle.x)+.35,10,Z(obstacle.y)+.35,Math.max(.1,obstacle.width-.7),.18,Math.max(.1,obstacle.height-.7),cleared?['#F0D8B4','#E2BC8E','#CC9865']:['#E4BD86','#D7A86F','#BF8654']);
+ }
+ if(track.id==='s03'){
+  const sonarReach=clamp(robot.sonarCm>0?robot.sonarCm:22,14,28);
+  const sonarOriginX=robot.x+Math.cos(robot.heading)*ROBOT.sonarOffsetCm;
+  const sonarOriginY=robot.y+Math.sin(robot.heading)*ROBOT.sonarOffsetCm;
+  const sonarBeamOffsets=[-.52,-.26,0,.26,.52];
+  faces.push({
+   points:[V(X(sonarOriginX),-.14,Z(sonarOriginY)),...sonarBeamOffsets.map(offset=>V(X(sonarOriginX+Math.cos(robot.heading+offset)*sonarReach),-.14,Z(sonarOriginY+Math.sin(robot.heading+offset)*sonarReach)))],
+   fill:robot.sonarCm>0?'rgba(85,214,230,.16)':'rgba(85,214,230,.10)',
+   stroke:robot.sonarCm>0?'rgba(85,214,230,.44)':'rgba(85,214,230,.28)',
+   alpha:1,layer:2.2,lineWidth:.7
+  });
  }
  // Robot geometry in local forward/right coordinates. The authoritative state
  // comes directly from the same physics engine used by the 2D view.
@@ -172,7 +185,7 @@ export function renderScene3D(canvas:HTMLCanvasElement,track:TrackDefinition,rob
  // Compact IR modules at the front corners.
  orientedBox(4.72,-4.15,3.65,1.05,.9,.65,robot.irLeft?'#D65D58':'#444D53','#293137');
  orientedBox(4.72,4.15,3.65,1.05,.9,.65,robot.irRight?'#D65D58':'#444D53','#293137');
- // Golpe servo and arm. Geometry comes from the actual live servo angle.
+ // Golpe servo and arm. Puede coexistir visualmente con el cono del sonar.
  const {pivot,tip}=strikeTip(robot),pivotWorld=V(X(pivot.x),3.65,Z(pivot.y)),tipWorld=V(X(tip.x),3.65,Z(tip.y));
  orientedBox(5.1,0,3.15,1.6,2.2,1.6,'#376AA5','#244B77','#1B385A');
  segmentBar(pivotWorld,tipWorld,3.55,.9,.72,'#DDE4E7','#9DA9B0');
@@ -217,7 +230,7 @@ export function renderScene3D(canvas:HTMLCanvasElement,track:TrackDefinition,rob
  }
  if(track.id==='s03'){
   context.save();context.textAlign='center';context.textBaseline='middle';
-  for(const obstacle of obstacles){const center=project(V(X(obstacle.x+obstacle.width/2),10.35,Z(obstacle.y+obstacle.height/2)));const n=obstacle.id.match(/(\d+)$/)?.[1];if(center&&n){context.fillStyle='#5C321A';context.font='700 12px "IBM Plex Mono", monospace';context.fillText(n,center.x,center.y);}}
+  for(const obstacle of obstacles){const center=project(V(X(obstacle.x+obstacle.width/2),10.35,Z(obstacle.y+obstacle.height/2)));const n=obstacle.id.match(/(\d+)$/)?.[1];if(center&&n){context.fillStyle=obstacle.blocking===false?'#8A5A2F':'#5C321A';context.font='700 12px "IBM Plex Mono", monospace';context.fillText(n,center.x,center.y);}}
   for(const path of track.paths){if(!path.id.startsWith('scenario-cross-')||!path.id.endsWith('-h'))continue;const a=path.points[0],b=path.points.at(-1)!;const center=project(V(X((a.x+b.x)/2),.2,Z((a.y+b.y)/2)));const idx=path.id.match(/scenario-cross-(\d+)-h/)?.[1];if(center){context.fillStyle='#A64A20';context.font='700 10px "IBM Plex Mono", monospace';context.fillText(`I${Number(idx??0)+1}`,center.x,center.y-8);}}
   context.restore();
  }
@@ -228,7 +241,7 @@ export function renderScene3D(canvas:HTMLCanvasElement,track:TrackDefinition,rob
  context.fillText(`BITIRO / ${track.id.toUpperCase()} / 3D`,26,30);
  context.font='10px "IBM Plex Sans", sans-serif';context.fillStyle='#AFC2CB';
  context.fillText(camera.follow?'Seguimiento IROH':topView?'Vista superior · rueda para zoom':'Arrastra para orbitar · rueda para zoom',26,45);
- if(track.id==='s01'||track.id==='s03'){
+ if(track.id==='s01'){
   const status=robot.strikeServoAttached?`GOLPE ${Math.round(robot.strikeServoAngle)}°`:'GOLPE SIN INICIALIZAR';
   context.font='10px "IBM Plex Mono", monospace';const tw=context.measureText(status).width;
   context.fillStyle='rgba(8,18,27,.68)';context.fillRect(width-tw-30,height-30,tw+18,19);

@@ -25,7 +25,17 @@ export function renderCanvas(canvas: HTMLCanvasElement, track: TrackDefinition, 
   track.paths.forEach((path,i)=>{ctx.strokeStyle=T.line;ctx.lineWidth=path.widthCm;ctx.lineCap=path.lineCap as CanvasLineCap;ctx.lineJoin='round';ctx.stroke(paths![i]);});
   if(track.id==='s03'){for(const path of track.paths){if(!path.id.startsWith('scenario-cross-')||!path.id.endsWith('-h'))continue;const match=path.id.match(/scenario-cross-(\d+)-h/);const a=path.points[0],b=path.points.at(-1)!;ctx.fillStyle='#A64A20';ctx.font='700 2px "IBM Plex Mono"';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(`I${Number(match?.[1]??0)+1}`,(a.x+b.x)/2,(a.y+b.y)/2-4);}}
   if(track.startLabel){ctx.fillStyle=T.label;ctx.font='2.4px "IBM Plex Sans"';ctx.textAlign='center';ctx.textBaseline='alphabetic';ctx.fillText(track.startLabel.text,track.startLabel.x,track.startLabel.y);}
-  for(const o of track.obstacles) {ctx.fillStyle=o.blocking===false?'#F0C98F':T.obstacle;ctx.fillRect(o.x,o.y,o.width,o.height);ctx.strokeStyle=T.obstacleStroke;ctx.lineWidth=.4;ctx.strokeRect(o.x,o.y,o.width,o.height);ctx.beginPath();ctx.moveTo(o.x+o.width/2,o.y);ctx.lineTo(o.x+o.width/2,o.y+o.height);ctx.stroke();if(track.id==='s03'){const n=o.id.match(/(\d+)$/)?.[1];if(n){ctx.fillStyle='#5D341A';ctx.font='700 2.2px "IBM Plex Mono"';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(n,o.x+o.width/2,o.y+o.height/2);}}}
+  for(const o of track.obstacles) {ctx.fillStyle=o.blocking===false?'#F0C98F':T.obstacle;ctx.fillRect(o.x,o.y,o.width,o.height);ctx.strokeStyle=o.blocking===false?'#B97C4A':T.obstacleStroke;ctx.lineWidth=.4;ctx.strokeRect(o.x,o.y,o.width,o.height);ctx.beginPath();ctx.moveTo(o.x+o.width/2,o.y);ctx.lineTo(o.x+o.width/2,o.y+o.height);ctx.stroke();if(track.id==='s03'){const n=o.id.match(/(\d+)$/)?.[1];if(n){ctx.fillStyle=o.blocking===false?'#8A5A2F':'#5D341A';ctx.font='700 2.2px "IBM Plex Mono"';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(n,o.x+o.width/2,o.y+o.height/2);}}}
+  if(track.id==='s03'){
+   const sonarOrigin={x:robot.x+Math.cos(robot.heading)*ROBOT.sonarOffsetCm,y:robot.y+Math.sin(robot.heading)*ROBOT.sonarOffsetCm};
+   const sonarReach=Math.max(14,Math.min(28,robot.sonarCm>0?robot.sonarCm:22));
+   ctx.save();
+   ctx.beginPath();ctx.moveTo(sonarOrigin.x,sonarOrigin.y);ctx.arc(sonarOrigin.x,sonarOrigin.y,sonarReach,robot.heading-.52,robot.heading+.52);ctx.closePath();
+   ctx.fillStyle=robot.sonarCm>0?'rgba(85,214,230,.18)':'rgba(85,214,230,.10)';ctx.fill();
+   ctx.strokeStyle=robot.sonarCm>0?'rgba(85,214,230,.58)':'rgba(85,214,230,.34)';ctx.lineWidth=.55;ctx.setLineDash([1.2,.9]);ctx.stroke();ctx.setLineDash([]);
+   ctx.beginPath();ctx.arc(sonarOrigin.x,sonarOrigin.y,.85,0,Math.PI*2);ctx.fillStyle='rgba(85,214,230,.92)';ctx.fill();
+   ctx.restore();
+  }
   ctx.save();ctx.translate(robot.x,robot.y);ctx.rotate(robot.heading+Math.PI/2);
   ctx.fillStyle=T.robotShadow;ctx.beginPath();ctx.ellipse(.8,1.3,7.4,8,0,0,Math.PI*2);ctx.fill();
   ctx.fillStyle=T.wheel;ctx.fillRect(-7,-4,2,8);ctx.fillRect(5,-4,2,8);

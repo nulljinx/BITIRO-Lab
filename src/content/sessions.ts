@@ -17,24 +17,48 @@ export function starterCode(session:SessionDefinition) {
 // Desafío: contadores y ciclo while
 #include <KnightRoboticsLibs_Iroh.h>
 
-void setup() {
+int sensorI;
+int sensorC;
+int sensorD;
+int distancia;
 
+int umbralI = 200;
+int umbralC = 200;
+int umbralD = 200;
+
+int contadorObstaculos = 0;
+
+void setup() {
+  inicializarMovimiento();
+  inicializarSensores();
+  inicializarPantalla();
 }
 
 void loop() {
+  // 1) Lee los tres sensores y el sonar.
 
+  // 2) Muestra la distancia del sonar en la LCD.
+
+  // 3) Cuando detectes un obstáculo, súmalo al contador
+  //    y muestra también el total en la LCD.
+
+  // 4) Usa while para no contar varias veces el mismo obstáculo.
+
+  // 5) Si I, C y D ven negro, realiza un giro de 180°.
+
+  // 6) En los demás casos, sigue la línea con los tres sensores.
 }
 `;
  if(session.id==='s02')return `// BITIRO Lab · Sesión 02
 // Tres sensores, intersección y elección de base
 #include <KnightRoboticsLibs_Iroh.h>
 
-int sensorI = 0;
-int sensorC = 0;
-int sensorD = 0;
+int sensorI;
+int sensorC;
+int sensorD;
 
-int irIzq = 0;
-int irDer = 0;
+int irIzq;
+int irDer;
 
 int destino = 0;
 int estado = 0;

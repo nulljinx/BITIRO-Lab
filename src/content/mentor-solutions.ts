@@ -16,10 +16,10 @@ int lado = 0;          // 1 = izquierda, 2 = derecha
 int flag = 0;          // 0 = falta elegir lado, 1 = lado elegido
 int terminado = 0;     // 0 = recorriendo, 1 = desafío terminado
 
-int irIzq = 0;
-int irDer = 0;
-int sensorCentro = 0;
-int distancia = 0;
+int irIzq;
+int irDer;
+int sensorCentro;
+int distancia;
 int umbral = 200;      // Reemplazar por el valor obtenido al calibrar.
 
 void setup() {
@@ -119,13 +119,13 @@ void loop() {
 // Solución de referencia para mentor
 #include <KnightRoboticsLibs_Iroh.h>
 
-int sensorI = 0;
-int sensorC = 0;
-int sensorD = 0;
+int sensorI;
+int sensorC;
+int sensorD;
 
-int irIzq = 0;
-int irDer = 0;
-int boton = 0;
+int irIzq;
+int irDer;
+int boton;
 
 int destino = 0;       // 1 = Base 1, 2 = Base 2, 3 = Base 3
 int estado = 0;        // 0 = elegir base, 1 = recorrer, 2 = terminado
@@ -258,118 +258,105 @@ void loop() {
   },
   s03:{
     title:'Solución de referencia · S03',
-    note:'Una forma posible de resolver el desafío con los contenidos de S03: contador, ciclo while, sonar, tres sensores, Golpe e intersecciones. Antes de mostrarla, deja que el grupo pruebe y compare sus propias estrategias.',
+    note:'Referencia construida con lo trabajado en S03: seguidor de línea con tres sensores, sonar mostrado en LCD, contador, ciclo while para no contar dos veces el mismo obstáculo e intersecciones con giro de 180°.',
     source:`// BITIRO Lab · Sesión 03
 // Solución de referencia para mentor
 #include <KnightRoboticsLibs_Iroh.h>
 
-const int UMBRAL_I = 200,
-          UMBRAL_C = 200,
-          UMBRAL_D = 200;
+int sensorI;
+int sensorC;
+int sensorD;
+int distancia;
 
-int si = 0, sc = 0, sd = 0;
-int distancia = 0;
+// Reemplazar por los valores obtenidos al calibrar cada sensor.
+int umbralI = 200;
+int umbralC = 200;
+int umbralD = 200;
+
 int contadorObstaculos = 0;
-int ultimoGiro = 0; // -1 izquierda, 1 derecha
-int enInterseccion = 0;
 
 void setup() {
+  // En setup solo inicializamos las partes del IROH que usaremos.
   inicializarMovimiento();
   inicializarSensores();
   inicializarPantalla();
-  inicializarGolpe();
-
-  borrarPantalla();
-  escribirPantalla(0, 0, "Obstaculos:");
-  escribirPantalla(0, 1, contadorObstaculos);
 }
 
 void loop() {
-  si = leerSensorLineaIzquierdo();
-  sc = leerSensorLineaCentral();
-  sd = leerSensorLineaDerecho();
 
-  // Intersección: los tres sensores detectan negro.
-  if (si >= UMBRAL_I && sc >= UMBRAL_C && sd >= UMBRAL_D) {
-    // En esta solución primero completamos el conteo de los 3 obstáculos.
-    // Así usamos el contador para decidir cuándo empezar a cambiar de sentido.
-    if (contadorObstaculos < 3) {
-      avanzar(18);
-    }
-    else if (enInterseccion == 0) {
-      detenerse();
-      girarDerecha(35);
-      pausa(1200);   // aproximadamente 180° en el simulador
-      detenerse();
-      enInterseccion = 1;
-      ultimoGiro = 0;
-    }
-    else {
-      // Después del giro atravesamos la franja una sola vez para abandonarla.
-      avanzar(18);
-    }
-  }
-  else {
-    enInterseccion = 0;
-
-    // Línea centrada.
-    if (si < UMBRAL_I && sc >= UMBRAL_C && sd < UMBRAL_D) {
-      ultimoGiro = 0;
-      avanzar(18);
-    }
-    // Línea hacia la derecha.
-    else if (si < UMBRAL_I && sc < UMBRAL_C && sd >= UMBRAL_D) {
-      ultimoGiro = 1;
-      avanzar(55, 1);
-    }
-    // Línea hacia la izquierda.
-    else if (si >= UMBRAL_I && sc < UMBRAL_C && sd < UMBRAL_D) {
-      ultimoGiro = -1;
-      avanzar(1, 55);
-    }
-    // Si los tres ven blanco, buscamos el último lado donde vimos la línea.
-    else if (si < UMBRAL_I && sc < UMBRAL_C && sd < UMBRAL_D) {
-      if (ultimoGiro == 1) {
-        avanzar(50, 1);
-      }
-      if (ultimoGiro == -1) {
-        avanzar(1, 50);
-      }
-      if (ultimoGiro == 0) {
-        avanzar(14);
-      }
-    }
-  }
-
+  sensorI = leerSensorLineaIzquierdo();
+  sensorC = leerSensorLineaCentral();
+  sensorD = leerSensorLineaDerecho();
   distancia = leerDistanciaSonar();
 
-  // El rango sigue el criterio trabajado en la sesión.
+  // Usamos la LCD para observar el sonar y el contador.
+  borrarPantalla();
+  escribirPantalla(0, 0, "Dist:");
+  escribirPantalla(6, 0, distancia);
+  escribirPantalla(0, 1, "Obst:");
+  escribirPantalla(6, 1, contadorObstaculos);
+
+  // PRIMERA TAREA: detectar y contar obstáculos.
   if (distancia > 5 && distancia < 12) {
     detenerse();
+
     contadorObstaculos++;
 
     borrarPantalla();
-    escribirPantalla(0, 0, "Obstaculos:");
-    escribirPantalla(0, 1, contadorObstaculos);
-
-    // Movimiento de abanico trabajado en la sesión: barrimos ambos lados
-    // para desplazar la caja sin asumir de qué lado quedó respecto del IROH.
-    moverServoGolpe(-1);
-    pausa(350);
-    moverServoGolpe(1);
-    pausa(500);
-    moverServoGolpe(0);
-    pausa(300);
+    escribirPantalla(0, 0, "Dist:");
+    escribirPantalla(6, 0, distancia);
+    escribirPantalla(0, 1, "Obst:");
+    escribirPantalla(6, 1, contadorObstaculos);
 
     // Mientras el mismo obstáculo siga delante, no lo contamos otra vez.
     distancia = leerDistanciaSonar();
+
     while (distancia > 5 && distancia < 12) {
       pausa(50);
       distancia = leerDistanciaSonar();
-    }
 
-    avanzar(16);
-    pausa(250);
+      borrarPantalla();
+      escribirPantalla(0, 0, "Dist:");
+      escribirPantalla(6, 0, distancia);
+      escribirPantalla(0, 1, "Obst:");
+      escribirPantalla(6, 1, contadorObstaculos);
+    }
+  }
+
+  // SEGUNDA TAREA: responder a una intersección.
+  else if (sensorI >= umbralI &&
+           sensorC >= umbralC &&
+           sensorD >= umbralD) {
+    detenerse();
+    pausa(200);
+
+    // En el desafío, al encontrar una intersección cambiamos el sentido.
+    girarDerecha(35);
+    pausa(1200);
+    detenerse();
+
+    // Salimos de la franja negra antes de volver al seguidor de línea.
+    avanzar(18);
+    pausa(450);
+  }
+
+  // TERCERA TAREA: seguidor de línea con los tres casos vistos en clase.
+  else if (sensorI < umbralI &&
+           sensorC >= umbralC &&
+           sensorD < umbralD) {
+    avanzar(18);
+  }
+
+  else if (sensorI < umbralI &&
+           sensorC < umbralC &&
+           sensorD >= umbralD) {
+    girarDerecha(10);
+  }
+
+  else if (sensorI >= umbralI &&
+           sensorC < umbralC &&
+           sensorD < umbralD) {
+    girarIzquierda(10);
   }
 }
 `,

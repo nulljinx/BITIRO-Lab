@@ -33,20 +33,58 @@ describe('mentor reference solutions',()=>{
     });
 });
 
-it('S03 mentor solution detects, counts and clears all three fixed obstacles',()=>{
+it('S03 mentor reference stays within the classroom progression for counters and while',()=>{
+  const source=mentorSolutions.s03.source;
+  expect(source).toContain('int sensorI;');
+  expect(source).toContain('int sensorC;');
+  expect(source).toContain('int sensorD;');
+  expect(source).toContain('int contadorObstaculos = 0;');
+  expect(source).toContain('contadorObstaculos++;');
+  expect(source).toContain('while (distancia > 5 && distancia < 12)');
+  expect(source).not.toContain('const int UMBRAL');
+  expect(source).not.toContain('ultimoGiro');
+});
+
+it('S03 mentor solution detects, counts and waits for all three temporary obstacles',()=>{
   const engine=new SimulationEngine(trackForSession('s03'));
   const runtime=new ProgramRuntime(engine);
-  const before=engine.obstacles.map(item=>({x:item.x,y:item.y}));
-  expect(engine.obstacles.every(item=>item.movable&&item.blocking)).toBe(true);
+  expect(engine.obstacles.every(item=>item.blocking)).toBe(true);
   expect(runtime.run(mentorSolutions.s03.source)).toEqual([]);
   for(let i=0;i<12000&&engine.snapshot().mission.status!=='completed';i++)runtime.step(10);
   const result=engine.snapshot();
   expect(result.mission.status).toBe('completed');
   expect(result.mission.progress).toMatchObject({obstaclesDetected:3,lcdValue:3,intersectionsResponded:3,duplicateObstacleRead:false});
-  expect(engine.obstacles.filter((item,index)=>Math.hypot(item.x-before[index].x,item.y-before[index].y)>5)).toHaveLength(3);
+  expect(engine.events.filter(event=>event.type==='OBSTACLE_HIT')).toHaveLength(3);
+  expect(engine.events.filter(event=>event.type==='OBSTACLE_MOVED')).toHaveLength(3);
   expect(engine.obstacles.every(item=>item.blocking===false)).toBe(true);
+  expect(engine.obstacles.every(item=>item.movable)).toBe(true);
+  expect(mentorSolutions.s03.source).not.toContain('inicializarGolpe');
+  expect(mentorSolutions.s03.source).not.toContain('moverServoGolpe');
+  expect(mentorSolutions.s03.source).toContain('escribirPantalla(6, 0, distancia)');
 });
 
+
+it('S01 and S02 mentor references only initialize variables that need an initial state',()=>{
+  const s01=mentorSolutions.s01.source;
+  expect(s01).toContain('int irIzq;');
+  expect(s01).toContain('int irDer;');
+  expect(s01).toContain('int sensorCentro;');
+  expect(s01).toContain('int distancia;');
+  expect(s01).toContain('int lado = 0;');
+  expect(s01).toContain('int flag = 0;');
+  expect(s01).toContain('int terminado = 0;');
+
+  const s02=mentorSolutions.s02.source;
+  expect(s02).toContain('int sensorI;');
+  expect(s02).toContain('int sensorC;');
+  expect(s02).toContain('int sensorD;');
+  expect(s02).toContain('int irIzq;');
+  expect(s02).toContain('int irDer;');
+  expect(s02).toContain('int boton;');
+  expect(s02).toContain('int destino = 0;');
+  expect(s02).toContain('int estado = 0;');
+  expect(s02).toContain('int cruceSuperado = 0;');
+});
 
 for(const side of ['left','right'] as const)it(`S01 mentor solution completes the ${side} route and all four mission checks`,()=>{
   const engine=new SimulationEngine(trackForSession('s01'));

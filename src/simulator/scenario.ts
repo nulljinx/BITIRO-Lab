@@ -18,9 +18,12 @@ export function s01ObstacleForIR(left:boolean,right:boolean):Obstacle|null{
 
 export const S03_FIXED_SCENARIO={
  obstacles:[
-  {x:16.8,y:59.5},
-  {x:65.3,y:171.7},
-  {x:89.1,y:33.2},
+  // Los tres obstáculos quedan centrados sobre el trazado y repartidos a lo
+  // largo del recorrido. El primero queda lejos del inicio para evitar que el
+  // sonar lo detecte apenas comienza la simulación.
+  {x:82.214,y:160.363},
+  {x:89.112,y:33.176},
+  {x:13.369,y:153.838},
  ] satisfies Point[],
  intersections:[
   {x:26.1,y:106.0},
@@ -32,9 +35,11 @@ export const S03_FIXED_SCENARIO={
 export function scenarioIntersectionPaths(intersections:readonly ScenarioIntersection[]):LinePath[]{
  return intersections.map((point,index)=>({
   id:`scenario-intersection-${index+1}`,
-  widthCm:3.4,
+  // Las intersecciones horizontales deben verse como una franja añadida al mapa,
+  // no como un bloque ancho que deforme el trazado original.
+  widthCm:2.8,
   lineCap:'square',
-  points:[{x:point.x-7,y:point.y},{x:point.x+7,y:point.y}],
+  points:[{x:point.x-5.8,y:point.y},{x:point.x+5.8,y:point.y}],
  }));
 }
 export function withScenarioIntersections(track:TrackDefinition,intersections:readonly ScenarioIntersection[]):TrackDefinition{
