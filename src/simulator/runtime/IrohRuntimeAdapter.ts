@@ -26,7 +26,7 @@ export class IrohRuntimeAdapter {
    case 'leerSensorLineaDerecho':if(!this.lineRead.has('right')){this.lineRead.add('right');this.engine.emit({type:'LINE_SENSOR_READ',side:'right'});}return numberValue(robot.lineRight);
    case 'leerSensorObstaculoIzquierdo':case 'leerSensorObstaculoDerecho':{const side=name==='leerSensorObstaculoIzquierdo'?'left':'right',active=side==='left'?robot.irLeft:robot.irRight;if(this.irRead.get(side)!==active){this.engine.emit({type:'IR_READ',side,active});this.irRead.set(side,active);}return numberValue(majorityIR([active,active,active])?1:0);}
    case 'leerDistanciaSonar':return numberValue(this.engine.readSonar());
-   case 'leerBoton':return numberValue(robot.buttonPressed?1:0);
+   case 'leerBoton':this.engine.emit({type:'BUTTON_READ',active:robot.buttonPressed});return numberValue(robot.buttonPressed?1:0);
    case 'botonInicio':if(!robot.buttonPressed)yield {kind:'wait',wait:{type:'button'}};break;
    case 'inicializarPantalla':case 'inicializarPantallaRobot':this.lcdInitialized=true;robot.lcdBacklight=true;this.engine.setLCD([' KnightRobotics ','                ']);break;
    case 'escribirPantalla':{const col=integer(0),row=integer(1);if(col<0||col>15||row<0||row>1)throw new LanguageError('ArgumentError','La LCD usa columnas 0–15 y filas 0–1.',loc);const text=args[2].type==='string'?String(args[2].value):String(integer(2));if(this.lcdInitialized){const rows:[string,string]=[...robot.lcd];rows[row]=(rows[row].slice(0,col)+text+rows[row].slice(col+text.length)).slice(0,16);this.engine.setLCD(rows);}break;}

@@ -4,10 +4,23 @@ import {ProgramRuntime} from '../../simulator/runtime/ProgramRuntime';
 import {trackForSession} from '../../content/tracks';
 import {sessions,starterCode} from '../../content/sessions';
 
-it('S02 starter scaffold uses multiple declarations and a helper function supported by the runtime',()=>{
+it('S02 starter scaffold stays within the language taught in class and is accepted by the runtime',()=>{
  const session=sessions.find(item=>item.id==='s02')!;
+ const source=starterCode(session);
+ expect(source).toContain('int destino = 0;');
+ expect(source).toContain('int estado = 0;');
+ expect(source).toContain('int umbralI = 200;');
+ expect(source).toContain('int umbralC = 200;');
+ expect(source).toContain('int umbralD = 200;');
+ expect(source).not.toMatch(/\bbool\b/);
+ expect(source).not.toContain('void seguirLinea');
+ const setup=source.match(/void setup\(\)\s*\{([\s\S]*?)\}/)?.[1]??'';
+ expect(setup).toContain('inicializarMovimiento');
+ expect(setup).toContain('inicializarSensores');
+ expect(setup).toContain('inicializarPantalla');
+ expect(setup).not.toContain('leerSensor');
  const engine=new SimulationEngine(trackForSession('s02'));
  const runtime=new ProgramRuntime(engine);
- const diagnostics=runtime.run(starterCode(session));
+ const diagnostics=runtime.run(source);
  expect(diagnostics).toEqual([]);
 });

@@ -71,6 +71,29 @@ for(const side of ['left','right'] as const)it(`S01 mentor solution completes th
   expect(engine.robot.strikeServoPosition).toBe(0);
 });
 
+
+for(const scenario of [
+  {label:'Base 1',left:false,right:true},
+  {label:'Base 2',left:true,right:false},
+  {label:'Base 3',left:true,right:true},
+] as const)it(`S02 mentor solution completes ${scenario.label} with the class-aligned three-sensor strategy`,()=>{
+  const engine=new SimulationEngine(trackForSession('s02'));
+  const runtime=new ProgramRuntime(engine);
+  runtime.command({type:'ir',side:'left',value:scenario.left});
+  runtime.command({type:'ir',side:'right',value:scenario.right});
+  expect(runtime.run(mentorSolutions.s02.source)).toEqual([]);
+  for(let i=0;i<12000&&engine.snapshot().mission.status!=='completed';i++)runtime.step(10);
+  expect(runtime.diagnostic).toBeNull();
+  const evidence=engine.snapshot().mission;
+  expect(evidence.status).toBe('completed');
+  expect(evidence.checks).toHaveLength(4);
+  expect(evidence.checks.every(check=>check.passed)).toBe(true);
+  expect(engine.events.filter(event=>event.type==='LINE_LOST')).toHaveLength(0);
+  expect(evidence.elapsedMs).toBeLessThan(60000);
+  expect(engine.robot.leftMotor).toBe(0);
+  expect(engine.robot.rightMotor).toBe(0);
+});
+
 it('S01 mentor solution refuses an invalid initial IR scenario instead of choosing a route silently',()=>{
   const engine=new SimulationEngine(trackForSession('s01'));
   const runtime=new ProgramRuntime(engine);

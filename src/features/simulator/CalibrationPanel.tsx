@@ -51,7 +51,7 @@ export function useCalibration(simulation:SimulationConnection,enabled:boolean){
  const checkResult=testedWhite&&testedBlack?'pass':null;
  const canSave=ready&&decisionMade&&testedWhite&&testedBlack;
 
- useEffect(()=>{if(simulation.engineState==='ready')simulation.send({type:'set-line-thresholds',values:savedThresholds});},[simulation.engineState,simulation.send,savedThresholds]);
+ useEffect(()=>{if(simulation.track.id!=='s02'&&simulation.engineState==='ready')simulation.send({type:'set-line-thresholds',values:savedThresholds});},[simulation.engineState,simulation.send,simulation.track.id,savedThresholds]);
  useEffect(()=>{
   if(!enabled)return;
   setMessage('');

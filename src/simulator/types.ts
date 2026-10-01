@@ -28,6 +28,7 @@ export type EventPayload =
  | {type:'LCD_UPDATED';rows:[string,string]}
  | {type:'LINE_SENSOR_READ';side:'left'|'center'|'right'}
  | {type:'IR_READ';side:'left'|'right';active:boolean}
+ | {type:'BUTTON_READ';active:boolean}
  | {type:'RUNTIME_ERROR';message:string};
 export type SimulationEvent=EventPayload & {sequence:number;timeMs:number};
 export interface Snapshot {mission:import('./MissionEvaluator').MissionEvidence;robot:RobotState;status:Status;feedback:string;ticks:number;collisions:number;obstacles:DynamicObstacle[];scenarioIntersections:ScenarioIntersection[];events:SimulationEvent[];instructions:number;finish:{zoneId:string|null;arrived:boolean;stopped:boolean}}

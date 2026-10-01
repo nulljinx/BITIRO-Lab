@@ -228,8 +228,10 @@ export function renderScene3D(canvas:HTMLCanvasElement,track:TrackDefinition,rob
  context.fillText(`BITIRO / ${track.id.toUpperCase()} / 3D`,26,30);
  context.font='10px "IBM Plex Sans", sans-serif';context.fillStyle='#AFC2CB';
  context.fillText(camera.follow?'Seguimiento IROH':topView?'Vista superior · rueda para zoom':'Arrastra para orbitar · rueda para zoom',26,45);
- const status=robot.strikeServoAttached?`GOLPE ${Math.round(robot.strikeServoAngle)}°`:'GOLPE SIN INICIALIZAR';
- context.font='10px "IBM Plex Mono", monospace';const tw=context.measureText(status).width;
- context.fillStyle='rgba(8,18,27,.68)';context.fillRect(width-tw-30,height-30,tw+18,19);
- context.fillStyle=robot.strikeServoAttached?'#75D0DC':'#91A3AC';context.fillText(status,width-tw-21,height-16);
+ if(track.id==='s01'||track.id==='s03'){
+  const status=robot.strikeServoAttached?`GOLPE ${Math.round(robot.strikeServoAngle)}°`:'GOLPE SIN INICIALIZAR';
+  context.font='10px "IBM Plex Mono", monospace';const tw=context.measureText(status).width;
+  context.fillStyle='rgba(8,18,27,.68)';context.fillRect(width-tw-30,height-30,tw+18,19);
+  context.fillStyle=robot.strikeServoAttached?'#75D0DC':'#91A3AC';context.fillText(status,width-tw-21,height-16);
+ }
 }

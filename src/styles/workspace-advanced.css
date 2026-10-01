@@ -2704,3 +2704,241 @@
 .threshold-equation>input::placeholder{
   color:var(--text-soft);
 }
+
+/* v7.84 · S02 guided calibration
+   Session 2 extends S01 naturally: the learner measures the three line sensors,
+   calculates three thresholds, then verifies the four patterns taught in class. */
+.s02-calibration-guide{
+  gap:9px;
+}
+.s02-live-readings{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  border:1px solid var(--border-default);
+  border-left:3px solid var(--brand-blue);
+  border-radius:11px;
+  overflow:hidden;
+  background:var(--surface-panel-raised);
+}
+.s02-live-readings>div{
+  display:grid;
+  place-items:center;
+  gap:3px;
+  min-width:0;
+  padding:9px 5px 8px;
+  border-left:1px solid var(--border-default);
+  text-align:center;
+}
+.s02-live-readings>div:first-child{border-left:0;}
+.s02-live-readings span{
+  max-width:100%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:8px;
+  font-weight:700;
+  color:var(--text-secondary);
+}
+.s02-live-readings strong{
+  font:500 24px/1 var(--font-mono);
+  letter-spacing:-.04em;
+  color:var(--mustakis-navy,var(--text-primary));
+}
+.s02-live-readings small{
+  padding:2px 5px;
+  border-radius:999px;
+  background:var(--surface-panel-muted);
+  font:700 7.5px var(--font-mono);
+  letter-spacing:.03em;
+  color:var(--text-secondary);
+}
+.s02-calibration-samples{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px;
+}
+.s02-calibration-samples>div{
+  display:grid;
+  gap:3px;
+  min-width:0;
+  min-height:53px;
+  padding:7px 6px;
+  border:1px dashed var(--border-strong);
+  border-radius:8px;
+  background:var(--surface-panel-soft);
+  color:var(--text-soft);
+}
+.s02-calibration-samples>div.filled{
+  border-style:solid;
+  border-color:var(--status-success-border);
+  background:var(--status-success-soft);
+  color:var(--status-success-strong);
+}
+.s02-calibration-samples b{
+  font:700 8px var(--font-mono);
+}
+.s02-calibration-samples span{
+  min-width:0;
+  font:600 8px/1.35 var(--font-mono);
+  overflow-wrap:anywhere;
+}
+.s02-threshold-card>p{display:block;}
+.s02-threshold-card form{
+  display:grid;
+  gap:8px;
+}
+.s02-threshold-card label{
+  display:grid;
+  gap:5px;
+  padding:8px;
+  border:1px solid var(--border-default);
+  border-radius:9px;
+  background:var(--surface-panel-soft);
+}
+.s02-threshold-card label>span{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  font-size:8.5px;
+  font-weight:650;
+  color:var(--text-secondary);
+}
+.s02-threshold-card label>span b{
+  display:grid;
+  place-items:center;
+  width:20px;
+  height:20px;
+  border-radius:6px;
+  background:var(--brand-ink);
+  color:#fff;
+  font:700 9px var(--font-mono);
+}
+.s02-threshold-equation{
+  display:grid;
+  grid-template-columns:minmax(36px,auto) 14px minmax(70px,1fr) 14px minmax(36px,auto);
+  align-items:center;
+  gap:4px;
+}
+.s02-threshold-equation strong{
+  font:600 15px var(--font-mono);
+  text-align:center;
+  color:var(--text-primary);
+}
+.s02-threshold-equation i{
+  font:600 14px var(--font-mono);
+  font-style:normal;
+  text-align:center;
+  color:var(--text-secondary);
+}
+.s02-threshold-equation input{
+  width:100%;
+  min-width:0;
+  height:36px;
+  padding:4px 6px;
+  border:1px solid var(--brand-blue);
+  border-radius:7px;
+  outline:none;
+  background:var(--surface-panel-raised);
+  color:var(--brand-blue);
+  font:600 18px var(--font-mono);
+  text-align:center;
+}
+.s02-threshold-equation input:focus{
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--brand-blue) 12%,transparent);
+}
+.s02-pattern-preview{
+  display:grid;
+  gap:7px;
+  padding:9px;
+  border:1px solid color-mix(in srgb,var(--brand-blue) 18%,var(--border-default));
+  border-radius:9px;
+  background:color-mix(in srgb,var(--brand-blue) 3%,var(--surface-panel-raised));
+}
+.s02-pattern-sensors{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:6px;
+}
+.s02-pattern-sensors span{
+  display:grid;
+  place-items:center;
+  gap:3px;
+  min-height:42px;
+  border:1px solid var(--border-default);
+  border-radius:7px;
+  font:650 7.5px var(--font-mono);
+}
+.s02-pattern-sensors span b{font-size:10px;}
+.s02-pattern-sensors span.black{
+  background:var(--brand-ink);
+  color:#fff;
+}
+.s02-pattern-sensors span.white{
+  background:var(--surface-panel-raised);
+  color:var(--text-secondary);
+}
+.s02-pattern-action{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.s02-pattern-action span{font-size:8px;color:var(--text-secondary);}
+.s02-pattern-action strong{font-size:9px;color:var(--brand-blue);}
+.s02-pattern-progress{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:6px;
+}
+.s02-pattern-progress>div{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-width:0;
+  min-height:42px;
+  padding:7px 8px;
+  border:1px solid var(--border-default);
+  border-radius:8px;
+  background:var(--surface-panel-soft);
+}
+.s02-pattern-progress>div>span{
+  flex:0 0 auto;
+  width:13px;
+  height:13px;
+  border:1px solid var(--border-strong);
+  border-radius:50%;
+}
+.s02-pattern-progress>div.done{
+  border-color:var(--status-success-border);
+  background:var(--status-success-soft);
+}
+.s02-pattern-progress>div.done>svg{flex:0 0 auto;color:var(--status-success-strong);}
+.s02-pattern-progress p{display:grid;gap:1px;margin:0;min-width:0;}
+.s02-pattern-progress strong{font-size:8.5px;color:var(--text-primary);}
+.s02-pattern-progress small{font-size:7.5px;color:var(--text-secondary);}
+.s02-code-value pre{
+  margin:0;
+  white-space:pre-wrap;
+  font:600 9px/1.5 var(--font-mono);
+  color:var(--instrument-text);
+}
+.s02-code-value button{
+  display:flex;
+  align-items:center;
+  gap:5px;
+}
+@media(min-width:1180px){
+  .simulation-body:has(.s02-calibration-guide){
+    grid-template-columns:minmax(0,1fr) 430px!important;
+  }
+}
+@media(min-width:1600px){
+  .simulation-body:has(.s02-calibration-guide){
+    grid-template-columns:minmax(0,1fr) 450px!important;
+  }
+}
+@media(max-width:767px){
+  .s02-live-readings strong{font-size:20px;}
+  .s02-calibration-samples{grid-template-columns:1fr;}
+  .s02-pattern-progress{grid-template-columns:1fr;}
+}

@@ -4,7 +4,7 @@ export interface SessionDefinition {
 }
 export const sessions:SessionDefinition[]=[
  {id:'s01',number:1,title:'Seguir línea y mover obstáculo',summary:'Lee los IR al inicio, elige la ruta, sigue la línea con el sensor central y mueve el obstáculo al llegar a la base.',concepts:['IR','Línea','LCD','Umbral','Variables de estado'],objectives:['Leer el IR inicial y guardar la decisión de ruta.','Seguir la línea con el sensor central usando un umbral.','Llegar a la base correspondiente.','Mover el obstáculo hacia el lado contrario.'],bonus:'',source:'ROB-002-S01-AE1 · Slide 2026',dimensions:'100 × 140 cm',interactive:true,trackAsset:'/tracks/s01.png'},
- {id:'s02',number:2,title:'Tres sensores y elección de base',summary:'Sigue la línea de forma fluida, detecta la intersección y elige una de tres bases.',concepts:['3 sensores','Intersección','IR'],objectives:['Seguir la línea con los tres sensores.','Detenerse un instante en la intersección.','Elegir Base 1 con IR derecho, Base 2 con IR izquierdo o Base 3 con ambos.','Detenerse al llegar a la base.'],bonus:'Mostrar en tiempo real los valores de los sensores en la LCD.',source:'ROB-002-S02-AE2 · Slide 2025',dimensions:'100 × 200 cm',interactive:true,trackAsset:'/tracks/s02.png'},
+ {id:'s02',number:2,title:'Tres sensores y elección de base',summary:'Sigue la línea de forma fluida, detecta la intersección y elige una de tres bases.',concepts:['Variables de estado','3 sensores','Umbral','Intersección','IR'],objectives:['Seguir la línea con los tres sensores.','Detenerse un instante en la intersección.','Elegir Base 1 con IR derecho, Base 2 con IR izquierdo o Base 3 con ambos.','Detenerse al llegar a la base.'],bonus:'Mostrar en tiempo real los valores de los sensores en la LCD.',source:'ROB-002-S02-AE2 · Slide 2025',dimensions:'100 × 200 cm',interactive:true,trackAsset:'/tracks/s02.png'},
  {id:'s03',number:3,title:'Contadores y ciclo while',summary:'Sigue la pista con tres sensores, cuenta obstáculos con sonar y responde a las intersecciones cambiando de sentido.',concepts:['Contadores','Ciclo while','Sonar','3 sensores','Intersecciones'],objectives:['Recorrer la pista siguiendo la línea con los tres sensores.','Detectar y contar 3 obstáculos durante el recorrido.','Mostrar correctamente en la LCD la cantidad de obstáculos detectados.','Responder a 3 intersecciones cambiando el sentido del recorrido en 180°.'],bonus:'Resuelve el desafío sin contar dos veces el mismo obstáculo cuando permanece detectado.',source:'ROB-002-S03-Slide-2025 · desafío y pauta de evaluación',dimensions:'100 × 180 cm',interactive:true,trackAsset:'/tracks/s03.png'},
  {id:'s04',number:4,title:'Tramos, separaciones y bucles',summary:'Próxima práctica: mantener el control cuando la línea cambia, se separa o exige repetir una estrategia.',concepts:['Bucles','Línea','Recuperación'],objectives:[],bonus:'',source:'Tema identificado en material de continuidad; pista y criterios pendientes de validación',dimensions:'—',interactive:false},
  {id:'s05',number:5,title:'Sensores IR y elección de ruta',summary:'Próxima práctica: contar o interpretar estímulos IR y elegir una trayectoria según la información recibida.',concepts:['IR','Contadores','Decisiones'],objectives:[],bonus:'',source:'Tema identificado en material de continuidad; pista y criterios pendientes de validación',dimensions:'—',interactive:false},
@@ -26,27 +26,24 @@ void loop() {
 }
 `;
  if(session.id==='s02')return `// BITIRO Lab · Sesión 02
-// Tres sensores y elección de base
+// Tres sensores, intersección y elección de base
 #include <KnightRoboticsLibs_Iroh.h>
 
+int sensorI = 0;
+int sensorC = 0;
+int sensorD = 0;
+
+int irIzq = 0;
+int irDer = 0;
+
+int destino = 0;
+int estado = 0;
+int cruceSuperado = 0;
+
 // Reemplaza estos valores por los umbrales que obtuviste al calibrar.
-const int UMBRAL_I = 200,
-          UMBRAL_C = 200,
-          UMBRAL_D = 200;
-
-int sensorI = 0, sensorC = 0, sensorD = 0;
-
-void leerLinea() {
-  sensorI = leerSensorLineaIzquierdo();
-  sensorC = leerSensorLineaCentral();
-  sensorD = leerSensorLineaDerecho();
-}
-
-bool esInterseccion() {
-  return sensorI > UMBRAL_I &&
-         sensorC > UMBRAL_C &&
-         sensorD > UMBRAL_D;
-}
+int umbralI = 200;
+int umbralC = 200;
+int umbralD = 200;
 
 void setup() {
   inicializarMovimiento();
@@ -55,14 +52,20 @@ void setup() {
 }
 
 void loop() {
-  leerLinea();
+  // 1) Lee los IR y guarda la base en una variable de estado.
+  //    DER -> Base 1 | IZQ -> Base 2 | ambos -> Base 3.
 
-  // esInterseccion() muestra un ejemplo de && (Y).
-  // Para decidir la base también puedes necesitar || (O).
-  // 1) Sigue la línea usando los tres sensores.
-  // 2) Cuando esInterseccion() sea true, detente al menos 300 ms.
-  // 3) Lee ambos IR y decide: DER → Base 1, IZQ → Base 2, ambos → Base 3.
-  // 4) Toma la rama correspondiente y detén el IROH en la base.
+  // 2) Lee los tres sensores de línea.
+
+  // 3) Programa los casos vistos en clase:
+  //    centro -> avanzar
+  //    derecha -> girar a la derecha
+  //    izquierda -> girar a la izquierda
+  //    los tres en negro -> intersección
+
+  // 4) En la intersección, detente un instante y toma el camino elegido.
+
+  // 5) Detente al llegar a la base final.
 }
 `;
  return `// BITIRO Lab · Sesión ${String(session.number).padStart(2,'0')}

@@ -11,6 +11,7 @@ export function feedbackFor(event:EventPayload):string|undefined{
   case 'OBSTACLE_MOVED':return `La caja se desplazó hacia la ${event.side==='left'?'izquierda':'derecha'}. Observa el sonar antes de continuar.`;
   case 'FINISH_REACHED':return 'El IROH llegó a una base. Llegar y detenerse son dos acciones distintas: observa qué decide tu programa.';
   case 'IR_READ':return `Tu programa leyó el IR ${event.side==='left'?'izquierdo':'derecho'} como ${event.active?'activo':'libre'}. Puedes recordar esa información en una variable.`;
+  case 'BUTTON_READ':return `Tu programa leyó el pulsador como ${event.active?'presionado':'libre'}. Puedes usarlo como señal de estado.`;
   case 'RUNTIME_ERROR':return 'El programa se detuvo por un error. Revisa el mensaje y la línea marcada en el editor.';
  }
 }

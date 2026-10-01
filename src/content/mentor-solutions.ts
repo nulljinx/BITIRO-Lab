@@ -114,7 +114,7 @@ void loop() {
   },
   s02:{
     title:'Solución de referencia · S02',
-    note:'Usa la progresión de S02: variables de estado, tres sensores de línea, detección de intersección y decisión de base con los dos IR. No usa contadores ni ciclo while, que se trabajan en S03.',
+    note:'Referencia construida solo con lo trabajado en S02: variables de estado, lectura de los tres sensores, tres umbrales, cuatro casos del seguidor (centro, derecha, izquierda e intersección) y elección de una de las tres bases con los IR y la alternativa del pulsador para Base 3.',
     source:`// BITIRO Lab · Sesión 02
 // Solución de referencia para mentor
 #include <KnightRoboticsLibs_Iroh.h>
@@ -122,77 +122,136 @@ void loop() {
 int sensorI = 0;
 int sensorC = 0;
 int sensorD = 0;
+
 int irIzq = 0;
 int irDer = 0;
-int destino = 0;
-int cruceSuperado = 0;
+int boton = 0;
 
+int destino = 0;       // 1 = Base 1, 2 = Base 2, 3 = Base 3
+int estado = 0;        // 0 = elegir base, 1 = recorrer, 2 = terminado
+int cruceSuperado = 0; // 0 = antes del cruce, 1 = después del cruce
+
+// Reemplazar por los valores obtenidos al calibrar cada sensor.
 int umbralI = 200;
 int umbralC = 200;
 int umbralD = 200;
 
 void setup() {
+  // En setup solo inicializamos las partes del IROH que usaremos.
   inicializarMovimiento();
   inicializarSensores();
   inicializarPantalla();
-
-  irIzq = leerSensorObstaculoIzquierdo();
-  irDer = leerSensorObstaculoDerecho();
-
-  // DER -> Base 1 | IZQ -> Base 2 | ambos -> Base 3
-  if (irDer == 1 && irIzq == 0) {
-    destino = 1;
-  }
-  if (irIzq == 1 && irDer == 0) {
-    destino = 2;
-  }
-  if (irIzq == 1 && irDer == 1) {
-    destino = 3;
-  }
-
-  borrarPantalla();
-  escribirPantalla(0, 0, "Base");
-  escribirPantalla(5, 0, destino);
 }
 
 void loop() {
-  sensorI = leerSensorLineaIzquierdo();
-  sensorC = leerSensorLineaCentral();
-  sensorD = leerSensorLineaDerecho();
 
-  // Intersección: los tres sensores ven negro.
-  if (sensorI >= umbralI && sensorC >= umbralC && sensorD >= umbralD) {
-    if (cruceSuperado == 0) {
-      detenerse();
-      pausa(350);
-      cruceSuperado = 1;
+  // PRIMERA SUB-TAREA: leer los IR y guardar la base elegida.
+  if (estado == 0) {
+    irIzq = leerSensorObstaculoIzquierdo();
+    irDer = leerSensorObstaculoDerecho();
+    boton = leerBoton();
 
-      if (destino == 1) {
-        girarIzquierda(30);
-        pausa(320);
-      }
-      if (destino == 2) {
-        avanzar(30);
-        pausa(250);
-      }
-      if (destino == 3) {
-        girarDerecha(30);
-        pausa(320);
-      }
+    borrarPantalla();
+
+    // IR derecho -> Base 1.
+    if (irDer == 1 && irIzq == 0) {
+      destino = 1;
+      estado = 1;
+    }
+    // IR izquierdo -> Base 2.
+    else if (irIzq == 1 && irDer == 0) {
+      destino = 2;
+      estado = 1;
+    }
+    // Ambos IR -> Base 3.
+    else if (irIzq == 1 && irDer == 1) {
+      destino = 3;
+      estado = 1;
+    }
+    // En la clase también se permite usar el pulsador como alternativa para Base 3.
+    else if (boton == 1) {
+      destino = 3;
+      estado = 1;
     }
     else {
-      // La segunda franja negra corresponde a la base final.
       detenerse();
     }
+
+    if (estado == 1) {
+      escribirPantalla(0, 0, "BASE");
+      escribirPantalla(5, 0, destino);
+    }
   }
-  else if (sensorI < umbralI && sensorC >= umbralC && sensorD < umbralD) {
-    avanzar(30);
+
+  // SEGUNDA SUB-TAREA: seguir la línea con tres sensores.
+  else if (estado == 1) {
+    sensorI = leerSensorLineaIzquierdo();
+    sensorC = leerSensorLineaCentral();
+    sensorD = leerSensorLineaDerecho();
+
+    // CASO 4: intersección = los tres sensores ven negro.
+    if (sensorI >= umbralI &&
+        sensorC >= umbralC &&
+        sensorD >= umbralD) {
+
+      // Primera intersección: detenerse un instante y elegir camino.
+      if (cruceSuperado == 0) {
+        detenerse();
+        pausa(350);
+        cruceSuperado = 1;
+
+        // La Base 1 está en la rama izquierda del plotter.
+        if (destino == 1) {
+          girarIzquierda(10);
+          pausa(400);
+        }
+        // La Base 2 continúa por el centro.
+        else if (destino == 2) {
+          avanzar(12);
+          pausa(250);
+        }
+        // La Base 3 está en la rama derecha del plotter.
+        else if (destino == 3) {
+          girarDerecha(10);
+          pausa(500);
+        }
+
+        // Avanzamos un poco para salir de la franja de la intersección.
+        avanzar(12);
+        pausa(450);
+      }
+      // La siguiente franja negra corresponde a la base final.
+      else {
+        detenerse();
+        estado = 2;
+      }
+    }
+
+    // CASO 1: línea en el centro -> avanzar.
+    else if (sensorI < umbralI &&
+             sensorC >= umbralC &&
+             sensorD < umbralD) {
+      avanzar(12);
+    }
+
+    // CASO 2: línea a la derecha -> girar a la derecha.
+    else if (sensorI < umbralI &&
+             sensorC < umbralC &&
+             sensorD >= umbralD) {
+      girarDerecha(10);
+    }
+
+    // CASO 3: línea a la izquierda -> girar a la izquierda.
+    else if (sensorI >= umbralI &&
+             sensorC < umbralC &&
+             sensorD < umbralD) {
+      girarIzquierda(10);
+    }
   }
-  else if (sensorI >= umbralI) {
-    avanzar(15, 30);
-  }
-  else if (sensorD >= umbralD) {
-    avanzar(30, 15);
+
+  // Al llegar a la base final, el IROH queda detenido.
+  else {
+    detenerse();
   }
 }
 `,

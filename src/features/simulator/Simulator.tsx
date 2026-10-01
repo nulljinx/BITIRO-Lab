@@ -11,6 +11,7 @@ import {TelemetryPanel} from './TelemetryPanel';
 import {RuntimeBar} from './RuntimeBar';
 import {FeedbackPanel} from './FeedbackPanel';
 import {CalibrationPanel,useCalibration} from './CalibrationPanel';
+import {S02CalibrationPanel,useS02Calibration} from './S02CalibrationPanel';
 import {SimulatorToolbar} from './SimulatorToolbar';
 import {hasSimulation} from '../../content/tracks';
 function SimulatorPanel({simulation,cloudContext,onCalibrationModeChange}:{simulation:SimulationConnection;cloudContext?:CloudContext;onCalibrationModeChange?:(active:boolean)=>void}){
@@ -20,7 +21,9 @@ function SimulatorPanel({simulation,cloudContext,onCalibrationModeChange}:{simul
  const [viewMode,setViewMode]=useState<'top'|'perspective'|'follow'>('perspective');
  const [nativeFullscreen,setNativeFullscreen]=useState(false),[fullscreenFallback,setFullscreenFallback]=useState(false),panelRef=useRef<HTMLElement>(null);
  const fullscreen=nativeFullscreen||fullscreenFallback;
- const calibration=useCalibration(simulation,calibrating),{robot}=simulation.snapshot;
+ const s01Calibration=useCalibration(simulation,calibrating&&track.id!=='s02');
+ const s02Calibration=useS02Calibration(simulation,calibrating&&track.id==='s02');
+ const calibration=track.id==='s02'?s02Calibration:s01Calibration,{robot}=simulation.snapshot;
  const calibrationZoom=.9;
  const viewportZoom=calibrating?calibrationZoom:zoom;
  const is3D=!calibrating&&viewMode!=='top';
@@ -44,13 +47,25 @@ function SimulatorPanel({simulation,cloudContext,onCalibrationModeChange}:{simul
   try{if(typeof element.requestFullscreen==='function'){await element.requestFullscreen();if(document.fullscreenElement===element)return;}}catch{/* fallback below */}
   setFullscreenFallback(true);
  }
- function toggleCalibration(){if(!calibrating){setViewMode('top');setCalibrationNotice('');}if(!calibrating){simulation.send({type:'stop-program'});setZoom(1);}setCalibrating(!calibrating);}
- function finishCalibration(values:import('../../simulator/types').LineThresholds){simulation.send({type:'reset'});setCalibrating(false);setViewMode('perspective');setZoom(1);setCalibrationNotice(`Calibración guardada · umbral central ${values[1]}`);window.setTimeout(()=>setCalibrationNotice(''),4500);}
+ function toggleCalibration(){
+  if(calibrating){
+   setCalibrating(false);
+   setViewMode('perspective');
+   setZoom(1);
+   return;
+  }
+  setViewMode('top');
+  setCalibrationNotice('');
+  simulation.send({type:'stop-program'});
+  setZoom(1);
+  setCalibrating(true);
+ }
+ function finishCalibration(values:import('../../simulator/types').LineThresholds){simulation.send({type:'reset'});setCalibrating(false);setViewMode('perspective');setZoom(1);setCalibrationNotice(track.id==='s02'?`Calibración guardada · I ${values[0]} · C ${values[1]} · D ${values[2]}`:`Calibración guardada · umbral central ${values[1]}`);window.setTimeout(()=>setCalibrationNotice(''),4500);}
  return <section ref={panelRef} className={`simulation-panel ${calibrating?'is-calibrating':''} ${is3D?'is-3d-view':'is-2d-view'} ${fullscreenFallback?'is-panel-fullscreen':''}`} aria-label={`Simulador ${track.id.toUpperCase()}`}>
   {simulation.engineState!=='ready'&&<div className="engine-notice" role="status"><p>{simulation.engineState==='starting'?'Iniciando motor…':simulation.engineError}</p>{simulation.engineState==='error'&&<button onClick={simulation.retry}>Reiniciar motor</button>}</div>}
   <SimulatorToolbar zoom={viewportZoom} onZoom={setZoom} calibration={calibrating} onCalibration={toggleCalibration} trackId={track.id} viewMode={calibrating?'top':viewMode} onViewMode={mode=>{setViewMode(mode);if(mode==='top')setZoom(1);}} fullscreen={fullscreen} onFullscreen={()=>void togglePanelFullscreen()}/>
-  {calibrating&&<div className="calibration-banner"><FlaskConical size={15}/><span><strong>Modo calibración</strong> · mide blanco, mide negro y construye el umbral del sensor central.</span></div>}{!calibrating&&calibrationNotice&&<div className="calibration-applied-banner" role="status"><FlaskConical size={15}/><span>{calibrationNotice}</span></div>}
-  <div className="simulation-body"><div className="viewport-column">{is3D?<Arena3D snapshot={simulation.snapshot} track={track} zoom={zoom} onZoom={setZoom} thresholds={calibration.savedThresholds} preset={viewMode==='follow'?'follow':'perspective'}/>:<Arena latest={simulation.latest} calibration={calibrating} send={simulation.send} zoom={viewportZoom} activeSensor={1} thresholds={calibration.thresholds} snapshot={simulation.snapshot} running={simulation.snapshot.status==='running'} track={track}/>} {debug&&<div className="debug"><p data-testid="robot-position">x={robot.x.toFixed(3)} y={robot.y.toFixed(3)} θ={robot.heading.toFixed(3)}</p><span>Ticks: {simulation.snapshot.ticks} · Colisiones: {simulation.snapshot.collisions}</span></div>}</div>{calibrating?<CalibrationPanel simulation={simulation} calibration={calibration} onSaved={finishCalibration}/>:<TelemetryPanel simulation={simulation}/>}</div>
+  {calibrating&&<div className="calibration-banner"><FlaskConical size={15}/><span><strong>Modo calibración</strong> · {track.id==='s02'?'mide I, C y D; calcula tres umbrales y comprueba los cuatro casos.':'mide blanco, mide negro y construye el umbral del sensor central.'}</span></div>}{!calibrating&&calibrationNotice&&<div className="calibration-applied-banner" role="status"><FlaskConical size={15}/><span>{calibrationNotice}</span></div>}
+  <div className="simulation-body"><div className="viewport-column">{is3D?<Arena3D snapshot={simulation.snapshot} track={track} zoom={zoom} onZoom={setZoom} thresholds={calibration.savedThresholds} preset={viewMode==='follow'?'follow':'perspective'}/>:<Arena latest={simulation.latest} calibration={calibrating} send={simulation.send} zoom={viewportZoom} activeSensor={track.id==='s02'?-1:1} thresholds={calibration.thresholds} snapshot={simulation.snapshot} running={simulation.snapshot.status==='running'} track={track}/>} {debug&&<div className="debug"><p data-testid="robot-position">x={robot.x.toFixed(3)} y={robot.y.toFixed(3)} θ={robot.heading.toFixed(3)}</p><span>Ticks: {simulation.snapshot.ticks} · Colisiones: {simulation.snapshot.collisions}</span></div>}</div>{calibrating?(track.id==='s02'?<S02CalibrationPanel calibration={s02Calibration} onSaved={finishCalibration}/>:<CalibrationPanel simulation={simulation} calibration={s01Calibration} onSaved={finishCalibration}/>):<TelemetryPanel simulation={simulation}/>}</div>
   {!calibrating&&<RuntimeBar simulation={simulation}/>} 
   {debug&&<div className="manual-controls" aria-label="Motores de diagnóstico"><span>Diagnóstico</span><button aria-label="Girar izquierda manual" onClick={()=>simulation.send({type:'motors',left:-14,right:14})}><ArrowLeft size={16}/></button><button aria-label="Avanzar manual" onClick={()=>simulation.send({type:'motors',left:18,right:18})}><ArrowUp size={16}/></button><button aria-label="Girar derecha manual" onClick={()=>simulation.send({type:'motors',left:14,right:-14})}><ArrowRight size={16}/></button><button aria-label="Retroceder manual" onClick={()=>simulation.send({type:'motors',left:-14,right:-14})}><ArrowDown size={16}/></button><button aria-label="Detener manual" onClick={()=>simulation.send({type:'stop'})}><Square size={16}/></button></div>}
   {!calibrating&&<FeedbackPanel simulation={simulation} calibration={false}/>}

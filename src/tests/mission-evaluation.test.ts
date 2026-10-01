@@ -90,6 +90,24 @@ describe('Formative mission evaluator',()=>{
   expect(result.checks.find(check=>check.key==='finish')?.passed).toBe(true);
  });
 
+ it('accepts the pulsador as the S02 Base 3 alternative taught in class',()=>{
+  const track=trackForSession('s02'),engine=new SimulationEngine(track);
+  engine.command({type:'button',value:true});
+  engine.mission.start(engine.robot);
+  engine.emit({type:'BUTTON_READ',active:true});
+  engine.emit({type:'LINE_SENSOR_READ',side:'left'});engine.emit({type:'LINE_SENSOR_READ',side:'center'});engine.emit({type:'LINE_SENSOR_READ',side:'right'});
+  const intersection=track.missionZones!.find(item=>item.id==='intersection')!;
+  engine.robot.x=intersection.x+intersection.width/2;engine.robot.y=intersection.y+intersection.height/2;
+  engine.robot.lineLeft=400;engine.robot.lineCenter=410;engine.robot.lineRight=420;engine.robot.leftMotor=0;engine.robot.rightMotor=0;engine.robot.simTimeMs=500;
+  engine.mission.observeTick(engine.robot);
+  const zone=track.finishZones.find(item=>item.id==='base3')!;
+  engine.robot.x=zone.x+zone.width/2;engine.robot.y=zone.y+zone.height/2;engine.robot.simTimeMs=900;engine.mission.observeTick(engine.robot);
+  const result=engine.snapshot().mission;
+  expect(result.checks.find(check=>check.key==='ir')?.label).toContain('Base 3');
+  expect(result.checks.find(check=>check.key==='ir')?.passed).toBe(true);
+  expect(result.checks.find(check=>check.key==='finish')?.passed).toBe(true);
+ });
+
  it('requires three line-sensor reads, intersection and correct IR base for S02',()=>{
   const engine=new SimulationEngine(trackForSession('s02'));
   engine.mission.start(engine.robot);

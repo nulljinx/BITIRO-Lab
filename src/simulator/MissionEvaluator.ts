@@ -17,8 +17,11 @@ export interface MissionEvidence {
 export class MissionEvaluator {
  private active=false;
  private initialIR:{left:boolean;right:boolean}|null=null;
+ private initialButton=false;
  private reads=new Set<'left'|'right'>();
+ private buttonRead=false;
  private lineReads=new Set<'left'|'center'|'right'>();
+ private lineLostEvents=0;
  private movedSides=new Set<'left'|'right'>();
  private lcdDecision=false;
  private intersection=false;
@@ -41,13 +44,15 @@ export class MissionEvaluator {
  constructor(private track:TrackDefinition){}
  setLineThresholds(values:LineThresholds){this.lineThresholds=[...values] as LineThresholds;}
  setScenarioIntersections(values:readonly ScenarioIntersection[]){this.scenarioIntersections=values.map(item=>({...item}));}
- reset(){this.active=false;this.initialIR=null;this.reads.clear();this.lineReads.clear();this.movedSides.clear();this.lcdDecision=false;this.intersection=false;this.intersectionStopMs=0;this.distance=0;this.last=null;this.lastTickMs=0;this.completed=false;this.destinationReached=false;this.invalid=false;this.obstacleDetections.clear();this.obstacleReadEvents=0;this.lcdNumber=null;this.s03IntersectionActive=null;this.s03IntersectionHeading=0;this.s03IntersectionTurned=false;this.s03IntersectionResponses=0;}
- start(robot:RobotState){this.reset();this.active=true;this.initialIR={left:robot.irLeft,right:robot.irRight};this.last={x:robot.x,y:robot.y};this.lastTickMs=robot.simTimeMs;}
+ reset(){this.active=false;this.initialIR=null;this.initialButton=false;this.reads.clear();this.buttonRead=false;this.lineReads.clear();this.lineLostEvents=0;this.movedSides.clear();this.lcdDecision=false;this.intersection=false;this.intersectionStopMs=0;this.distance=0;this.last=null;this.lastTickMs=0;this.completed=false;this.destinationReached=false;this.invalid=false;this.obstacleDetections.clear();this.obstacleReadEvents=0;this.lcdNumber=null;this.s03IntersectionActive=null;this.s03IntersectionHeading=0;this.s03IntersectionTurned=false;this.s03IntersectionResponses=0;}
+ start(robot:RobotState){this.reset();this.active=true;this.initialIR={left:robot.irLeft,right:robot.irRight};this.initialButton=robot.buttonPressed;this.last={x:robot.x,y:robot.y};this.lastTickMs=robot.simTimeMs;}
  invalidate(){this.invalid=true;this.active=false;}
  observeEvent(event:SimulationEvent){
   if(!this.active||this.invalid)return;
   if(event.type==='IR_READ')this.reads.add(event.side);
+  if(event.type==='BUTTON_READ')this.buttonRead=true;
   if(event.type==='LINE_SENSOR_READ')this.lineReads.add(event.side);
+  if(event.type==='LINE_LOST')this.lineLostEvents++;
   if(event.type==='OBSTACLE_MOVED')this.movedSides.add(event.side);
   if(event.type==='OBSTACLE_DETECTED'){this.obstacleReadEvents++;if(event.obstacleId)this.obstacleDetections.add(event.obstacleId);}
   if(event.type==='LCD_UPDATED'){
@@ -70,9 +75,25 @@ export class MissionEvaluator {
     if(Math.hypot(robot.x-nearestX,robot.y-nearestY)<=ROBOT.radiusCm)this.destinationReached=true;
    }
   }
+  if(this.track.id==='s02'&&this.initialIR){
+   const expectedId=this.initialIR.left&&this.initialIR.right?'base3':this.initialIR.right&&!this.initialIR.left?'base1':this.initialIR.left&&!this.initialIR.right?'base2':!this.initialIR.left&&!this.initialIR.right&&this.initialButton?'base3':null;
+   const expected=expectedId?this.track.finishZones.find(zone=>zone.id===expectedId):null;
+   if(expected){
+    // En S02 el robot se detiene cuando sus sensores delanteros reconocen la
+    // franja negra de la base. El centro del chasis queda unos centímetros
+    // antes del rectángulo verde, igual que en el montaje físico.
+    const front={x:robot.x+Math.cos(robot.heading)*ROBOT.lineFrontCm,y:robot.y+Math.sin(robot.heading)*ROBOT.lineFrontCm};
+    const nearestX=Math.max(expected.x,Math.min(front.x,expected.x+expected.width));
+    const nearestY=Math.max(expected.y,Math.min(front.y,expected.y+expected.height));
+    if(Math.hypot(front.x-nearestX,front.y-nearestY)<=2)this.destinationReached=true;
+   }
+  }
   const elapsed=Math.max(0,robot.simTimeMs-this.lastTickMs);this.lastTickMs=robot.simTimeMs;
   const intersectionZone=this.track.missionZones?.find(zone=>zone.id==='intersection');
-  const insideIntersection=!intersectionZone||(robot.x>=intersectionZone.x&&robot.x<=intersectionZone.x+intersectionZone.width&&robot.y>=intersectionZone.y&&robot.y<=intersectionZone.y+intersectionZone.height);
+  // La intersección la leen los sensores que van delante del chasis, por eso
+  // evaluamos la posición del sensor central y no el centro geométrico del robot.
+  const lineFront={x:robot.x+Math.cos(robot.heading)*ROBOT.lineFrontCm,y:robot.y+Math.sin(robot.heading)*ROBOT.lineFrontCm};
+  const insideIntersection=!intersectionZone||(lineFront.x>=intersectionZone.x&&lineFront.x<=intersectionZone.x+intersectionZone.width&&lineFront.y>=intersectionZone.y&&lineFront.y<=intersectionZone.y+intersectionZone.height);
   const allLineSensorsBlack=[robot.lineLeft,robot.lineCenter,robot.lineRight].every((value,index)=>value>=this.lineThresholds[index]);
   const nearestS03=this.track.id==='s03'?this.scenarioIntersections.map(item=>({item,distance:Math.hypot(robot.x-item.x,robot.y-item.y)})).sort((a,b)=>a.distance-b.distance)[0]:null;
   const currentS03=nearestS03&&nearestS03.distance<=12?nearestS03.item:null;
@@ -112,12 +133,14 @@ export class MissionEvaluator {
    check('obstacle','Mover el obstáculo hacia el lado contrario',left?this.movedSides.has('right'):right?this.movedSides.has('left'):false);
   }else if(this.track.id==='s02'){
    const left=!!this.initialIR?.left,right=!!this.initialIR?.right;
-   const expected=left&&right?'base3':right?'base1':left?'base2':null;
+   const base3WithButton=!left&&!right&&this.initialButton;
+   const expected=left&&right?'base3':right&&!left?'base1':left&&!right?'base2':base3WithButton?'base3':null;
    const expectedLabel=expected==='base1'?'Base 1':expected==='base2'?'Base 2':expected==='base3'?'Base 3':null;
-   check('ir',expectedLabel?`Leer ambos IR y determinar ${expectedLabel}`:'Leer ambos IR con una señal inicial válida',this.reads.has('left')&&this.reads.has('right')&&!!expected);
-   check('line','Leer los tres sensores de línea durante el recorrido',this.lineReads.size===3&&this.distance>=50);
+   const initialSignalRead=base3WithButton?this.buttonRead:this.reads.has('left')&&this.reads.has('right');
+   check('ir',expectedLabel?`Leer la señal inicial y determinar ${expectedLabel}`:'Leer una señal inicial válida',initialSignalRead&&!!expected);
+   check('line','Seguir la línea de forma fluida usando los tres sensores',this.lineReads.size===3&&this.distance>=50&&this.lineLostEvents===0);
    check('cross','Reconocer el cruce central y detenerse al menos 0,3 s',this.intersection&&this.intersectionStopMs>=300);
-   check('finish',expectedLabel?`Llegar a ${expectedLabel} y detener ambos motores`:'Llegar a la base indicada y detener ambos motores',stationary&&!!expected&&zone===expected);
+   check('finish',expectedLabel?`Llegar a ${expectedLabel} y detener ambos motores`:'Llegar a la base indicada y detener ambos motores',stationary&&!!expected&&this.destinationReached);
   }else if(this.track.id==='s03'){
    check('line','Recorrer la pista leyendo los tres sensores de línea',this.lineReads.size===3&&this.distance>=140);
    check('obstacles',`Detectar 3 obstáculos con sonar (${Math.min(3,this.obstacleDetections.size)}/3)`,this.obstacleDetections.size>=3);
