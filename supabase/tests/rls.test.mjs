@@ -2,6 +2,11 @@ import {PGlite} from '@electric-sql/pglite';
 import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {listMigrations,latestMigration,migrationFunctions,publicFunctions,frontendRpcs,missingRpcs,rpcNames,compareMigrations} from '../../tools/migration-contract.mjs';
 
 // PostgreSQL-engine integration test. Minimal auth shim, not a mocked policy evaluator.
 // Supabase hosted Auth, email delivery and PostgREST are separate deployment checks.
@@ -14,13 +19,9 @@ await db.exec(`
  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
  grant usage on schema auth to anon,authenticated;
 `);
-await db.exec(await sqlFile('../migrations/202609170001_accounts_and_learning.sql'));
-await db.exec(await sqlFile('../migrations/202609180001_institution_workspaces.sql'));
-await db.exec(await sqlFile('../migrations/202609180002_institution_hardening.sql'));
-await db.exec(await sqlFile('../migrations/202609180003_mentor_workspace_polish.sql'));
-await db.exec(await sqlFile('../migrations/202609180004_participant_pilot.sql'));
-await db.exec(await sqlFile('../migrations/202609190001_cohort_learning.sql'));
-await db.exec(await sqlFile('../migrations/202609190002_formative_missions.sql'));
+// REL-1: the migration set is discovered from supabase/migrations/, never listed by hand.
+const migrations=await listMigrations();
+for(const migration of migrations)await db.exec(await readFile(migration.path,'utf8'));
 await db.exec(await sqlFile('../seed.sql'));
 const productionCodes=await db.query('select count(*)::int as count from private.workspace_access_codes');
 check(Number(productionCodes.rows[0].count)===0,'Production-safe seed contains no institutional access codes');
@@ -30,6 +31,40 @@ async function context(role,user,operation){await db.exec(`set role ${role}`);aw
 const user=(id,sql,params=[])=>context('authenticated',id,()=>db.query(sql,params));
 function check(condition,label){assert.ok(condition,label);checks++;console.log(`PASS ${label}`);}
 async function rejects(promise,label,code){await assert.rejects(promise,error=>!code||error.code===code,label);checks++;console.log(`PASS ${label}`);}
+// REL-1 contract gate: static, derived from the repository.
+{
+ const defined=await migrationFunctions(migrations),used=await frontendRpcs();
+ check(migrations.length>0&&latestMigration(migrations)===migrations.at(-1).version,`Discovered ${migrations.length} migrations; latest ${latestMigration(migrations)}`);
+ check(used.size>0,`Found ${used.size} literal RPC names in src/features`);
+ const missing=missingRpcs(used,defined);
+ check(missing.length===0,`Every frontend RPC is defined in migrations${missing.length?` (missing: ${missing.join(', ')})`:''}`);
+ // Negative controls on synthetic input: the gate must fail for unknown and removed RPCs.
+ check(missingRpcs(new Map([['no_such_rpc',[]]]),defined).join()==='no_such_rpc','Gate flags a frontend RPC that no migration defines');
+ const [victim]=[...used.keys()];
+ const without=publicFunctions([...await Promise.all(migrations.map(m=>readFile(m.path,'utf8'))),`drop function if exists public.${victim}(text);`]);
+ check(missingRpcs(used,without).includes(victim),'Gate flags a used RPC removed from the SQL');
+ check(!publicFunctions(['create function private.helper() returns int language sql as $$select 1$$;']).has('helper'),'Private functions are not part of the public contract');
+ check(rpcNames("supabase.rpc('a_b',{x:1}); client\n.rpc( \"c_d\" )").join()==='a_b,c_d','RPC literal extraction handles quotes and spacing');
+ const drift=compareMigrations(migrations.map(m=>m.version),migrations.slice(0,-2).map(m=>({version:m.version})));
+ check(drift.missingLive.length===2&&drift.extraLive.length===0,'Parity comparison reports missing-live versions');
+ check(compareMigrations(['1'],[{version:'1'},{version:'2'}]).extraLive.join()==='2','Parity comparison reports extra-live versions');
+ // Parity checker end to end against simulated live responses (offline: --live-file, no credentials, no network).
+ {
+  const dir=mkdtempSync(join(tmpdir(),'bitiro-parity-')),names=[...used.keys()];
+  const fixture=(file,fns)=>{const p=join(dir,file);writeFileSync(p,JSON.stringify({migrations:migrations.map(m=>({version:m.version,name:m.name})),functions:fns.map(proname=>({proname}))}));return p;};
+  const run=(...argv)=>spawnSync(process.execPath,['tools/check-migration-parity.mjs',...argv],{cwd:fileURLToPath(new URL('../../',import.meta.url)),encoding:'utf8',env:{...process.env,SUPABASE_ACCESS_TOKEN:'',SUPABASE_PROJECT_REF:'',BITIRO_PARITY_MODE:''}});
+  try{
+   const ok=run('--live-file',fixture('ok.json',[...names,'unrelated_fn']));
+   check(ok.status===0&&ok.stdout.includes('RPC contract OK'),'Parity checker: all RPCs present live is OK');
+   const bad=fixture('bad.json',names.slice(1)),enforced=run('--live-file',bad);
+   check(enforced.status===1&&enforced.stdout.includes(`MISSING LIVE (rpc): ${names[0]}`),'Parity checker: missing live RPC fails in enforcement mode');
+   const report=run('--live-file',bad,'--report-only');
+   check(report.status===0&&report.stdout.includes('MISSING LIVE (rpc)'),'Parity checker: missing live RPC is reported but exits 0 in report-only');
+   const none=run();
+   check(none.status===0&&none.stdout.includes('NOT CONFIGURED'),'Parity checker: no credentials reports NOT CONFIGURED safely');
+  }finally{rmSync(dir,{recursive:true,force:true});}
+ }
+}
 try {
  for(const [name,id] of Object.entries(ids))await db.query('insert into auth.users(id,raw_user_meta_data) values($1,$2)',[id,JSON.stringify({display_name:`Persona ${name}`,role:'admin',requested_role:'admin'})]);
  await db.query("update public.memberships set site_id='recoleta' where user_id in ($1,$2,$3,$4)",[ids.a,ids.f,ids.admin,ids.peer]);

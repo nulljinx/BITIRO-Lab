@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,6 +19,7 @@ concurrency:
 jobs:
   quality:
     name: Quality / unit / build
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -37,6 +41,7 @@ jobs:
 
   e2e:
     name: Browser E2E
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs: quality
@@ -56,3 +61,30 @@ jobs:
 
       - name: Run Playwright
         run: pnpm test:e2e
+
+  # REL-1: repo/live migration parity. Report-only: never fails the workflow.
+  # Needs the read-only secrets SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_REF (authorization D8);
+  # without them the script prints "NOT CONFIGURED" and exits 0.
+  # Flip to required after REL-2: drop --report-only and continue-on-error.
+  migration-parity:
+    name: Migration parity (report-only)
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm + Node
+        uses: pnpm/setup@v3
+        with:
+          runtime: node@24
+          cache: true
+          require-lockfile: true
+
+      - name: Compare local and live migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+        run: node tools/check-migration-parity.mjs --report-only

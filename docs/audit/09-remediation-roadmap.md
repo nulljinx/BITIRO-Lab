@@ -62,6 +62,9 @@ Format: ID, priority, phase, dependency, then Goal / Resolves / Areas / Outline 
 ### P0
 
 #### REL-1 - Migration-parity and RPC-contract gate
+Status 2026-10-02: IMPLEMENTED LOCALLY. Static migration discovery, repo RPC contract,
+release requiredMigration and offline/live parity checker are complete and tested.
+Live verification and CI secrets remain pending D8. The live gate remains report-only.
 P0 | Phase 1 | Depends: D8 (token); none in code.
 Goal: make repo/live drift fail CI. Resolves: 07 F1, F6; 04 V4, L1 (detection); 03 §8.1.
 Areas: `.github/workflows/ci.yml`, new `tools/` check, `tools/release-meta.mjs`, `public/version.json`, `supabase/tests/rls.test.mjs` L19-25.
