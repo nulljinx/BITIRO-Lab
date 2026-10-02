@@ -1,7 +1,7 @@
 {
   "product": "BITIRO Lab",
   "version": "8.00.0",
-  "requiredMigration": "202609200001",
-  "sourceHash": "e5e6586fd2afdad37a5b51ec8f0c07fc4d3ac11830f1fd5e33c0105e4e3b25b7",
-  "builtAt": "2026-10-02T22:50:58.420Z"
+  "requiredMigration": "202609200003",
+  "sourceHash": "48f49efb85130c73b6fcc205c60f1ed603f0b0337e6d3f01723d6d53acb6f987",
+  "builtAt": "2026-10-02T23:00:15.527Z"
 }

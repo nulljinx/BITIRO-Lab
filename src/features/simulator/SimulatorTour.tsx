@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useState} from 'react';
+import {useEffect,useMemo,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {ArrowLeft,ArrowRight,BookOpen,Check,Compass,Eye,Gauge,Play,SlidersHorizontal,Code2,X} from 'lucide-react';
 
@@ -71,6 +71,7 @@ export function SimulatorTour({open,onDone,onAreaChange}:{open:boolean;onDone:()
  const [index,setIndex]=useState(0);
  const [rect,setRect]=useState<DOMRect|null>(null);
  const step=STEPS[index];
+ const cardRef=useRef<HTMLElement>(null),headingRef=useRef<HTMLHeadingElement>(null),openerRef=useRef<HTMLElement|null>(null);
  const position=useMemo(()=>!rect?'center':rect.top+rect.height/2>window.innerHeight*.56?'top':'bottom',[rect]);
 
  useEffect(()=>{if(open)setIndex(0);},[open]);
@@ -99,21 +100,54 @@ export function SimulatorTour({open,onDone,onAreaChange}:{open:boolean;onDone:()
   window.addEventListener('scroll',update,true);
   return()=>{window.clearTimeout(timer);window.removeEventListener('resize',update);window.removeEventListener('scroll',update,true);};
  },[open,index,step.area,step.target,onAreaChange]);
+ // Modal lifecycle: the app behind is inert (the portal lives outside #root), focus starts on the step title and
+ // returns to whatever opened the tour (the Tutorial button) when it closes.
  useEffect(()=>{
   if(!open)return;
-  const key=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();onDone();}if(event.key==='ArrowRight')setIndex(value=>Math.min(STEPS.length-1,value+1));if(event.key==='ArrowLeft')setIndex(value=>Math.max(0,value-1));};
-  window.addEventListener('keydown',key);
-  return()=>window.removeEventListener('keydown',key);
+  const active=document.activeElement;
+  openerRef.current=active instanceof HTMLElement&&active!==document.body?active:null;
+  const root=document.getElementById('root');
+  root?.setAttribute('inert','');
+  headingRef.current?.focus();
+  return()=>{
+   root?.removeAttribute('inert');
+   const opener=openerRef.current,target=opener?.isConnected?opener:document.querySelector<HTMLElement>('[data-tour-opener]');
+   target?.focus();openerRef.current=null;
+  };
+ },[open]);
+ // Changing step can unmount the focused button (Siguiente becomes Finalizar): never leave focus outside the dialog.
+ useEffect(()=>{if(open&&!cardRef.current?.contains(document.activeElement))headingRef.current?.focus();},[open,index]);
+ useEffect(()=>{
+  if(!open)return;
+  const key=(event:KeyboardEvent)=>{
+   if(event.key==='Escape'){event.preventDefault();onDone();return;}
+   if(event.key==='Tab'){
+    const card=cardRef.current;if(!card)return;
+    const nodes=[...card.querySelectorAll<HTMLElement>('button:not(:disabled),a[href]')];
+    if(!nodes.length){event.preventDefault();headingRef.current?.focus();return;}
+    const first=nodes[0],last=nodes[nodes.length-1],active=document.activeElement;
+    if(!card.contains(active)){event.preventDefault();first.focus();}
+    else if(event.shiftKey&&(active===first||active===headingRef.current)){event.preventDefault();last.focus();}
+    else if(!event.shiftKey&&active===last){event.preventDefault();first.focus();}
+    return;
+   }
+   if(event.key==='ArrowRight')setIndex(value=>Math.min(STEPS.length-1,value+1));
+   if(event.key==='ArrowLeft')setIndex(value=>Math.max(0,value-1));
+  };
+  const contain=(event:FocusEvent)=>{if(cardRef.current&&event.target instanceof Node&&!cardRef.current.contains(event.target))headingRef.current?.focus();};
+  window.addEventListener('keydown',key,true);document.addEventListener('focusin',contain);
+  return()=>{window.removeEventListener('keydown',key,true);document.removeEventListener('focusin',contain);};
  },[open,onDone]);
  if(!open)return null;
  const Icon=step.icon;
  const pad=8;
- return createPortal(<div className={`sim-tour-root ${rect?'has-target':'no-target'}`} role="dialog" aria-modal="true" aria-labelledby="sim-tour-title">
+ return createPortal(<div className={`sim-tour-root ${rect?'has-target':'no-target'}`} role="dialog" aria-modal="true" aria-labelledby="sim-tour-title" aria-describedby="sim-tour-body sim-tour-hint">
   <div className="sim-tour-guard" aria-hidden="true"/>
   {rect&&<div className="sim-tour-spotlight" aria-hidden="true" style={{left:Math.max(8,rect.left-pad),top:Math.max(8,rect.top-pad),width:Math.min(window.innerWidth-16,rect.width+pad*2),height:Math.min(window.innerHeight-16,rect.height+pad*2)}}/>}
-  <section className={`sim-tour-card is-${position}`}>
-   <div className="sim-tour-card-head"><span className="sim-tour-icon"><Icon size={20}/></span><div><span className="sim-tour-step">Paso {index+1} de {STEPS.length}</span><h2 id="sim-tour-title">{step.title}</h2></div><button type="button" className="icon-button sim-tour-close" aria-label="Cerrar tutorial" onClick={onDone}><X size={18}/></button></div>
-   <p>{step.body}</p>
+  <section ref={cardRef} className={`sim-tour-card is-${position}`}>
+   <div className="sim-tour-card-head"><span className="sim-tour-icon"><Icon size={20}/></span><div><span className="sim-tour-step">Paso {index+1} de {STEPS.length}</span><h2 id="sim-tour-title" ref={headingRef} tabIndex={-1}>{step.title}</h2></div><button type="button" className="icon-button sim-tour-close" aria-label="Cerrar tutorial" onClick={onDone}><X size={18}/></button></div>
+   <p id="sim-tour-body">{step.body}</p>
+   <p id="sim-tour-hint" className="sim-tour-hint">Flechas ← → para navegar · Esc para cerrar</p>
    <div className="sim-tour-progress" aria-label={`Paso ${index+1} de ${STEPS.length}`}>{STEPS.map((_,i)=><i key={i} className={i===index?'is-current':i<index?'is-done':''}/>)}</div>
    <div className="sim-tour-actions"><button type="button" className="sim-tour-skip" onClick={onDone}>Omitir tutorial</button><div><button type="button" disabled={index===0} onClick={()=>setIndex(value=>Math.max(0,value-1))}><ArrowLeft size={15}/>Anterior</button>{index<STEPS.length-1?<button type="button" className="primary" onClick={()=>setIndex(value=>Math.min(STEPS.length-1,value+1))}>Siguiente<ArrowRight size={15}/></button>:<button type="button" className="primary" onClick={onDone}><Check size={15}/>Comenzar</button>}</div></div>
   </section>

@@ -2988,3 +2988,5 @@
  .workspace-tour-button svg{margin:0;}
 }
 @media(prefers-reduced-motion:reduce){.sim-tour-spotlight{transition:none;}}
+.sim-tour-hint{margin:-6px 0 12px;color:var(--legacy-hex-bdc7ec);font-size:11px;line-height:1.4;}
+.sim-tour-card h2:focus{outline:none;}
