@@ -1,4 +1,5 @@
 import {requireSupabase} from '../../lib/supabase';
+import {rememberOAuthNext} from './auth-navigation';
 import type {Membership, Profile, SignUpInput, Site} from './auth-types';
 
 export const passwordMinimum = 12;
@@ -25,6 +26,13 @@ export async function fetchAccount(userId:string):Promise<{profile:Profile;membe
 export async function signIn(email:string,password:string):Promise<void> {
   const {error}=await requireSupabase().auth.signInWithPassword({email:email.trim(),password});
   if(error)throw new Error('No pudimos iniciar sesión. Revisa tu correo y contraseña, o confirma tu cuenta si aún está pendiente.');
+}
+// Identity only: Supabase's default Google scopes (openid, email, profile). No extra scopes and no provider_token use.
+// The role is never sent; accounts always start as participants and are elevated only by server-side rules.
+export async function signInWithGoogle(next='/espacios'):Promise<void> {
+  rememberOAuthNext(next);
+  const {error}=await requireSupabase().auth.signInWithOAuth({provider:'google',options:{redirectTo:callbackUrl()}});
+  if(error)throw new Error('No pudimos iniciar el acceso con Google. Inténtalo nuevamente o usa tu correo.');
 }
 export async function signUp(input:SignUpInput):Promise<{confirmationRequired:boolean}> {
   validatePassword(input.password);const display_name=displayNameValue(input.displayName);

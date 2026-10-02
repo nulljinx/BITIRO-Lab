@@ -23,7 +23,9 @@ test('public pages, honest account state and responsive accessibility',async({pa
  }
  await page.goto('/intermedio');await expect(page).toHaveURL(/\/$/);
  await page.goto('/registro');await expect(page.getByRole('heading',{name:'Un lugar para seguir aprendiendo.'})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Continuar con Google'})).toBeVisible();
  await expect(page.getByText(/Acceso no disponible en esta instalación/)).toBeVisible();
+ await page.goto('/login');await expect(page.getByRole('button',{name:'Continuar con Google'})).toBeVisible();await expect(page.getByLabel('Correo electrónico')).toBeVisible();
  await page.goto('/equipo');await expect(page).toHaveURL(/login\?next=\/equipo/);expect(errors).toEqual([]);
 });
 test('landing defers Monaco and simulator; missing route assets recover',async({page})=>{

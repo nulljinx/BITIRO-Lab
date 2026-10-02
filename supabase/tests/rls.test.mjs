@@ -70,6 +70,18 @@ try {
  await db.query("update public.memberships set site_id='recoleta' where user_id in ($1,$2,$3,$4)",[ids.a,ids.f,ids.admin,ids.peer]);
  await db.query("update public.memberships set site_id='talca' where user_id=$1",[ids.b]);
  const original=await db.query('select distinct role from public.memberships');check(original.rows.length===1&&original.rows[0].role==='participant','Signup metadata cannot elevate roles');
+ {
+  // Google OAuth signups carry given_name/name, not display_name, and may try to smuggle role metadata.
+  const g={one:'00000000-0000-4000-8000-0000000000a1',two:'00000000-0000-4000-8000-0000000000a2',three:'00000000-0000-4000-8000-0000000000a3',bad:'00000000-0000-4000-8000-0000000000a4'};
+  await db.query('insert into auth.users(id,raw_user_meta_data) values($1,$2)',[g.one,JSON.stringify({given_name:'Camila',name:'Camila Rojas Soto',role:'admin',requested_role:'facilitator'})]);
+  await db.query('insert into auth.users(id,raw_user_meta_data) values($1,$2)',[g.two,JSON.stringify({full_name:'Matías Pérez'})]);
+  await db.query('insert into auth.users(id,raw_user_meta_data) values($1,$2)',[g.three,JSON.stringify({})]);
+  const rows=(await db.query('select p.id,p.display_name,m.role,m.site_id from public.profiles p join public.memberships m on m.user_id=p.id where p.id in ($1,$2,$3) order by p.id',[g.one,g.two,g.three])).rows;
+  check(rows.length===3&&rows.every(r=>r.role==='participant'&&r.site_id===null),'Provider signups become site-less participants even with role metadata');
+  check(rows[0].display_name==='Camila'&&rows[1].display_name==='Matías'&&rows[2].display_name==='Participante','Provider signups derive a first-name display name with a safe fallback');
+  await rejects(db.query('insert into auth.users(id,raw_user_meta_data) values($1,$2)',[g.bad,JSON.stringify({display_name:'x'})]),'A malformed explicit display name is still rejected','22023');
+  await db.query('delete from auth.users where id in ($1,$2,$3)',[g.one,g.two,g.three]);
+ }
  await db.query("update public.memberships set role='facilitator' where user_id=$1",[ids.f]);
  await db.query("update public.memberships set role='admin' where user_id=$1",[ids.admin]);
  const sites=await context('anon',null,()=>db.query('select * from public.sites'));check(sites.rows.length===8,'Anonymous users can list eight registration sites');

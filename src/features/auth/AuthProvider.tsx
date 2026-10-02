@@ -36,7 +36,7 @@ export function AuthProvider({children}:{children:ReactNode}) {
   },[loadAccount]);
   const refreshProfile=useCallback(async()=>{await loadAccount(currentUser.current,true);},[loadAccount]);
   const value:AuthContextValue={status,user,profile,membership,sites,error,
-    signIn:service.signIn,signUp:service.signUp,
+    signIn:service.signIn,signInWithGoogle:service.signInWithGoogle,signUp:service.signUp,
     signOut:async()=>{await service.signOut();await loadAccount(null);},
     resetPassword:service.resetPassword,updatePassword:service.updatePassword,
     updateProfile:async(name)=>{await service.updateProfile(name);await refreshProfile();},refreshProfile};

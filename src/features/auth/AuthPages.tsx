@@ -3,7 +3,7 @@ import {Link,useNavigate,useSearchParams} from 'react-router-dom';
 import {ArrowLeft,ArrowRight,Eye,EyeOff,LoaderCircle} from 'lucide-react';
 import {Brand} from '../../components/Brand';
 import {useAuth} from './AuthProvider';
-import {safeNext} from './auth-navigation';
+import {consumeOAuthNext,safeNext} from './auth-navigation';
 import {InteractiveIroh} from './InteractiveIroh';
 
 type Mode='login'|'register'|'reset'|'update'|'callback';
@@ -14,6 +14,7 @@ const copy:Record<Mode,{eyebrow:string;title:string;description:string;action:st
   update:{eyebrow:'Protege tu cuenta',title:'Elige una contraseña nueva.',description:'Usa una contraseña de al menos 12 caracteres que no utilices en otros servicios.',action:'Guardar contraseña'},
   callback:{eyebrow:'Verificando acceso',title:'Preparando tu cuenta.',description:'Estamos comprobando el enlace que recibiste por correo.',action:'Continuar'},
 };
+function GoogleMark(){return <svg className="google-mark" width="18" height="18" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>;}
 function PasswordField({id,label,value,onChange,confirm=false,onFocusChange,onVisibilityChange}:{id:string;label:string;value:string;onChange:(value:string)=>void;confirm?:boolean;onFocusChange?:(focused:boolean)=>void;onVisibilityChange?:(visible:boolean)=>void}){
   const [visible,setVisible]=useState(false);
   const toggle=()=>{const next=!visible;setVisible(next);onVisibilityChange?.(next);};
@@ -23,13 +24,26 @@ export function AuthPage({mode}:{mode:Mode}){
   const auth=useAuth(),navigate=useNavigate(),[params]=useSearchParams();
   const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[confirmation,setConfirmation]=useState(''),[displayName,setDisplayName]=useState('');
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[callbackExpired,setCallbackExpired]=useState(false);
-  const [passwordActive,setPasswordActive]=useState(false),[passwordVisible,setPasswordVisible]=useState(false);
+  const [googleBusy,setGoogleBusy]=useState(false),[passwordActive,setPasswordActive]=useState(false),[passwordVisible,setPasswordVisible]=useState(false);
   const content=copy[mode],next=safeNext(params.get('next')),unconfigured=auth.status==='unconfigured';
   const loginReady=mode!=='login'||(email.trim().length>0&&password.length>0);
   useEffect(()=>{setError('');setMessage('');setPassword('');setConfirmation('');setCallbackExpired(false);},[mode]);
+  const oauthFailed=mode==='callback'&&Boolean(params.get('error')||params.get('error_code'));
   useEffect(()=>{
-    if(mode==='callback'&&auth.status==='authenticated')navigate(params.get('recovery')==='1'?'/actualizar-clave':next,{replace:true});
+    if(auth.status!=='authenticated')return;
+    // An existing session never needs the login form again; the callback also resumes the destination saved before OAuth.
+    if(mode==='callback'){
+      const stored=consumeOAuthNext();
+      navigate(params.get('recovery')==='1'?'/actualizar-clave':params.get('next')?next:stored??next,{replace:true});
+    }else if(mode==='login'||mode==='register')navigate(next,{replace:true});
   },[mode,auth.status,navigate,next,params]);
+  useEffect(()=>{const reset=(event:PageTransitionEvent)=>{if(event.persisted)setGoogleBusy(false);};window.addEventListener('pageshow',reset);return()=>window.removeEventListener('pageshow',reset);},[]);
+  async function continueWithGoogle(){
+    if(busy||googleBusy||unconfigured)return;
+    setError('');setMessage('');setGoogleBusy(true);
+    try{await auth.signInWithGoogle(next);}
+    catch(err){setGoogleBusy(false);setError(err instanceof Error?err.message:'No pudimos iniciar el acceso con Google.');}
+  }
   useEffect(()=>{if(mode!=='callback')return;const timer=setTimeout(()=>setCallbackExpired(true),20000);return()=>clearTimeout(timer);},[mode]);
   async function submit(event:FormEvent<HTMLFormElement>){
     event.preventDefault();setError('');setMessage('');
@@ -59,8 +73,12 @@ export function AuthPage({mode}:{mode:Mode}){
   const awaitingRecovery=mode==='update'&&auth.status!=='authenticated';
   return <main id="main" className={`auth-page auth-page--${mode}`}><header className="auth-header"><Brand/><Link className="text-link" to="/"><ArrowLeft size={16}/>Volver a BITIRO</Link></header><div className="auth-layout"><section className="auth-form-panel" aria-labelledby="auth-title"><span className="eyebrow">{content.eyebrow}</span><h1 id="auth-title">{content.title}</h1><p>{content.description}</p>
     {unconfigured&&mode!=='login'?<div className="form-message" role="status">Acceso no disponible en esta instalación.</div>:null}
-    {mode==='callback'?<div className="form-message" role="status">{auth.error||callbackExpired?<><p>No pudimos confirmar el acceso con este enlace. Puedes volver a ingresar o solicitar un enlace nuevo.</p><div className="button-row"><Link className="button" to="/login">Ir a ingresar</Link><Link className="text-link" to="/recuperar">Recuperar acceso</Link></div></>:unconfigured?'Las cuentas no están configuradas en esta instalación.':<><LoaderCircle className="spin" size={18}/>Comprobando el enlace…</>}</div>:<>
+    {mode==='callback'?<div className="form-message" role="status">{auth.error||callbackExpired||oauthFailed?<><p>No pudimos confirmar el acceso con este enlace. Puedes volver a ingresar o solicitar un enlace nuevo.</p><div className="button-row"><Link className="button" to="/login">Ir a ingresar</Link><Link className="text-link" to="/recuperar">Recuperar acceso</Link></div></>:unconfigured?'Las cuentas no están configuradas en esta instalación.':<><LoaderCircle className="spin" size={18}/>Comprobando el enlace…</>}</div>:<>
       {awaitingRecovery&&!unconfigured&&<div className="form-message" role="status">{auth.status==='loading'?'Comprobando tu sesión…':<>Necesitas abrir un enlace de recuperación válido o ingresar a tu cuenta. <Link to="/recuperar">Solicitar enlace</Link></>}</div>}
+      {(mode==='login'||mode==='register')&&<div className="auth-google">
+        <button className="google-button" type="button" onClick={()=>void continueWithGoogle()} disabled={googleBusy||busy||unconfigured} aria-busy={googleBusy}>{googleBusy?<LoaderCircle className="spin" size={18}/>:<GoogleMark/>}<span>{googleBusy?'Abriendo Google…':'Continuar con Google'}</span></button>
+        <p className="auth-divider"><span>o usa tu correo</span></p>
+      </div>}
       <form onSubmit={submit} aria-busy={busy}>
         {mode==='register'&&<div className="form-field"><label htmlFor="display-name">Nombre visible</label><input id="display-name" name="displayName" autoComplete="nickname" value={displayName} onChange={e=>setDisplayName(e.target.value)} minLength={2} maxLength={80} required aria-describedby="name-help"/><small id="name-help" className="form-caption">Puedes usar un alias. No necesitamos tu nombre legal.</small></div>}
         {mode!=='update'&&<div className="form-field"><label htmlFor="email">Correo electrónico</label><input id="email" name="email" type="email" autoComplete="email" inputMode="email" autoCapitalize="none" spellCheck={false} value={email} onChange={e=>{setEmail(e.target.value);if(error)setError('');}} maxLength={254} required/></div>}

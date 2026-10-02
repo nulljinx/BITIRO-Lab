@@ -8,6 +8,7 @@ export interface SignUpInput {email:string; password:string; displayName:string}
 export interface AuthContextValue {
   status:AuthStatus; user:User|null; profile:Profile|null; membership:Membership|null; sites:Site[]; error:string|null;
   signIn:(email:string,password:string)=>Promise<void>;
+  signInWithGoogle:(next?:string)=>Promise<void>;
   signUp:(input:SignUpInput)=>Promise<{confirmationRequired:boolean}>;
   signOut:()=>Promise<void>;
   resetPassword:(email:string)=>Promise<void>;
