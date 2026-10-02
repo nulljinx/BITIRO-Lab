@@ -493,6 +493,174 @@ void loop() {
 `,
   },
 
+
+  s05:{
+    title:'Solución de referencia · S05',
+    note:'Referencia para el desafío intermedio usando solo contenidos vistos hasta S04: contador con antirrebote mediante while, LCD, variables de estado, tres sensores, gap y funciones. La Guía recuerda conceptos, pero esta referencia queda reservada al mentor.',
+    source:`// BITIRO Lab · Sesión 05
+// Solución de referencia para mentor
+#include <KnightRoboticsLibs_Iroh.h>
+
+int sensorI;
+int sensorC;
+int sensorD;
+int irIzq;
+int irDer;
+
+int umbralI = 200;
+int umbralC = 200;
+int umbralD = 200;
+
+int contador = 0;
+int estado = 0;        // 0 = contar, 1 = recorrer, 2 = esperar, 3 = ruta final, 4 = terminado
+
+void leerSensores() {
+  sensorI = leerSensorLineaIzquierdo();
+  sensorC = leerSensorLineaCentral();
+  sensorD = leerSensorLineaDerecho();
+}
+
+void mostrarContador() {
+  borrarPantalla();
+  escribirPantalla(0, 0, "CONTADOR IR:");
+  escribirPantalla(0, 1, contador);
+}
+
+void seguirLinea() {
+  // Línea al centro.
+  if (sensorI < umbralI &&
+      sensorC >= umbralC &&
+      sensorD < umbralD) {
+    avanzar(14);
+  }
+
+  // Línea a la derecha.
+  else if (sensorI < umbralI &&
+           sensorC < umbralC &&
+           sensorD >= umbralD) {
+    girarDerecha(10);
+  }
+
+  // Línea a la izquierda.
+  else if (sensorI >= umbralI &&
+           sensorC < umbralC &&
+           sensorD < umbralD) {
+    girarIzquierda(10);
+  }
+
+  // GAP: los tres sensores ven blanco.
+  else if (sensorI < umbralI &&
+           sensorC < umbralC &&
+           sensorD < umbralD) {
+    avanzar(14, 14);
+  }
+}
+
+void setup() {
+  inicializarMovimiento();
+  inicializarSensores();
+  inicializarPantalla();
+}
+
+void loop() {
+
+  // ETAPA 1: contar activaciones del IR derecho.
+  if (estado == 0) {
+    detenerse();
+    irIzq = leerSensorObstaculoIzquierdo();
+    irDer = leerSensorObstaculoDerecho();
+
+    if (irDer == 1) {
+      contador++;
+      mostrarContador();
+
+      // Antirrebote: una activación mantenida cuenta solo una vez.
+      while (irDer == 1) {
+        pausa(20);
+        irDer = leerSensorObstaculoDerecho();
+      }
+    }
+
+    // IR izquierdo autoriza comenzar el recorrido.
+    if (irIzq == 1 && contador > 0) {
+      while (irIzq == 1) {
+        pausa(20);
+        irIzq = leerSensorObstaculoIzquierdo();
+      }
+      estado = 1;
+    }
+  }
+
+  // ETAPA 2: seguir línea y cruzar el gap hasta la intersección.
+  else if (estado == 1) {
+    leerSensores();
+
+    if (sensorI >= umbralI &&
+        sensorC >= umbralC &&
+        sensorD >= umbralD) {
+      detenerse();
+      estado = 2;
+    }
+    else {
+      seguirLinea();
+    }
+  }
+
+  // ETAPA 3: esperar una nueva autorización del IR izquierdo.
+  else if (estado == 2) {
+    detenerse();
+    irIzq = leerSensorObstaculoIzquierdo();
+
+    if (irIzq == 1) {
+      while (irIzq == 1) {
+        pausa(20);
+        irIzq = leerSensorObstaculoIzquierdo();
+      }
+
+      // 1 -> Base 1 | 2 -> Base 2 | 3 o más -> Base 3.
+      if (contador == 1) {
+        girarIzquierda(10);
+        pausa(430);
+      }
+      else if (contador == 2) {
+        avanzar(12);
+        pausa(250);
+      }
+      else {
+        girarDerecha(10);
+        pausa(500);
+      }
+
+      // Salimos de la intersección antes de retomar el seguidor.
+      avanzar(12);
+      pausa(500);
+      estado = 3;
+    }
+  }
+
+  // ETAPA 4: seguir la rama elegida hasta la base final.
+  else if (estado == 3) {
+    leerSensores();
+
+    // La franja negra de la base final es la última intersección.
+    if (sensorI >= umbralI &&
+        sensorC >= umbralC &&
+        sensorD >= umbralD) {
+      detenerse();
+      estado = 4;
+    }
+    else {
+      seguirLinea();
+    }
+  }
+
+  else {
+    detenerse();
+  }
+}
+`,
+  },
+
 };
 
 export function mentorSolutionFor(sessionId:string){return mentorSolutions[sessionId]??null;}

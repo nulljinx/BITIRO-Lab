@@ -1,4 +1,11 @@
 import {test,expect} from '@playwright/test';
+
+// Most E2E tests exercise the laboratory itself, not the first-run onboarding.
+// Keep the tutorial covered by its own behavior while preventing its modal guard
+// from intercepting unrelated interaction tests.
+test.beforeEach(async({page})=>{
+ await page.addInitScript(()=>localStorage.setItem('bitiro:v7:simulator-tutorial:guest','done'));
+});
 import {readFileSync} from 'node:fs';
 const axeSource=readFileSync('node_modules/axe-core/axe.min.js','utf8');
 const packageVersion=JSON.parse(readFileSync('package.json','utf8')).version as string;
@@ -15,8 +22,8 @@ test('public pages, honest account state and responsive accessibility',async({pa
   }
  }
  await page.goto('/intermedio');await expect(page).toHaveURL(/\/$/);
- await page.goto('/registro');await expect(page.getByRole('button',{name:'Crear cuenta',exact:true})).toBeDisabled();
- await expect(page.getByText(/Las cuentas no están configuradas en esta instalación/)).toBeVisible();
+ await page.goto('/registro');await expect(page.getByRole('heading',{name:'Un lugar para seguir aprendiendo.'})).toBeVisible();
+ await expect(page.getByText(/Acceso no disponible en esta instalación/)).toBeVisible();
  await page.goto('/equipo');await expect(page).toHaveURL(/login\?next=\/equipo/);expect(errors).toEqual([]);
 });
 test('landing defers Monaco and simulator; missing route assets recover',async({page})=>{
@@ -41,17 +48,16 @@ test('worker failure offers recovery without losing the editor',async({page})=>{
 });
 test('calibration controls remain reachable at short desktop height',async({page})=>{
  await page.setViewportSize({width:1280,height:600});await page.goto('/intermedio/s01');await page.getByRole('button',{name:'Calibrar',exact:true}).click();
- const panel=page.getByRole('complementary',{name:'Calibración de sensores'});await expect(panel).toBeVisible();
- await expect(panel.getByRole('button',{name:'Inicio',exact:true})).toBeVisible();
- await expect(panel.getByRole('button',{name:'Limpiar',exact:true})).toBeVisible();
- await expect(panel.getByRole('button',{name:'Guardar calibración y volver',exact:true})).toBeVisible();
+ const panel=page.getByRole('complementary',{name:'Calibración guiada del sensor central'});await expect(panel).toBeVisible();
+ await expect(panel.getByRole('button',{name:'Registrar lectura blanca',exact:true})).toBeVisible();
+ await expect(panel.getByRole('button',{name:'Reiniciar mediciones',exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.screenshot({path:'test-results/calibracion-1280x600.png',fullPage:true});
 });
 test('institutional areas require an account before codes or content are available',async({page})=>{
  await page.goto('/espacios');
- await expect(page).toHaveURL(/\/registro\?next=%2Fespacios/);
- await expect(page.getByRole('heading',{name:'Un lugar para seguir aprendiendo.'})).toBeVisible();
+ await expect(page).toHaveURL(/\/login\?next=\/espacios/);
+ await expect(page.getByRole('heading',{name:'Vuelve a tu espacio.'})).toBeVisible();
  await expect(page.getByLabel('Código de acceso')).toHaveCount(0);
  await page.goto('/espacios/mustakis/grupos/mustakis-demo-talca');
  await expect(page).toHaveURL(/\/login\?next=/);

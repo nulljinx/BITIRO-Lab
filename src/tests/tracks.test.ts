@@ -9,6 +9,7 @@ describe('interactive track registry',()=>{
   expect(hasSimulation('s02')).toBe(true);
   expect(hasSimulation('s03')).toBe(true);
   expect(hasSimulation('s04')).toBe(true);
+  expect(hasSimulation('s05')).toBe(true);
  });
 
  it('loads the official S03 plotter at 100 × 180 cm',()=>{
@@ -59,5 +60,14 @@ describe('interactive track registry',()=>{
    const point=path!.points.at(-1)!;
    expect(isInsideFinishZone(point,track)?.id).toBe(`base${index+1}`);
   }
+ });
+
+ it('loads S05 from the official 100 × 200 cm intermediate-challenge plotter',()=>{
+  const track=trackForSession('s05');
+  expect(track.physicalWidthCm).toBe(100);
+  expect(track.physicalHeightCm).toBe(200);
+  expect(track.finishZones.map(zone=>zone.id)).toEqual(['base1','base2','base3']);
+  expect(track.missionZones?.some(zone=>zone.id==='gap')).toBe(true);
+  expect(track.missionZones?.some(zone=>zone.id==='junction')).toBe(true);
  });
 });

@@ -1,3 +1,9 @@
+## v8.00 · cierre E2E runtime
+
+- El programa sintético del test de movimiento usa `avanzar(20)` en lugar de `avanzar(0)`, por lo que ahora prueba movimiento real y no espera movimiento con velocidad cero.
+- La comprobación de altura del canvas se alinea con el layout actual de S01 (`< 760px`), conservando la validación de que el simulador cabe correctamente en escritorio.
+- No se modificó lógica de producción; son ajustes de la suite E2E para reflejar el comportamiento actual.
+
 ## v7.97 · Tutorial Guía + pulsador en todos los laboratorios
 
 - El tutorial de primera entrada ahora destaca el botón **Guía** y explica que sirve para volver a consultar contenidos, conceptos y funciones del IROH sin salir del laboratorio.

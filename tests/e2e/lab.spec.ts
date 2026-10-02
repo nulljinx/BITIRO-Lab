@@ -1,4 +1,11 @@
 import {test,expect} from '@playwright/test';
+
+// Most E2E tests exercise the laboratory itself, not the first-run onboarding.
+// Keep the tutorial covered by its own behavior while preventing its modal guard
+// from intercepting unrelated interaction tests.
+test.beforeEach(async({page})=>{
+ await page.addInitScript(()=>localStorage.setItem('bitiro:v7:simulator-tutorial:guest','done'));
+});
 test('explorer, code persistence, motion, pause, reset and guide',async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto('/intermedio/s01?debug=1');await expect(page.locator('.monaco-editor')).toBeVisible();
@@ -17,8 +24,8 @@ await expect.poll(()=>page.evaluate(()=>{const raw=localStorage.getItem('bitiro:
  expect(errors).toEqual([]);
 });
 test('all sessions keep separate code and truthful availability',async({page})=>{
- for(const id of ['s02','s03']){await page.goto('/intermedio/'+id);await expect(page.locator('.monaco-editor')).toBeVisible();await expect(page.locator('canvas[role="img"]')).toBeVisible();}
- for(const id of ['s04','s05','s06','s07','s08']){await page.goto('/intermedio/'+id);await expect(page.locator('.session-overview')).toBeVisible();await expect(page.locator('.session-overview img')).toHaveCount(0);}
+ for(const id of ['s02','s03','s04','s05']){await page.goto('/intermedio/'+id);await expect(page.locator('.monaco-editor')).toBeVisible();await expect(page.locator('canvas[role="img"]')).toBeVisible();}
+ for(const id of ['s06','s07','s08']){await page.goto('/intermedio/'+id);await expect(page.locator('.session-overview')).toBeVisible();await expect(page.locator('.session-overview img')).toHaveCount(0);}
  await page.goto('/intermedio/no-existe');await expect(page).toHaveURL(/\/$/);
 });
 test('responsive layout, desktop fit, tablet tabs and mobile flow',async({page})=>{

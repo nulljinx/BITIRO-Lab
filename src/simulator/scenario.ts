@@ -22,8 +22,8 @@ export const S03_FIXED_SCENARIO={
   // largo del recorrido. El primero queda lejos del inicio para evitar que el
   // sonar lo detecte apenas comienza la simulación.
   {x:82.214,y:160.363},
-  {x:89.112,y:33.176},
   {x:13.369,y:153.838},
+  {x:11.571,y:49.9},
  ] satisfies Point[],
  intersections:[
   {x:26.1,y:106.0},

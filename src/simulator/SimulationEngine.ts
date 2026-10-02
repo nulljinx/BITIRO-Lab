@@ -175,8 +175,13 @@ export class SimulationEngine {
    if(this.s03IntersectionTurn){
     const delta=Math.abs(Math.atan2(Math.sin(this.robot.heading-this.s03IntersectionTurn.heading),Math.cos(this.robot.heading-this.s03IntersectionTurn.heading)));
     if(delta>=2.55){
-     this.s03ConsumedIntersections.add(this.s03IntersectionTurn.id);
+     const intersectionId=this.s03IntersectionTurn.id;
+     this.s03ConsumedIntersections.add(intersectionId);
      this.s03IntersectionTurn=null;
+     // El motor es la fuente de verdad para una respuesta de 180°. Emitimos un
+     // evento único para que la evaluación no dependa de volver a inferir el giro
+     // con otra geometría/tolerancia distinta.
+     this.emit({type:'INTERSECTION_RESPONDED',intersectionId});
      // La franja sigue dibujada para que el mapa no cambie, pero deja de actuar
      // como una segunda intersección cuando el IROH vuelve por el mismo lugar.
      this.robot=updateSensors(this.robot,this.scene());
@@ -186,7 +191,7 @@ export class SimulationEngine {
   if(this.programControlled)this.mission.observeTick(this.robot);
   const sensedLine=[this.robot.lineLeft,this.robot.lineCenter,this.robot.lineRight].some((value,index)=>value>=this.lineThresholds[index]);
   const lineFront={x:this.robot.x+Math.cos(this.robot.heading)*ROBOT.lineFrontCm,y:this.robot.y+Math.sin(this.robot.heading)*ROBOT.lineFrontCm};
-  const intentionalGap=this.track.id==='s04'&&!!this.track.missionZones?.some(zone=>(zone.id==='gap1'||zone.id==='gap2')&&lineFront.x>=zone.x&&lineFront.x<=zone.x+zone.width&&lineFront.y>=zone.y&&lineFront.y<=zone.y+zone.height);
+  const intentionalGap=(this.track.id==='s04'||this.track.id==='s05')&&!!this.track.missionZones?.some(zone=>((this.track.id==='s04'&&(zone.id==='gap1'||zone.id==='gap2'))||(this.track.id==='s05'&&zone.id==='gap'))&&lineFront.x>=zone.x&&lineFront.x<=zone.x+zone.width&&lineFront.y>=zone.y&&lineFront.y<=zone.y+zone.height);
   const line=sensedLine||intentionalGap;
   // A one-sensor zig-zag intentionally spends short instants over white. S04
   // also contains two intentional all-white gaps, which are part of the task.

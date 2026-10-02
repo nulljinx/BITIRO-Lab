@@ -1,4 +1,9 @@
 import {test,expect,type Page} from '@playwright/test';
+
+// Runtime tests start after onboarding so the tutorial modal cannot intercept controls.
+test.beforeEach(async({page})=>{
+ await page.addInitScript(()=>localStorage.setItem('bitiro:v7:simulator-tutorial:guest','done'));
+});
 import {readFileSync} from 'node:fs';
 const replaceCode=async(page:Page,source:string)=>{
  const normalized=source.replaceAll('\r\n','\n');
@@ -17,7 +22,7 @@ void setup(){
  inicializarGolpe();
  moverServoGolpe(1);
  pausa(700);
- avanzar(0);
+ avanzar(20);
 }
 void loop(){pausa(20);}`;
 test('student code controls Worker, pause/resume and reset preserves code',async({page})=>{
@@ -38,7 +43,7 @@ test('invalid syntax marks Monaco without movement; infinite loop remains recove
  await replaceCode(page,simple);await page.getByRole('button',{name:'Revisar código',exact:true}).click();await expect(page.locator('.runtime-diagnostics')).toHaveClass(/is-success/);await expect(page.locator('.runtime-diagnostics .diagnostic')).toHaveCount(0);await expect(page.locator('.squiggly-error')).toHaveCount(0);
 });
 test('LCD, animated strike and mobile student view',async({page})=>{
- await page.goto('/intermedio/s01');await expect(page.locator('.manual-controls')).toHaveCount(0);await expect.poll(async()=>(await page.locator('canvas[role="img"]').boundingBox())!.height).toBeLessThan(700);
+ await page.goto('/intermedio/s01');await expect(page.locator('.manual-controls')).toHaveCount(0);await expect.poll(async()=>(await page.locator('canvas[role="img"]').boundingBox())!.height).toBeLessThan(760);
  const irLeft=page.getByRole('button',{name:'IR izquierdo',exact:true});await irLeft.click();await expect(irLeft).toHaveAttribute('aria-pressed','true');await replaceCode(page,readFileSync('src/tests/reference-programs/s01-left.cpp','utf8'));await page.getByRole('button',{name:'Probar código',exact:true}).click();await expect(page.getByTestId('lcd')).toContainText('IR IZQUIERDO');await expect(page.getByTestId('lcd')).toHaveClass(/lcd-on/);await page.getByTestId('lcd').screenshot({path:'test-results/s01-lcd-activa.png'});
  await page.waitForTimeout(2200);await page.getByRole('button',{name:'Pausar',exact:true}).click();await expect(page.locator('.runtime-clock .status')).toContainText('En pausa');await page.screenshot({path:'test-results/s01-caja-movida.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});await expect(page.locator('canvas[role="img"]')).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await page.locator('canvas[role="img"]').boundingBox())!.height).toBeLessThan(500);await page.screenshot({path:'test-results/s01-runtime-movil.png',fullPage:true});

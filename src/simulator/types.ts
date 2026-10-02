@@ -24,6 +24,7 @@ export type EventPayload =
  | {type:'PROGRAM_STARTED'|'PROGRAM_PAUSED'|'PROGRAM_FINISHED'|'LINE_LOST'|'LINE_FOUND'}
  | {type:'OBSTACLE_DETECTED';distance:number;obstacleId?:string}
  | {type:'OBSTACLE_HIT'|'OBSTACLE_MOVED';obstacleId:string;side:'left'|'right'}
+ | {type:'INTERSECTION_RESPONDED';intersectionId:string}
  | {type:'FINISH_REACHED';zoneId:string}
  | {type:'LCD_UPDATED';rows:[string,string]}
  | {type:'LINE_SENSOR_READ';side:'left'|'center'|'right'}

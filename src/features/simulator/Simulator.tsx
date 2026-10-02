@@ -22,7 +22,7 @@ function SimulatorPanel({simulation,cloudContext,onCalibrationModeChange}:{simul
  const [viewMode,setViewMode]=useState<'top'|'perspective'|'follow'>('perspective');
  const [nativeFullscreen,setNativeFullscreen]=useState(false),[fullscreenFallback,setFullscreenFallback]=useState(false),panelRef=useRef<HTMLElement>(null);
  const fullscreen=nativeFullscreen||fullscreenFallback;
- const usesThreeSensorCalibration=track.id==='s02'||track.id==='s03'||track.id==='s04';
+ const usesThreeSensorCalibration=track.id==='s02'||track.id==='s03'||track.id==='s04'||track.id==='s05';
  const s01Calibration=useCalibration(simulation,calibrating&&!usesThreeSensorCalibration);
  const s02Calibration=useS02Calibration(simulation,calibrating&&usesThreeSensorCalibration);
  const calibration=usesThreeSensorCalibration?s02Calibration:s01Calibration,{robot}=simulation.snapshot;

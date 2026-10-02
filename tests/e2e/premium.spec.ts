@@ -1,11 +1,18 @@
 import {test,expect} from '@playwright/test';
+
+// Most E2E tests exercise the laboratory itself, not the first-run onboarding.
+// Keep the tutorial covered by its own behavior while preventing its modal guard
+// from intercepting unrelated interaction tests.
+test.beforeEach(async({page})=>{
+ await page.addInitScript(()=>localStorage.setItem('bitiro:v7:simulator-tutorial:guest','done'));
+});
 test('calibration keeps a stable fitted view and removes normal zoom controls',async({page})=>{
  await page.goto('/intermedio/s01?debug=1');
  await expect(page.locator('.manual-controls')).toBeVisible();
- await expect(page.getByRole('complementary',{name:'Calibración de sensores'})).toHaveCount(0);
+ await expect(page.getByRole('complementary',{name:'Calibración guiada del sensor central'})).toHaveCount(0);
  await page.getByRole('button',{name:'Calibrar',exact:true}).click();
- const panel=page.getByRole('complementary',{name:'Calibración de sensores'}),canvas=page.locator('canvas[role="img"]');
- await expect(panel).toBeVisible();await expect(panel).toContainText('Aprende a usar el umbral');
+ const panel=page.getByRole('complementary',{name:'Calibración guiada del sensor central'}),canvas=page.locator('canvas[role="img"]');
+ await expect(panel).toBeVisible();await expect(panel).toContainText('Enseña al IROH a distinguir blanco y negro');
  await expect(page.getByRole('button',{name:'Acercar pista',exact:true})).toHaveCount(0);
  await expect(page.getByRole('button',{name:'Alejar pista',exact:true})).toHaveCount(0);
  await expect(page.getByLabel('Zoom de pista')).toHaveCount(0);
@@ -13,7 +20,7 @@ test('calibration keeps a stable fitted view and removes normal zoom controls',a
  const pose=page.getByTestId('robot-position'),initial=await pose.textContent();
  await canvas.focus();await page.keyboard.press('ArrowLeft');await expect.poll(()=>pose.textContent()).not.toBe(initial);
  const after=await canvas.boundingBox();expect(after?.width).toBeCloseTo(before!.width,1);expect(after?.height).toBeCloseTo(before!.height,1);
- await expect(page.getByRole('button',{name:'Guardar calibración y volver',exact:true})).toBeDisabled();
+ await expect(page.getByRole('button',{name:'Registrar lectura blanca',exact:true})).toBeVisible();
  await page.screenshot({path:'test-results/premium-calibracion.png',fullPage:true});
  await page.getByRole('button',{name:'Salir de calibración',exact:true}).click();
  await expect(panel).toHaveCount(0);await expect(page.getByRole('button',{name:'Calibrar',exact:true})).toBeVisible();
@@ -32,7 +39,7 @@ test('mobile executes into simulator and reports errors back at editor',async({p
  await page.getByRole('button',{name:'Detener la prueba',exact:true}).click();await expect(page.locator('.runtime-clock .status')).toContainText('Detenido');
  const editor=page.getByRole('textbox',{name:/Código Arduino/});await editor.focus();await page.context().grantPermissions(['clipboard-read','clipboard-write']);await page.evaluate(()=>navigator.clipboard.writeText('void setup(){funcionInexistente();} void loop(){}'));await page.keyboard.press('Control+Home');await page.keyboard.press('Control+Shift+End');await page.keyboard.press('Control+V');
  await page.getByRole('button',{name:'Probar código',exact:true}).click();await expect(page.locator('.diagnostic')).toContainText('funcionInexistente');await expect.poll(async()=>(await page.locator('.editor-column').boundingBox())!.y).toBeLessThan(844/3);
- await page.getByRole('button',{name:'Calibrar',exact:true}).click();await expect(page.getByRole('complementary',{name:'Calibración de sensores'})).toBeVisible();await page.screenshot({path:'test-results/premium-calibracion-movil.png',fullPage:true});
+ await page.getByRole('button',{name:'Calibrar',exact:true}).click();await expect(page.getByRole('complementary',{name:'Calibración guiada del sensor central'})).toBeVisible();await page.screenshot({path:'test-results/premium-calibracion-movil.png',fullPage:true});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 
