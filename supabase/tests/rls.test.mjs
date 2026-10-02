@@ -15,7 +15,7 @@ const sqlFile=relative=>readFile(fileURLToPath(new URL(relative,import.meta.url)
 await db.exec(`
  create role anon nologin; create role authenticated nologin;
  create schema auth;
- create table auth.users(id uuid primary key, raw_user_meta_data jsonb not null default '{}');
+ create table auth.users(id uuid primary key, email text, email_confirmed_at timestamptz, raw_user_meta_data jsonb not null default '{}');
  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
  grant usage on schema auth to anon,authenticated;
 `);
@@ -164,8 +164,16 @@ try {
 
  await rejects(user(ids.a,"select public.mentor_cohort_learning('mustakis-demo-talca',1)"),'Participant cannot access mentor learning summary','42501');
  await rejects(user(ids.a,"select public.get_my_cohort_learning('mustakis-demo-talca','s01',null)"),'Null version does not bypass authorization','42501');
+ // Staff access comes only from the server allowlist; staff-role codes are no longer redeemable.
  const mentorJoin=(await user(ids.f,'select public.redeem_workspace_code($1) as result',['MUSTAKIS-MENTOR-DEMO'])).rows[0].result;
- check(mentorJoin.ok===true&&mentorJoin.workspace.role==='mentor','Single-use demo mentor code grants mentor only inside its cohort');
+ check(mentorJoin.ok===false&&(await db.query("select 1 from public.cohort_memberships where user_id=$1 and cohort_id='mustakis-demo-talca'",[ids.f])).rows.length===0,'A staff-role code no longer grants mentor access');
+ await db.query("update auth.users set email='f@colegio.cl',email_confirmed_at=now() where id=$1",[ids.f]);
+ check((await user(ids.f,'select public.claim_staff_access() as r')).rows[0].r.granted===0,'Verified email absent from the allowlist gets no staff access');
+ await user(ids.admin,'select public.admin_set_staff_allowlist($1,$2,true)',[' F@Colegio.CL ','mustakis-demo-talca']);
+ const claimed=(await user(ids.f,'select public.claim_staff_access() as r')).rows[0].r;
+ check(claimed.ok===true&&claimed.granted===1,'Allowlisted verified email (case/space-insensitive) receives its mentor membership');
+ check((await user(ids.f,'select public.claim_staff_access() as r')).rows[0].r.granted===0,'Claiming again is idempotent');
+ check((await user(ids.f,'select public.list_my_workspaces() as w')).rows[0].w.find(w=>w.cohort_id==='mustakis-demo-talca').can_manage===true,'Claimed mentor can manage exactly the allowlisted cohort');
  const mentorSessions=(await user(ids.f,'select public.list_workspace_sessions($1) as sessions',['mustakis-demo-talca'])).rows[0].sessions;
  check(mentorSessions.every(item=>item.can_manage===true),'Mentor receives content-management capability for own cohort');
  const mentorLearning=(await user(ids.f,"select public.mentor_cohort_learning('mustakis-demo-talca',1) as result")).rows[0].result;
@@ -247,6 +255,49 @@ try {
  await rejects(user(ids.f,'select public.mentor_set_session_release($1,$2,$3)',['mustakis-demo-talca-b','s01',true]),'Mentor in cohort A cannot manage cohort B','42501');
 
  await rejects(user(ids.a,"select * from public.content_releases"),'Participant cannot bypass RPC with direct release-table access','42501');
+ // AUTH-STAFF-ALLOWLIST abuse cases.
+ {
+  const t={stu:'00000000-0000-4000-8000-0000000000c1',stranger:'00000000-0000-4000-8000-0000000000c2',unverified:'00000000-0000-4000-8000-0000000000c3',off:'00000000-0000-4000-8000-0000000000c4',other:'00000000-0000-4000-8000-0000000000c5',susp:'00000000-0000-4000-8000-0000000000c6'};
+  const mk=(id,email,verified=true)=>db.query('insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values($1,$2,$3,$4)',[id,email,verified?new Date().toISOString():null,JSON.stringify({display_name:'Persona',role:'admin',requested_role:'facilitator',email})]);
+  await mk(t.stu,'alumno@colegio.cl');await mk(t.stranger,'extrano@colegio.cl');await mk(t.unverified,'docente.sin.verificar@colegio.cl',false);
+  await mk(t.off,'docente.off@colegio.cl');await mk(t.other,'docente.b@colegio.cl');await mk(t.susp,'docente.susp@colegio.cl');
+  for(const mail of ['docente.sin.verificar@colegio.cl','docente.off@colegio.cl','docente.susp@colegio.cl'])await user(ids.admin,'select public.admin_set_staff_allowlist($1,$2,true)',[mail,'mustakis-demo-talca']);
+  await user(ids.admin,'select public.admin_set_staff_allowlist($1,$2,true)',['docente.b@colegio.cl','mustakis-demo-talca-b']);
+  await user(ids.admin,'select public.admin_set_staff_allowlist($1,$2,false)',['docente.off@colegio.cl','mustakis-demo-talca']);
+  const role=async(id,cohort)=>(await db.query('select role from public.cohort_memberships where user_id=$1 and cohort_id=$2',[id,cohort])).rows[0]?.role??null;
+  const claim=async id=>(await user(id,'select public.claim_staff_access() as r')).rows[0].r.granted;
+  await db.query("insert into private.workspace_access_codes(code,cohort_id,role,max_uses,expires_at) values('ALLOWLIST-ALUMNO-A','mustakis-demo-talca','participant',50,now()+interval '1 day')");
+  // participant trying to self-elevate
+  await user(t.stu,"select public.redeem_participant_code('ALLOWLIST-ALUMNO-A')");
+  check(await role(t.stu,'mustakis-demo-talca')==='participant','Student joins as participant with the group code');
+  await rejects(user(t.stu,"update public.cohort_memberships set role='mentor' where user_id=$1",[t.stu]),'Participant cannot update own cohort role directly','42501');
+  await rejects(user(t.stu,"insert into public.cohort_memberships(user_id,cohort_id,role) values($1,'mustakis-demo-talca-b','mentor')",[t.stu]),'Participant cannot insert a mentor membership directly','42501');
+  await rejects(user(t.stu,"update public.organization_memberships set role='org_admin' where user_id=$1",[t.stu]),'Participant cannot become organisation admin directly','42501');
+  await rejects(user(t.stu,"select * from private.staff_allowlist"),'Participant cannot read the staff allowlist','42501');
+  await rejects(user(t.stu,"insert into private.staff_allowlist(email_normalized,cohort_id) values('alumno@colegio.cl','mustakis-demo-talca')"),'Participant cannot write the staff allowlist','42501');
+  await rejects(user(t.stu,"select public.admin_set_staff_allowlist('alumno@colegio.cl','mustakis-demo-talca',true)"),'Participant cannot call the allowlist admin RPC','42501');
+  await rejects(user(ids.f,"select public.admin_set_staff_allowlist('otro@colegio.cl','mustakis-demo-talca',true)"),'Even a mentor cannot edit the allowlist','42501');
+  await rejects(context('anon',null,()=>db.query('select public.claim_staff_access()')),'Anonymous cannot claim staff access','42501');
+  check((await claim(t.stu))===0&&await role(t.stu,'mustakis-demo-talca')==='participant','Student with metadata role=admin and an unlisted email stays participant after claiming');
+  check((await claim(t.stranger))===0&&await role(t.stranger,'mustakis-demo-talca')===null,'Unlisted email gets no membership');
+  check((await claim(t.unverified))===0&&await role(t.unverified,'mustakis-demo-talca')===null,'Allowlisted but UNVERIFIED email gets no staff access');
+  check((await claim(t.off))===0&&await role(t.off,'mustakis-demo-talca')===null,'Deactivated allowlist entry grants nothing');
+  await user(ids.admin,'select public.admin_set_staff_allowlist($1,$2,true)',['docente.off@colegio.cl','mustakis-demo-talca']);
+  check((await claim(t.off))===1&&await role(t.off,'mustakis-demo-talca')==='mentor','Reactivated entry grants the mentor membership');
+  // cross-cohort: the row names cohort B only
+  check((await claim(t.other))===1&&await role(t.other,'mustakis-demo-talca-b')==='mentor'&&await role(t.other,'mustakis-demo-talca')===null,'Allowlist grants only the named cohort');
+  await rejects(user(t.other,"select public.mentor_workspace_overview('mustakis-demo-talca')"),'Mentor of cohort B cannot manage cohort A','42501');
+  // promotion of an existing participant, and sticky suspension
+  await user(t.susp,"select public.redeem_participant_code('ALLOWLIST-ALUMNO-A')");
+  await db.query("update public.cohort_memberships set active=false where user_id=$1 and cohort_id='mustakis-demo-talca'",[t.susp]);
+  check((await claim(t.susp))===0&&(await db.query("select active from public.cohort_memberships where user_id=$1 and cohort_id='mustakis-demo-talca'",[t.susp])).rows[0].active===false,'Allowlist never lifts an administrative suspension');
+  check((await db.query("select count(*)::int as n from public.institution_audit_events where event_type='staff_allowlist_claimed'")).rows[0].n>=3,'Staff grants are audited');
+  check((await db.query("select count(*)::int as n from private.staff_allowlist where role<>'mentor'")).rows[0].n===0,'Allowlist can only hold the mentor role');
+  await rejects(db.query("insert into private.staff_allowlist(email_normalized,cohort_id,role) values('x@y.cl','mustakis-demo-talca','org_admin')"),'Allowlist rejects non-teaching roles','23514');
+  await rejects(db.query("insert into private.staff_allowlist(email_normalized,cohort_id) values('Mixed@Case.cl','mustakis-demo-talca')"),'Allowlist enforces normalised emails','23514');
+  for(const id of Object.values(t))await db.query('delete from auth.users where id=$1',[id]);
+ }
+
  // Participant onboarding: the student RPC can only create PARTICIPANT memberships, whatever the code row says.
  {
   const s={a:'00000000-0000-4000-8000-0000000000b1',b:'00000000-0000-4000-8000-0000000000b2',c:'00000000-0000-4000-8000-0000000000b3',d:'00000000-0000-4000-8000-0000000000b4',e:'00000000-0000-4000-8000-0000000000b5'};

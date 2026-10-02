@@ -1,4 +1,4 @@
-import {createContext,useCallback,useContext,useEffect,useMemo,useState,type ReactNode} from 'react';
+import {createContext,useCallback,useContext,useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {useAuth} from '../auth/AuthProvider';
 import * as service from './workspace-service';
 import type {CohortLearningRow,MentorWorkspaceOverview,ParticipantInvite,WorkspaceContextValue,WorkspaceParticipant,WorkspaceSessionAccess,WorkspaceSummary} from './workspace-types';
@@ -7,11 +7,14 @@ const Context=createContext<WorkspaceContextValue|null>(null);
 export function WorkspaceProvider({children}:{children:ReactNode}){
   const auth=useAuth();
   const [workspaces,setWorkspaces]=useState<WorkspaceSummary[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState<string|null>(null),[loadedUserId,setLoadedUserId]=useState<string|null>(null);
+  const staffClaimedFor=useRef<string|null>(null);
   const refresh=useCallback(async()=>{
     if(auth.status==='loading')return;
     if(auth.status!=='authenticated'){setWorkspaces([]);setLoadedUserId(null);setLoading(false);setError(null);return;}
     const userId=auth.user?.id??null;
     setLoading(true);setError(null);
+    // Once per account and page load, before the first listing: allowlisted staff get their membership server-side.
+    if(userId&&staffClaimedFor.current!==userId){staffClaimedFor.current=userId;try{await service.claimStaffAccess();}catch{/* best effort: access stays participant-only */}}
     try{setWorkspaces(await service.listMyWorkspaces());}
     catch(e){setError(e instanceof Error?e.message:'No pudimos cargar tus espacios.');}
     finally{setLoadedUserId(userId);setLoading(false);}

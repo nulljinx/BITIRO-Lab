@@ -26,3 +26,15 @@ describe('participant cohort onboarding',()=>{
     expect(decideSpacesEntry({status:'authenticated',workspacesLoading:true,workspaceCount:0})).toEqual({kind:'loading'});
   });
 });
+
+describe('staff allowlist claim',()=>{
+  beforeEach(()=>rpc.mockReset());
+  it('calls the server with no arguments and ignores anything but a numeric count',async()=>{
+    const {claimStaffAccess}=await import('../features/workspaces/workspace-service');
+    rpc.mockResolvedValue({data:{ok:true,granted:1,role:'admin'},error:null});
+    await expect(claimStaffAccess()).resolves.toBe(1);
+    expect(rpc).toHaveBeenCalledWith('claim_staff_access');
+    rpc.mockResolvedValue({data:{granted:'1'},error:null});await expect(claimStaffAccess()).resolves.toBe(0);
+    rpc.mockResolvedValue({data:null,error:{message:'denied'}});await expect(claimStaffAccess()).resolves.toBe(0);
+  });
+});

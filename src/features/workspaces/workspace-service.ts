@@ -17,6 +17,15 @@ export async function redeemWorkspaceCode(code:string):Promise<WorkspaceSummary>
   return result.workspace;
 }
 
+// Asks the server to apply its staff allowlist to the signed-in, email-verified account. No argument is sent:
+// the server decides from its own records, so the client can neither choose a role nor a cohort.
+export async function claimStaffAccess():Promise<number> {
+  const {data,error}=await requireSupabase().rpc('claim_staff_access').abortSignal(AbortSignal.timeout(15000));
+  if(error)return 0;
+  const granted=(data as {granted?:unknown}|null)?.granted;
+  return typeof granted==='number'?granted:0;
+}
+
 export async function listWorkspaceSessions(workspace:WorkspaceSummary):Promise<WorkspaceSessionAccess[]> {
   const {data,error}=await requireSupabase().rpc('list_workspace_sessions',{p_cohort_id:workspace.cohort_id}).abortSignal(AbortSignal.timeout(15000));
   if(error)throw new Error('No pudimos comprobar qué contenidos están habilitados.');
