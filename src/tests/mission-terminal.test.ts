@@ -1,0 +1,66 @@
+import {describe,expect,it} from 'vitest';
+import {mentorSolutions} from '../content/mentor-solutions';
+import {trackForSession} from '../content/tracks';
+import {SimulationEngine} from '../simulator/SimulationEngine';
+import {ProgramRuntime} from '../simulator/runtime/ProgramRuntime';
+import {deriveMissionView} from '../features/simulator/mission-state';
+
+type SessionId='s01'|'s02'|'s03'|'s04'|'s05';
+// Drives each reference solution the way a student would operate the simulator (stimuli included) until it passes.
+function runToCompletion(id:SessionId){
+  const engine=new SimulationEngine(trackForSession(id)),runtime=new ProgramRuntime(engine);
+  if(id==='s01'||id==='s02')runtime.command({type:'ir',side:'left',value:true});
+  if(id==='s05')runtime.command({type:'ir',side:'right',value:true});
+  expect(runtime.run(mentorSolutions[id].source)).toEqual([]);
+  let pulse=0;
+  for(let tick=0;tick<40000&&engine.snapshot().mission.status!=='completed';tick++){
+    runtime.step(10);
+    if(id==='s05'){
+      // S05 stimuli: one right pulse (counter 1), then left pulses to start and to authorise at the junction.
+      if(tick===20)runtime.command({type:'ir',side:'right',value:false});
+      if(tick>=40&&tick%50===0){pulse++;runtime.command({type:'ir',side:'left',value:pulse%2===1});}
+    }
+  }
+  expect(engine.snapshot().mission.status).toBe('completed');
+  return {engine,runtime};
+}
+
+describe('mission completion is terminal for the attempt (S01-S05)',()=>{
+  for(const id of ['s01','s02','s03','s04','s05'] as const){
+    it(`${id}: evidence, counter and badge agree after the pass, after Detener and after the robot keeps moving`,()=>{
+      const {engine,runtime}=runToCompletion(id);
+      const passed=engine.snapshot().mission;
+      expect(passed.checks.length).toBeGreaterThan(0);
+      expect(passed.checks.every(check=>check.passed)).toBe(true);
+      const frozen=JSON.stringify(passed);
+      // The program keeps running a while: later states must not rewrite the result.
+      for(let i=0;i<400;i++)runtime.step(10);
+      expect(JSON.stringify(engine.snapshot().mission)).toBe(frozen);
+      // Detener (worker maps stop-program to stop): the attempt stays passed and coherent.
+      runtime.command({type:'stop'});
+      const afterStop=engine.snapshot();
+      expect(JSON.stringify(afterStop.mission)).toBe(frozen);
+      const view=deriveMissionView({evidence:afterStop.mission,status:afterStop.status,ticks:afterStop.ticks,previouslyPassed:false});
+      expect(view).toMatchObject({phase:'passed',passed:afterStop.mission.checks.length,total:afterStop.mission.checks.length});
+      // Calibration/manual pose invalidates live evaluation but cannot undo a finished attempt.
+      runtime.command({type:'pose',x:20,y:20,heading:0});
+      expect(JSON.stringify(engine.snapshot().mission)).toBe(frozen);
+    });
+    it(`${id}: Restablecer starts a new attempt and the next run can pass again`,()=>{
+      const {engine,runtime}=runToCompletion(id);
+      runtime.command({type:'reset'});
+      const reset=engine.snapshot();
+      expect(reset.mission.status).toBe('in_progress');
+      expect(reset.mission.checks.every(check=>!check.passed)).toBe(true);
+      expect(deriveMissionView({evidence:reset.mission,status:reset.status,ticks:reset.ticks,previouslyPassed:true})).toMatchObject({phase:'ready',passed:0,badge:'Reiniciada · nuevo intento'});
+    });
+  }
+  it('a re-run after a pass is a fresh attempt: it starts unpassed and can be completed independently',()=>{
+    const {engine,runtime}=runToCompletion('s03');
+    expect(runtime.run(mentorSolutions.s03.source)).toEqual([]);
+    expect(engine.snapshot().mission.status).toBe('in_progress');
+    expect(engine.snapshot().mission.checks.every(check=>!check.passed)).toBe(true);
+    for(let tick=0;tick<12000&&engine.snapshot().mission.status!=='completed';tick++)runtime.step(10);
+    expect(engine.snapshot().mission.status).toBe('completed');
+  });
+});

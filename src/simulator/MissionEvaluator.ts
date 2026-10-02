@@ -30,6 +30,8 @@ export class MissionEvaluator {
  private last:{x:number;y:number}|null=null;
  private lastTickMs=0;
  private completed=false;
+ /** Evidence of the attempt that completed the mission. Terminal: stop, calibration or robot movement cannot change it; only reset()/start() (a new attempt) clear it. */
+ private frozen:MissionEvidence|null=null;
  private destinationReached=false;
  private invalid=false;
  private obstacleDetections=new Set<string>();
@@ -66,7 +68,7 @@ export class MissionEvaluator {
  constructor(private track:TrackDefinition){}
  setLineThresholds(values:LineThresholds){this.lineThresholds=[...values] as LineThresholds;}
  setScenarioIntersections(values:readonly ScenarioIntersection[]){this.scenarioIntersections=values.map(item=>({...item}));}
- reset(){this.active=false;this.initialIR=null;this.initialButton=false;this.reads.clear();this.buttonRead=false;this.lineReads.clear();this.lineLostEvents=0;this.movedSides.clear();this.lcdDecision=false;this.intersection=false;this.intersectionStopMs=0;this.distance=0;this.last=null;this.lastTickMs=0;this.completed=false;this.destinationReached=false;this.invalid=false;this.obstacleDetections.clear();this.obstacleReadEvents=0;this.lcdNumber=null;this.s03IntersectionActive=null;this.s03IntersectionHeading=0;this.s03IntersectionTurned=false;this.s03IntersectionResponses=0;this.s03RespondedIntersections.clear();this.s04Gap1Seen=false;this.s04Gap1Crossed=false;this.s04Gap2Seen=false;this.s04Intersection1=false;this.s04Intersection2=false;this.s04Intersection3=false;this.s04Intersection1StopMs=0;this.s04Intersection2StopMs=0;this.s04Intersection3StopMs=0;this.s05RightActivations=0;this.s05LastRight=false;this.s05LastLeft=false;this.s05StartedByLeft=false;this.s05LcdMatchedCount=false;this.s05GapSeen=false;this.s05GapCrossed=false;this.s05JunctionReached=false;this.s05JunctionStopMs=0;this.s05JunctionAuthorized=false;this.s05DestinationReached=false;this.s05ExpectedBase=null;}
+ reset(){this.active=false;this.initialIR=null;this.initialButton=false;this.reads.clear();this.buttonRead=false;this.lineReads.clear();this.lineLostEvents=0;this.movedSides.clear();this.lcdDecision=false;this.intersection=false;this.intersectionStopMs=0;this.distance=0;this.last=null;this.lastTickMs=0;this.completed=false;this.frozen=null;this.destinationReached=false;this.invalid=false;this.obstacleDetections.clear();this.obstacleReadEvents=0;this.lcdNumber=null;this.s03IntersectionActive=null;this.s03IntersectionHeading=0;this.s03IntersectionTurned=false;this.s03IntersectionResponses=0;this.s03RespondedIntersections.clear();this.s04Gap1Seen=false;this.s04Gap1Crossed=false;this.s04Gap2Seen=false;this.s04Intersection1=false;this.s04Intersection2=false;this.s04Intersection3=false;this.s04Intersection1StopMs=0;this.s04Intersection2StopMs=0;this.s04Intersection3StopMs=0;this.s05RightActivations=0;this.s05LastRight=false;this.s05LastLeft=false;this.s05StartedByLeft=false;this.s05LcdMatchedCount=false;this.s05GapSeen=false;this.s05GapCrossed=false;this.s05JunctionReached=false;this.s05JunctionStopMs=0;this.s05JunctionAuthorized=false;this.s05DestinationReached=false;this.s05ExpectedBase=null;}
  start(robot:RobotState){this.reset();this.active=true;this.initialIR={left:robot.irLeft,right:robot.irRight};this.initialButton=robot.buttonPressed;this.last={x:robot.x,y:robot.y};this.lastTickMs=robot.simTimeMs;}
  invalidate(){this.invalid=true;this.active=false;}
  observeEvent(event:SimulationEvent){
@@ -193,6 +195,7 @@ export class MissionEvaluator {
   }
  }
  evaluate(robot:RobotState):MissionEvidence{
+  if(this.frozen)return {...this.frozen,checks:this.frozen.checks.map(item=>({...item})),progress:this.frozen.progress?{...this.frozen.progress}:undefined};
   const zone=isInsideFinishZone(robot,this.track)?.id??null;
   const stationary=robot.leftMotor===0&&robot.rightMotor===0;
   const checks:{key:string;label:string;passed:boolean}[]=[];
@@ -234,6 +237,8 @@ export class MissionEvaluator {
   }
   if(this.active&&!this.invalid&&checks.length>0&&checks.every(item=>item.passed))this.completed=true;
   const progress=this.track.id==='s03'?{obstaclesDetected:Math.min(3,this.obstacleDetections.size),obstacleReads:this.obstacleReadEvents,intersectionsResponded:Math.min(3,this.s03IntersectionResponses),lcdValue:this.lcdNumber,duplicateObstacleRead:this.obstacleReadEvents>this.obstacleDetections.size}:undefined;
-  return {sessionId:this.track.id,status:this.completed?'completed':'in_progress',checks,elapsedMs:robot.simTimeMs,finishZone:zone,progress,kind:'formative_client_simulation'};
+  const evidence:MissionEvidence={sessionId:this.track.id,status:this.completed?'completed':'in_progress',checks,elapsedMs:robot.simTimeMs,finishZone:zone,progress,kind:'formative_client_simulation'};
+  if(this.completed)this.frozen={...evidence,checks:evidence.checks.map(item=>({...item})),progress:evidence.progress?{...evidence.progress}:undefined};
+  return evidence;
  }
 }

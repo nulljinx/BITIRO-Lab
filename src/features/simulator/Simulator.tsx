@@ -71,7 +71,7 @@ function SimulatorPanel({simulation,cloudContext,onCalibrationModeChange}:{simul
   {!calibrating&&<RuntimeBar simulation={simulation}/>} 
   {debug&&<div className="manual-controls" aria-label="Motores de diagnóstico"><span>Diagnóstico</span><button aria-label="Girar izquierda manual" onClick={()=>simulation.send({type:'motors',left:-14,right:14})}><ArrowLeft size={16}/></button><button aria-label="Avanzar manual" onClick={()=>simulation.send({type:'motors',left:18,right:18})}><ArrowUp size={16}/></button><button aria-label="Girar derecha manual" onClick={()=>simulation.send({type:'motors',left:14,right:-14})}><ArrowRight size={16}/></button><button aria-label="Retroceder manual" onClick={()=>simulation.send({type:'motors',left:-14,right:-14})}><ArrowDown size={16}/></button><button aria-label="Detener manual" onClick={()=>simulation.send({type:'stop'})}><Square size={16}/></button></div>}
   {!calibrating&&<FeedbackPanel simulation={simulation} calibration={false}/>}
-  {!calibrating&&<MissionPanel evidence={simulation.snapshot.mission} cloudContext={cloudContext}/>} 
+  {!calibrating&&<MissionPanel evidence={simulation.snapshot.mission} status={simulation.snapshot.status} ticks={simulation.snapshot.ticks} cloudContext={cloudContext}/>} 
  </section>;
 }
 type WorkspaceProps={session:SessionDefinition;storageScope?:string;cloudContext?:CloudContext;mentorMode?:boolean};

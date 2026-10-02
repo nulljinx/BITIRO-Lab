@@ -86,6 +86,7 @@ Tests: 04 V2/V4 queries re-run (12 repo RPCs authenticated-only, 13 RLS tables p
 Done: REL-1 green and required; the six functions and two tables exist live; V2 shows only the known `rls_auto_enable` item until DB-2; written closure note.
 
 #### MIS-1 - Mission completion state integrity
+Status 2026-10-02: IMPLEMENTED LOCALLY (pilot sprint). D2 resolved as FREEZE: `MissionEvaluator` latches the passing evidence; Detener, calibration pose or later movement cannot change it, reset/start begin a new attempt. Pure `deriveMissionView` drives counter, badge and card; earlier pass is acknowledged after a reset. Headless S01-S05 tests plus an S01 browser test; S02-S05 browser runs still pending.
 P0 | Phase 3 (first) | Depends: D2.
 Goal: one truthful completion state. Resolves: 06b N1, N2, G7; 02 R2 (symptom).
 Areas: `MissionPanel.tsx` L22, `FeedbackPanel.tsx`, `RuntimeBar.tsx`, `MissionEvaluator.ts`/`SimulationEngine.snapshot()` (read only unless D2 requires change).
@@ -94,6 +95,7 @@ Tests: unit tests for the derivation matrix (running/passed/stopped/reset/eviden
 Done: no state shows "superado" with "0/4"; the three states are distinguishable; S01-S05 each verified in a browser (only S03 was before).
 
 #### A11Y-1 - Tour dialog focus management
+Status 2026-10-02: IMPLEMENTED LOCALLY (pilot sprint). Focus on title, Tab trap, `inert` root, restore to the Tutorial button, visible keyboard hint; E2E fails on the previous code.
 P0 | Phase 2 | Depends: none.
 Goal: modal behaves as a modal. Resolves: 06 UX-1, 06b G4 extension, 05 R5, 06 R-B.
 Areas: `src/features/simulator/SimulatorTour.tsx`, app root `inert`.
@@ -102,6 +104,7 @@ Tests: Playwright spec: fresh storage, 40 x Tab, assert editor text unchanged an
 Done: no Tab can reach or edit the editor while open; first-run and reopened tour both pass; persisted `done` key behaviour unchanged.
 
 #### A11Y-2 - Monaco keyboard trap
+Status 2026-10-02: IMPLEMENTED LOCALLY (pilot sprint). Root cause refined: Monaco recomputes `tabFocusMode` from a global singleton, so the constructor option was ignored and the stock Ctrl+M action is not bundled. D7 applied: Tab indents; a visible `aria-pressed` switch and Ctrl+M toggle Tab-moves-focus. Screen-reader pass (NVDA/VoiceOver) still pending; Guide text not changed (tour step updated).
 P0 | Phase 2 | Depends: D7.
 Goal: keyboard users can leave the editor (WCAG 2.1.2). Resolves: 06b N5, G4; 06 UX-R3.
 Areas: `src/features/code-editor/CodeEditor.tsx` Monaco options, editor toolbar, Guide shortcut note.
