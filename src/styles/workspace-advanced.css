@@ -2942,3 +2942,49 @@
   .s02-calibration-samples{grid-template-columns:1fr;}
   .s02-pattern-progress{grid-template-columns:1fr;}
 }
+
+/* BITIRO 7.96 — tutorial de primera entrada al simulador */
+.sim-tour-root{position:fixed;inset:0;z-index:10000;pointer-events:none;font-family:var(--font-sans);}
+.sim-tour-guard{position:absolute;inset:0;z-index:10000;pointer-events:auto;background:transparent;}
+.sim-tour-root.no-target .sim-tour-guard{background:rgba(7,12,45,.68);backdrop-filter:blur(2px);}
+.sim-tour-spotlight{position:fixed;z-index:10001;border:2px solid rgba(255,255,255,.98);border-radius:12px;box-shadow:0 0 0 4px rgba(51,61,214,.34),0 0 0 9999px rgba(7,12,45,.68);pointer-events:none;transition:left .22s ease,top .22s ease,width .22s ease,height .22s ease;}
+.sim-tour-card{position:fixed;left:50%;z-index:10002;width:min(460px,calc(100vw - 28px));padding:20px 20px 17px;pointer-events:auto;transform:translateX(-50%);border:1px solid rgba(255,255,255,.16);border-radius:16px;background:#0f1b45;color:#fff;box-shadow:0 24px 80px rgba(6,11,35,.42);}
+.sim-tour-card.is-center{top:50%;transform:translate(-50%,-50%);}
+.sim-tour-card.is-top{top:88px;}
+.sim-tour-card.is-bottom{bottom:22px;}
+.sim-tour-card-head{display:grid;grid-template-columns:42px minmax(0,1fr) 34px;gap:12px;align-items:start;}
+.sim-tour-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:12px;background:#fff;color:#1117b6;}
+.sim-tour-step{display:block;margin:0 0 3px;color:#aeb9ff;font:600 10px/1.3 var(--font-mono);letter-spacing:.07em;text-transform:uppercase;}
+.sim-tour-card h2{margin:0;font-size:20px;line-height:1.2;letter-spacing:-.35px;color:#fff;}
+.sim-tour-card>p{margin:14px 0 16px;color:#dce2ff;font-size:13px;line-height:1.58;}
+.sim-tour-close{width:34px;min-width:34px;height:34px;min-height:34px;padding:0;border-color:rgba(255,255,255,.16);background:transparent;color:#fff;}
+.sim-tour-close:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.25);}
+.sim-tour-progress{display:flex;gap:5px;margin-bottom:16px;}
+.sim-tour-progress i{height:4px;flex:1;border-radius:999px;background:rgba(255,255,255,.18);}
+.sim-tour-progress i.is-done{background:#7c88ff;}
+.sim-tour-progress i.is-current{background:#fff;}
+.sim-tour-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;}
+.sim-tour-actions>div{display:flex;gap:7px;}
+.sim-tour-actions button{min-height:38px;padding:7px 11px;border-color:rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#fff;font-size:11px;}
+.sim-tour-actions button:hover:not(:disabled){background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.28);}
+.sim-tour-actions button.primary{background:#fff;color:#11176d;border-color:#fff;}
+.sim-tour-actions button.primary:hover{background:#eef0ff;border-color:#eef0ff;}
+.sim-tour-actions button:disabled{opacity:.38;}
+.sim-tour-skip{border:0!important;background:transparent!important;color:#bdc7ec!important;padding-left:0!important;}
+.workspace-tour-button{white-space:nowrap;}
+@media(max-width:767px){
+ .sim-tour-card{padding:17px 16px 15px;border-radius:14px;}
+ .sim-tour-card.is-top{top:72px;}
+ .sim-tour-card.is-bottom{bottom:10px;}
+ .sim-tour-card-head{grid-template-columns:38px minmax(0,1fr) 32px;gap:9px;}
+ .sim-tour-icon{width:38px;height:38px;border-radius:10px;}
+ .sim-tour-card h2{font-size:17px;}
+ .sim-tour-card>p{font-size:12px;margin:12px 0 14px;}
+ .sim-tour-actions{align-items:stretch;flex-direction:column-reverse;gap:6px;}
+ .sim-tour-actions>div{display:grid;grid-template-columns:1fr 1fr;}
+ .sim-tour-actions button{width:100%;}
+ .workspace-tour-button{padding-inline:10px;}
+ .workspace-tour-button{font-size:0;gap:0;}
+ .workspace-tour-button svg{margin:0;}
+}
+@media(prefers-reduced-motion:reduce){.sim-tour-spotlight{transition:none;}}

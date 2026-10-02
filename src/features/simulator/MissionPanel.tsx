@@ -18,7 +18,7 @@ export function MissionPanel({evidence,cloudContext}:{evidence:MissionEvidence;c
  }
  useEffect(()=>{if(evidence.status==='completed'&&cloudContext&&!submitted.current)void submit();},[evidence.status,cloudContext?.cohortId,cloudContext?.activityVersion,evidence.sessionId]);
  if(!evidence.checks.length)return null;
- return <details className="mission-panel" open={evidence.status==='completed'}>
+ return <details className="mission-panel" data-tour="mission" open={evidence.status==='completed'}>
   <summary><span className="mission-panel-title">{evidence.status==='completed'?<CheckCircle2 size={17}/>:<Circle size={17}/>}Objetivos de la misión · {evidence.checks.filter(check=>check.passed).length}/{evidence.checks.length}</span><span>{evidence.status==='completed'?'Superada en simulador':'Ver objetivos'}</span></summary>
   <ol>{evidence.checks.map(check=><li key={check.key}>{check.passed?<Check size={15}/>:<Circle size={15}/>}<span>{check.label}</span></li>)}</ol>
   {evidence.status==='completed'&&<p role="status">Resultado de práctica autoevaluado por el simulador. No equivale a una calificación ni a validación del mentor.</p>}

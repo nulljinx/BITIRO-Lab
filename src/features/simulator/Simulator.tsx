@@ -1,5 +1,5 @@
 import {Component,lazy,Suspense,useEffect,useRef,useState,type ReactNode} from 'react';
-import {ArrowLeft,ArrowRight,ArrowUp,ArrowDown,Square,Code2,MonitorPlay,FlaskConical,PanelLeftClose,PanelLeftOpen,Maximize2,Minimize2} from 'lucide-react';
+import {ArrowLeft,ArrowRight,ArrowUp,ArrowDown,Square,Code2,MonitorPlay,FlaskConical,PanelLeftClose,PanelLeftOpen,Maximize2,Minimize2,CircleHelp} from 'lucide-react';
 import type {SessionDefinition} from '../../content/sessions';
 import type {CloudContext} from '../code-editor/cloud-learning';
 const CodeEditor=lazy(()=>import('../code-editor/CodeEditor').then(m=>({default:m.CodeEditor})));
@@ -14,6 +14,7 @@ import {CalibrationPanel,useCalibration} from './CalibrationPanel';
 import {S02CalibrationPanel,useS02Calibration} from './S02CalibrationPanel';
 import {SimulatorToolbar} from './SimulatorToolbar';
 import {hasSimulation} from '../../content/tracks';
+import {SimulatorTour} from './SimulatorTour';
 function SimulatorPanel({simulation,cloudContext,onCalibrationModeChange}:{simulation:SimulationConnection;cloudContext?:CloudContext;onCalibrationModeChange?:(active:boolean)=>void}){
  const track=simulation.track;
  const debug=new URLSearchParams(location.search).get('debug')==='1';
@@ -66,7 +67,7 @@ function SimulatorPanel({simulation,cloudContext,onCalibrationModeChange}:{simul
   {simulation.engineState!=='ready'&&<div className="engine-notice" role="status"><p>{simulation.engineState==='starting'?'Iniciando motor…':simulation.engineError}</p>{simulation.engineState==='error'&&<button onClick={simulation.retry}>Reiniciar motor</button>}</div>}
   <SimulatorToolbar zoom={viewportZoom} onZoom={setZoom} calibration={calibrating} onCalibration={toggleCalibration} trackId={track.id} viewMode={calibrating?'top':viewMode} onViewMode={mode=>{setViewMode(mode);if(mode==='top')setZoom(1);}} fullscreen={fullscreen} onFullscreen={()=>void togglePanelFullscreen()}/>
   {calibrating&&<div className="calibration-banner"><FlaskConical size={15}/><span><strong>Modo calibración</strong> · {usesThreeSensorCalibration?'mide I, C y D; calcula tres umbrales y comprueba los cuatro casos.':'mide blanco, mide negro y construye el umbral del sensor central.'}</span></div>}{!calibrating&&calibrationNotice&&<div className="calibration-applied-banner" role="status"><FlaskConical size={15}/><span>{calibrationNotice}</span></div>}
-  <div className="simulation-body"><div className="viewport-column">{is3D?<Arena3D snapshot={simulation.snapshot} track={track} zoom={zoom} onZoom={setZoom} thresholds={calibration.savedThresholds} preset={viewMode==='follow'?'follow':'perspective'}/>:<Arena latest={simulation.latest} calibration={calibrating} send={simulation.send} zoom={viewportZoom} activeSensor={usesThreeSensorCalibration?-1:1} thresholds={calibration.thresholds} snapshot={simulation.snapshot} running={simulation.snapshot.status==='running'} track={track}/>} {debug&&<div className="debug"><p data-testid="robot-position">x={robot.x.toFixed(3)} y={robot.y.toFixed(3)} θ={robot.heading.toFixed(3)}</p><span>Ticks: {simulation.snapshot.ticks} · Colisiones: {simulation.snapshot.collisions}</span></div>}</div>{calibrating?(usesThreeSensorCalibration?<S02CalibrationPanel calibration={s02Calibration} onSaved={finishCalibration} sessionId={track.id}/>:<CalibrationPanel simulation={simulation} calibration={s01Calibration} onSaved={finishCalibration}/>):<TelemetryPanel simulation={simulation}/>}</div>
+  <div className="simulation-body"><div className="viewport-column" data-tour="viewport">{is3D?<Arena3D snapshot={simulation.snapshot} track={track} zoom={zoom} onZoom={setZoom} thresholds={calibration.savedThresholds} preset={viewMode==='follow'?'follow':'perspective'}/>:<Arena latest={simulation.latest} calibration={calibrating} send={simulation.send} zoom={viewportZoom} activeSensor={usesThreeSensorCalibration?-1:1} thresholds={calibration.thresholds} snapshot={simulation.snapshot} running={simulation.snapshot.status==='running'} track={track}/>} {debug&&<div className="debug"><p data-testid="robot-position">x={robot.x.toFixed(3)} y={robot.y.toFixed(3)} θ={robot.heading.toFixed(3)}</p><span>Ticks: {simulation.snapshot.ticks} · Colisiones: {simulation.snapshot.collisions}</span></div>}</div>{calibrating?(usesThreeSensorCalibration?<S02CalibrationPanel calibration={s02Calibration} onSaved={finishCalibration} sessionId={track.id}/>:<CalibrationPanel simulation={simulation} calibration={s01Calibration} onSaved={finishCalibration}/>):<TelemetryPanel simulation={simulation}/>}</div>
   {!calibrating&&<RuntimeBar simulation={simulation}/>} 
   {debug&&<div className="manual-controls" aria-label="Motores de diagnóstico"><span>Diagnóstico</span><button aria-label="Girar izquierda manual" onClick={()=>simulation.send({type:'motors',left:-14,right:14})}><ArrowLeft size={16}/></button><button aria-label="Avanzar manual" onClick={()=>simulation.send({type:'motors',left:18,right:18})}><ArrowUp size={16}/></button><button aria-label="Girar derecha manual" onClick={()=>simulation.send({type:'motors',left:14,right:-14})}><ArrowRight size={16}/></button><button aria-label="Retroceder manual" onClick={()=>simulation.send({type:'motors',left:-14,right:-14})}><ArrowDown size={16}/></button><button aria-label="Detener manual" onClick={()=>simulation.send({type:'stop'})}><Square size={16}/></button></div>}
   {!calibrating&&<FeedbackPanel simulation={simulation} calibration={false}/>}
@@ -82,10 +83,26 @@ class EditorBoundary extends Component<{children:ReactNode},{failed:boolean}>{
 function Workspace({session,simulation,storageScope,cloudContext,mentorMode=false}:{simulation?:SimulationConnection}&WorkspaceProps){
  const [tab,setTab]=useState('simulator');
  const [calibrationMode,setCalibrationMode]=useState(false);
+ const [tourOpen,setTourOpen]=useState(false);
+ const tourScope=storageScope?.match(/^user:([^|]+)/)?.[1]??'guest';
+ const tourStorageKey=`bitiro:v7:simulator-tutorial:${tourScope}`;
  const [focus,setFocus]=useState(()=>{try{return sessionStorage.getItem('bitiro:sim-focus')==='1';}catch{return false;}});
  const [nativeFullscreen,setNativeFullscreen]=useState(false),[fullscreenFallback,setFullscreenFallback]=useState(false),workspaceRef=useRef<HTMLElement>(null);
  const fullscreen=nativeFullscreen||fullscreenFallback;
  useEffect(()=>{try{sessionStorage.setItem('bitiro:sim-focus',focus?'1':'0');}catch{/* unavailable in private storage */}},[focus]);
+ useEffect(()=>{
+  if(!simulation||simulation.engineState!=='ready')return;
+  let seen=false;
+  try{seen=localStorage.getItem(tourStorageKey)==='done';}catch{/* storage unavailable */}
+  if(seen)return;
+  const timer=window.setTimeout(()=>{setFocus(false);setTab('simulator');setTourOpen(true);},420);
+  return()=>window.clearTimeout(timer);
+ },[simulation?.engineState,tourStorageKey]);
+ function finishTutorial(){
+  setTourOpen(false);
+  try{localStorage.setItem(tourStorageKey,'done');}catch{/* tutorial remains optional */}
+ }
+ function openTutorial(){setFocus(false);setCalibrationMode(false);setTab('simulator');setTourOpen(true);}
  useEffect(()=>{if(!calibrationMode)return;setTab('simulator');},[calibrationMode]);
  useEffect(()=>{
   const sync=()=>setNativeFullscreen(document.fullscreenElement===workspaceRef.current);
@@ -136,12 +153,13 @@ function Workspace({session,simulation,storageScope,cloudContext,mentorMode=fals
   }
  },[simulation?.reviewState]);
  return <main id="main" ref={workspaceRef} className={`workspace ${focus&&simulation?'is-simulation-focused':''} ${calibrationMode?'is-calibration-workspace':''} ${fullscreenFallback?'is-lab-fullscreen':''}`}>
-  <div className="workspace-heading"><div><span className="eyebrow">Misión {String(session.number).padStart(2,'0')} · Robótica Intermedia</span><h1>{session.title}</h1></div><div className="workspace-view-actions">{(calibrationMode||!simulation)&&<span className="workspace-availability">{calibrationMode?'Modo calibración activo':'Material y editor'}</span>}{simulation&&<>{!calibrationMode&&<button type="button" className="button workspace-focus-button" aria-pressed={focus} onClick={()=>{setFocus(v=>!v);setTab('simulator');}}>{focus?<PanelLeftOpen size={16}/>:<PanelLeftClose size={16}/>} {focus?'Mostrar código':'Ocultar código'}</button>}<button type="button" className="button workspace-fullscreen-button" aria-label={fullscreen?'Salir de pantalla completa':'Pantalla completa del laboratorio'} onClick={()=>void toggleFullscreen()}>{fullscreen?<Minimize2 size={16}/>:<Maximize2 size={16}/>} <span>{fullscreen?'Salir de pantalla completa':'Pantalla completa'}</span></button></>}</div></div>
+  <div className="workspace-heading"><div><span className="eyebrow">Misión {String(session.number).padStart(2,'0')} · Robótica Intermedia</span><h1>{session.title}</h1></div><div className="workspace-view-actions">{(calibrationMode||!simulation)&&<span className="workspace-availability">{calibrationMode?'Modo calibración activo':'Material y editor'}</span>}{simulation&&<>{!calibrationMode&&<button type="button" className="button workspace-tour-button" onClick={openTutorial}><CircleHelp size={16}/> Tutorial</button>}{!calibrationMode&&<button type="button" className="button workspace-focus-button" aria-pressed={focus} onClick={()=>{setFocus(v=>!v);setTab('simulator');}}>{focus?<PanelLeftOpen size={16}/>:<PanelLeftClose size={16}/>} {focus?'Mostrar código':'Ocultar código'}</button>}<button type="button" className="button workspace-fullscreen-button" aria-label={fullscreen?'Salir de pantalla completa':'Pantalla completa del laboratorio'} onClick={()=>void toggleFullscreen()}>{fullscreen?<Minimize2 size={16}/>:<Maximize2 size={16}/>} <span>{fullscreen?'Salir de pantalla completa':'Pantalla completa'}</span></button></>}</div></div>
   <div className="workspace-tabs" aria-label="Vista de trabajo"><button aria-pressed={tab==='editor'} onClick={()=>setTab('editor')} disabled={calibrationMode}><Code2 size={18}/>Código</button><button aria-pressed={tab==='simulator'} onClick={()=>setTab('simulator')}><MonitorPlay size={18}/>{simulation?'Simulador':'Material'}</button></div>
   <div className={`workspace-grid workspace-grid-stacked show-${calibrationMode||focus&&simulation?'simulator':tab}`}>
    <div ref={simRef} className="simulation-column">{simulation?<SimulatorPanel simulation={simulation} cloudContext={cloudContext} onCalibrationModeChange={setCalibrationMode}/>:<section className="session-overview"><span className="eyebrow">Material y editor</span><h2>Prepara tu próxima misión.</h2><p>{session.summary}</p><div className="overview-track">{session.trackAsset?<img src={session.trackAsset} alt={`Plotter ${session.id.toUpperCase()}`}/>:<strong>Material institucional aún no publicado en BITIRO</strong>}</div><ol>{session.objectives.map(o=><li key={o}>{o}</li>)}</ol><p className="availability-note">La simulación de esta sesión aún no está disponible. Puedes consultar el material y preparar tu código.</p></section>}</div>
-   <div ref={editorRef} className="editor-column" aria-hidden={calibrationMode||focus&&!!simulation?true:undefined}><div className="workspace-editor-heading"><div><span className="eyebrow">Programación</span><strong>Programa el IROH y prueba tu solución</strong></div><span>Arduino / C++</span></div><EditorBoundary><Suspense fallback={<section className="editor-skeleton" role="status"><Code2 size={24}/><h2>Preparando el editor</h2><p>Ya puedes explorar la pista y los objetivos.</p></section>}><CodeEditor session={session} simulation={simulation} storageScope={storageScope} cloudContext={cloudContext} mentorMode={mentorMode}/></Suspense></EditorBoundary></div>
+   <div ref={editorRef} className="editor-column" data-tour="editor" aria-hidden={calibrationMode||focus&&!!simulation?true:undefined}><div className="workspace-editor-heading"><div><span className="eyebrow">Programación</span><strong>Programa el IROH y prueba tu solución</strong></div><span>Arduino / C++</span></div><EditorBoundary><Suspense fallback={<section className="editor-skeleton" role="status"><Code2 size={24}/><h2>Preparando el editor</h2><p>Ya puedes explorar la pista y los objetivos.</p></section>}><CodeEditor session={session} simulation={simulation} storageScope={storageScope} cloudContext={cloudContext} mentorMode={mentorMode}/></Suspense></EditorBoundary></div>
   </div>
+  {simulation&&<SimulatorTour open={tourOpen} onDone={finishTutorial} onAreaChange={area=>{setFocus(false);setTab(area==='editor'?'editor':'simulator');}}/>}
  </main>;
 }
 function LiveWorkspace(props:WorkspaceProps){const simulation=useSimulation(props.session.id);return <Workspace {...props} simulation={simulation}/>;}

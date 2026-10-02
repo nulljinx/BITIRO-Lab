@@ -1,3 +1,16 @@
+## v7.97 · Tutorial Guía + pulsador en todos los laboratorios
+
+- El tutorial de primera entrada ahora destaca el botón **Guía** y explica que sirve para volver a consultar contenidos, conceptos y funciones del IROH sin salir del laboratorio.
+- El **Pulsador** vuelve a mostrarse también en S04. Desde esta versión, S01–S04 mantienen el pulsador disponible en la telemetría como control físico común del IROH, aunque no sea protagonista de todos los desafíos.
+
+## v7.96 · Tutorial de primera entrada al simulador
+
+- Se muestra una visita guiada la primera vez que cada usuario abre un simulador.
+- Explica pista 3D, controles de vista, telemetría, editor, revisión/ejecución, calibración y objetivos.
+- El progreso del tutorial se guarda por usuario en el navegador para no repetirlo en cada sesión.
+- Se añadió un botón `Tutorial` al encabezado del laboratorio para volver a abrirlo cuando sea necesario.
+- En pantallas pequeñas el recorrido cambia automáticamente entre las pestañas Simulador y Código.
+
 ## v7.95 · S04 Gaps y funciones
 
 - S04 pasa de placeholder a laboratorio interactivo.
