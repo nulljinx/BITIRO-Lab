@@ -247,3 +247,4 @@
 .runtime-diagnostics.is-error{
   background:rgba(157,54,54,.12);
 }
+.editor-toolbar .tab-nav-toggle.is-active{background:var(--instrument-line);color:var(--text-on-action);border-color:var(--instrument-line-strong)}

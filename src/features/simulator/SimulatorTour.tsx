@@ -39,7 +39,7 @@ const STEPS:TourStep[]=[
  },
  {
   title:'Escribe tu programa',
-  body:'En el editor trabajas con el código Arduino/IROH de la misión. Tu copia se guarda localmente mientras escribes para que puedas volver a ella después.',
+  body:'En el editor trabajas con el código Arduino/IROH de la misión. Tu copia se guarda localmente mientras escribes. Con el teclado, Tab sangra el código; para salir del editor pulsa Ctrl+M (Mac: Ctrl+Mayús+M) o usa el botón “Tab: sangra”.',
   target:'editor',area:'editor',icon:Code2,
  },
  {
