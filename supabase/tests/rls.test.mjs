@@ -247,5 +247,39 @@ try {
  await rejects(user(ids.f,'select public.mentor_set_session_release($1,$2,$3)',['mustakis-demo-talca-b','s01',true]),'Mentor in cohort A cannot manage cohort B','42501');
 
  await rejects(user(ids.a,"select * from public.content_releases"),'Participant cannot bypass RPC with direct release-table access','42501');
+ // Participant onboarding: the student RPC can only create PARTICIPANT memberships, whatever the code row says.
+ {
+  const s={a:'00000000-0000-4000-8000-0000000000b1',b:'00000000-0000-4000-8000-0000000000b2',c:'00000000-0000-4000-8000-0000000000b3',d:'00000000-0000-4000-8000-0000000000b4',e:'00000000-0000-4000-8000-0000000000b5'};
+  for(const id of Object.values(s))await db.query('insert into auth.users(id,raw_user_meta_data) values($1,$2)',[id,JSON.stringify({display_name:'Alumno piloto',role:'admin'})]);
+  await db.query(`insert into private.workspace_access_codes(code,cohort_id,role,max_uses,expires_at,active) values
+   ('PILOTO-ALUMNO-A','mustakis-demo-talca','participant',2,now()+interval '1 day',true),
+   ('PILOTO-ALUMNO-B','mustakis-demo-talca-b','participant',5,now()+interval '1 day',true),
+   ('PILOTO-STAFF-A','mustakis-demo-talca','mentor',5,now()+interval '1 day',true),
+   ('PILOTO-REVOCADO','mustakis-demo-talca','participant',5,now()+interval '1 day',false),
+   ('PILOTO-VENCIDO','mustakis-demo-talca','participant',5,now()-interval '1 minute',true)`);
+  const redeem=(id,code)=>user(id,'select public.redeem_participant_code($1) as r',[code]).then(r=>r.rows[0].r);
+  const membership=async(id,cohort)=>(await db.query('select role,active from public.cohort_memberships where user_id=$1 and cohort_id=$2',[id,cohort])).rows[0];
+  check((await db.query("select pronargs from pg_proc where proname='redeem_participant_code'")).rows[0].pronargs===1,'Participant redemption accepts a code and nothing else (no role argument)');
+  await rejects(context('anon',null,()=>db.query("select public.redeem_participant_code('PILOTO-ALUMNO-A')")),'Anonymous cannot redeem a participant code','42501');
+  const ok=await redeem(s.a,'piloto-alumno-a');
+  const mA=await membership(s.a,'mustakis-demo-talca');
+  check(ok.ok===true&&ok.workspace.role==='participant'&&mA.role==='participant'&&mA.active,'Valid code (any case) creates a participant membership in its own cohort');
+  check(!(await membership(s.a,'mustakis-demo-talca-b')),'Redeeming cohort A grants nothing in cohort B');
+  const again=await redeem(s.a,'PILOTO-ALUMNO-A');
+  check(again.ok===true&&(await db.query("select uses from private.workspace_access_codes where code='PILOTO-ALUMNO-A'")).rows[0].uses===1,'Re-entering the code is idempotent and does not consume another seat');
+  check((await user(s.a,'select public.list_my_workspaces() as w')).rows[0].w.length===1,'Participant sees the workspace afterwards without typing the code again');
+  const staff=await redeem(s.b,'PILOTO-STAFF-A');
+  check(staff.ok===false&&!(await membership(s.b,'mustakis-demo-talca')),'A staff-role code cannot be used through student onboarding');
+  const viaLegacy=(await user(s.e,'select public.redeem_workspace_code($1) as r',['PILOTO-ALUMNO-B'])).rows[0].r;
+  check(viaLegacy.ok===true&&viaLegacy.workspace.role==='participant','Legacy redemption still works unchanged for participant codes');
+  check((await redeem(s.b,'PILOTO-REVOCADO')).ok===false&&(await redeem(s.b,'PILOTO-VENCIDO')).ok===false,'Revoked and expired codes are rejected');
+  check((await redeem(s.c,'PILOTO-ALUMNO-A')).ok===true&&(await redeem(s.d,'PILOTO-ALUMNO-A')).ok===false,'max_uses is enforced across students');
+  check((await redeem(s.b,'PILOTO-ALUMNO-B')).ok===true&&(await membership(s.b,'mustakis-demo-talca-b')).role==='participant'&&!(await membership(s.b,'mustakis-demo-talca')),'Cohort B code isolates the student to cohort B');
+  await db.query("update public.cohort_memberships set active=false where user_id=$1 and cohort_id='mustakis-demo-talca'",[s.a]);
+  check((await redeem(s.a,'PILOTO-ALUMNO-A')).ok===false,'A code never reactivates a suspended membership');
+  for(let i=0;i<10;i++)await redeem(s.d,'NO-EXISTE-'+i);
+  check((await redeem(s.d,'PILOTO-ALUMNO-B')).ok===false,'Rate limit blocks a valid code after ten attempts in 15 minutes');
+  check((await db.query("select count(*)::int as n from public.organization_memberships where role<>'participant' and user_id in ($1,$2,$3,$4,$5)",Object.values(s))).rows[0].n===0,'No student onboarding path produced a non-participant role');
+ }
  console.log(`\n${checks} PostgreSQL/RLS integration checks passed.`);
 } finally {await db.close();}

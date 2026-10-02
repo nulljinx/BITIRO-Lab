@@ -10,7 +10,7 @@ export async function listMyWorkspaces():Promise<WorkspaceSummary[]> {
 export async function redeemWorkspaceCode(code:string):Promise<WorkspaceSummary> {
   const normalized=code.trim().toUpperCase();
   if(normalized.length<8||normalized.length>64)throw new Error('Código no válido o no disponible.');
-  const {data,error}=await requireSupabase().rpc('redeem_workspace_code',{p_code:normalized}).abortSignal(AbortSignal.timeout(15000));
+  const {data,error}=await requireSupabase().rpc('redeem_participant_code',{p_code:normalized}).abortSignal(AbortSignal.timeout(15000));
   if(error||!data)throw new Error('Código no válido o no disponible. Solicita uno nuevo a tu mentor.');
   const result=data as {ok?:boolean;workspace?:WorkspaceSummary};
   if(!result.ok||!result.workspace)throw new Error('Código no válido o no disponible. Solicita uno nuevo a tu mentor.');
