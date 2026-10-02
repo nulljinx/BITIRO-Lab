@@ -5,6 +5,11 @@ adds order, tests and definitions of done). Nothing here is implemented. No find
 00-07b is labelled "not established". 45 work packages: P0 = 5, P1 = 12, P2 = 19, P3 = 9. Each package is one commit (a migration
 package may add one migration file) and can be implemented, tested and reviewed independently once its dependency is merged.
 
+Status 2026-10-02: CLOSED. Characterization coverage added for cloud-sync
+decisions, useSimulation request lifecycle, worker dispatch/timer cleanup,
+session/track invariants and all App.tsx route guards. Full gate green:
+262 unit tests, 115 DB/RLS checks, build OK, 18/18 E2E.
+
 ## 1. Rules for remediation
 
 1. **Authorization first (CLAUDE.md).** No migration, RLS, Supabase data or dashboard change, push, merge or dependency install without

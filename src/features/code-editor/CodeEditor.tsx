@@ -9,6 +9,7 @@ import type {SimulationConnection} from '../simulator/useSimulation';
 import {api} from '../../content/api';
 import {loadCode, saveCode, markExplored, getStorageScope,localCodeDocument} from './storage';
 import {fetchCloudLearning,saveCloudCode,markCloudActivity,type CloudContext,type CloudDocument,type LearningStatus} from './cloud-learning';
+import {afterSuccessfulSave,decideInitialSync,decideRejectedSave,remoteRevision,revisionAfterKeepingLocal} from './cloud-sync-decisions';
 import {isSupportedSource, SOURCE_LIMIT_MESSAGE} from '../../simulator/runtime/source-size';
 import {mentorSolutionFor} from '../../content/mentor-solutions';
 (self as typeof self & {MonacoEnvironment:unknown}).MonacoEnvironment={getWorker:()=>new EditorWorker()};
@@ -48,14 +49,15 @@ export function CodeEditor({session,simulation,storageScope,cloudContext,mentorM
         uploadRef.current=null;cloudReady.current=false;
         const latest=await fetchCloudLearning(cloudContext,session.id);
         if(!aliveRef.current)return;
-        revisionRef.current=latest.document?.revision??0;
-        if(latest.document && latest.document.source!==currentCode.current){
+        revisionRef.current=remoteRevision(latest.document);
+        if(latest.document && decideRejectedSave(latest.document,currentCode.current)==='conflict'){
           setRemoteConflict(latest.document);setCloudState('conflict');setCloudMessage('Otra pestaña o dispositivo cambió tu código. El código local sigue intacto.');
         }else{cloudReady.current=true;setCloudState('saved');}
         return;
       }
-      revisionRef.current=result.revision??revision+1;setCloudMessage('');
-      setCloudState(uploadRef.current===null?'saved':'pending');
+      const next=afterSuccessfulSave({resultRevision:result.revision,sentRevision:revision,hasQueuedUpload:uploadRef.current!==null});
+      revisionRef.current=next.revision;setCloudMessage('');
+      setCloudState(next.state);
     }catch{
       if(aliveRef.current){setCloudState('offline');setCloudMessage('Sin sincronización. Tu código está guardado en este navegador.');}
       uploadRef.current=null;
@@ -122,14 +124,16 @@ export function CodeEditor({session,simulation,storageScope,cloudContext,mentorM
       try{
         const remote=await fetchCloudLearning(cloudContext,session.id);
         if(!active)return;
-        revisionRef.current=remote.document?.revision??0;
+        revisionRef.current=remoteRevision(remote.document);
         setProgress(remote.progress?.status??null);
         const local=localCodeDocument(session.id,scope);
-        if(remote.document && remote.document.source!==currentCode.current){
-          if(!local&&!typedRef.current){
+        const decision=decideInitialSync({remote:remote.document,currentCode:currentCode.current,hasLocalDraft:!!local,typed:typedRef.current});
+        if(decision==='restore-remote'||decision==='conflict'){
+          if(decision==='restore-remote'){
             // No authored local draft: safely restore the cloud document.
-            currentCode.current=remote.document.source;setCode(remote.document.source);
-            saveCode(session.id,remote.document.source,scope);
+            const restored=remote.document!.source;
+            currentCode.current=restored;setCode(restored);
+            saveCode(session.id,restored,scope);
             cloudReady.current=true;setCloudState('saved');
           }else{
             setRemoteConflict(remote.document);setCloudState('conflict');
@@ -137,7 +141,7 @@ export function CodeEditor({session,simulation,storageScope,cloudContext,mentorM
           }
         }else{
           cloudReady.current=true;setCloudState('saved');
-          if(!remote.document && (local||typedRef.current))queueCloud(currentCode.current);
+          if(decision==='synced-and-queue-local')queueCloud(currentCode.current);
         }
       }catch{if(active){setCloudState('offline');setCloudMessage('No pudimos consultar la nube. Sigue disponible tu copia local.');}}
       try{const status=await markCloudActivity(cloudContext,session.id,'visited');if(active)keepHighestProgress(status);}catch{/* offline/local recovery remains available */}
@@ -145,7 +149,7 @@ export function CodeEditor({session,simulation,storageScope,cloudContext,mentorM
     return()=>{active=false;aliveRef.current=false;clearTimeout(cloudTimer.current);};
   },[cloudContext?.cohortId,cloudContext?.userId,cloudContext?.activityVersion,session.id,scope]);
   function selectLocal(){
-    revisionRef.current=remoteConflict?.revision??revisionRef.current;
+    revisionRef.current=revisionAfterKeepingLocal(remoteConflict,revisionRef.current);
     setRemoteConflict(null);cloudReady.current=true;setCloudMessage('');queueCloud(currentCode.current);
   }
   function selectRemote(){

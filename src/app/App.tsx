@@ -10,6 +10,7 @@ import {WorkspaceProvider,useWorkspaces} from '../features/workspaces/WorkspaceP
 import {LandingPage,LockedInstitutionSession,MentorWorkspacePage,OrganizationWorkspacePage,SpacesPage} from '../features/workspaces/WorkspacePages';
 import {workspaceMentorPath,workspacePath,workspaceSessionPath} from '../features/workspaces/workspace-paths';
 import type {WorkspaceSummary} from '../features/workspaces/workspace-types';
+import {decideAccountGate,decideInstitutionSession,decideLegacyResources,decideLegacySession,decideLegacyWorkspaceRedirect,decideMentorRoute,decideSpacesEntry,decideStaffGate,decideWorkspaceRoute,sessionAccessFor} from './route-decisions';
 const Simulator=lazy(()=>import('../features/simulator/Simulator').then(m=>({default:m.Simulator})));
 const AuthPage=lazy(()=>import('../features/auth/AuthPages').then(m=>({default:m.AuthPage})));
 const AccountPage=lazy(()=>import('../features/account/AccountPage').then(m=>({default:m.AccountPage})));
@@ -37,51 +38,55 @@ function AppShell({session,page,workspace,children}:{session?:SessionDefinition;
 }
 function AccountGate({children,next='/espacios',registerFirst=false}:{children:ReactNode;next?:string;registerFirst?:boolean}){
   const {status}=useAuth();
-  if(status==='loading')return <LoadingView/>;
-  if(status==='authenticated')return children;
-  const target=registerFirst?'/registro':'/login';
-  return <Navigate to={`${target}?next=${encodeURIComponent(next)}`} replace/>;
+  const decision=decideAccountGate({status,next,registerFirst});
+  if(decision.kind==='loading')return <LoadingView/>;
+  if(decision.kind==='render')return children;
+  return <Navigate to={decision.to} replace/>;
 }
 function StaffGate({children}:{children:ReactNode}){
   const {status,membership}=useAuth();
-  if(status!=='authenticated')return <Navigate to="/login?next=/equipo" replace/>;
-  if(!membership||membership.role==='participant')return <main id="main" className="recovery-page"><span className="eyebrow">Área de plataforma</span><h1>Esta sección requiere permisos.</h1><p>El acceso de equipo se administra por separado de los permisos de participante y mentor del programa.</p><Link className="button" to="/espacios">Volver a mi programa</Link></main>;
+  const decision=decideStaffGate({status,role:membership?membership.role:null});
+  if(decision.kind==='redirect')return <Navigate to={decision.to} replace/>;
+  if(decision.kind==='forbidden')return <main id="main" className="recovery-page"><span className="eyebrow">Área de plataforma</span><h1>Esta sección requiere permisos.</h1><p>El acceso de equipo se administra por separado de los permisos de participante y mentor del programa.</p><Link className="button" to="/espacios">Volver a mi programa</Link></main>;
   return children;
 }
 function LegacySessionRoute(){
   const {sessionId}=useParams();const {status}=useAuth();const session=sessions.find(s=>s.id===sessionId);
-  if(!session)return <Navigate to="/" replace/>;
-  if(status==='unconfigured')return <AppShell session={session}/>;
-  return <Navigate to={status==='authenticated'?'/espacios':'/login?next=/espacios'} replace/>;
+  const decision=decideLegacySession({sessionExists:!!session,status});
+  if(decision.kind==='render')return <AppShell session={session}/>;
+  return <Navigate to={(decision as {to:string}).to} replace/>;
 }
-function LegacyResourcesGate(){const {status}=useAuth();if(status==='unconfigured')return <AppShell page="resources"/>;return <Navigate to={status==='authenticated'?'/espacios':'/login?next=/espacios'} replace/>;}
+function LegacyResourcesGate(){const {status}=useAuth();const decision=decideLegacyResources({status});if(decision.kind==='render')return <AppShell page="resources"/>;return <Navigate to={(decision as {to:string}).to} replace/>;}
 
 function findWorkspace(workspaces:WorkspaceSummary[],orgId:string|undefined,cohortId:string|undefined){return workspaces.find(item=>item.organization_id===orgId&&item.cohort_id===cohortId);}
 
 function SpacesEntryRoute(){
   const {status}=useAuth();
   const state=useWorkspaces();
-  if(status==='loading'||state.loading)return <LoadingView/>;
-  if(status!=='authenticated')return <Navigate to="/login?next=/espacios" replace/>;
-  if(state.workspaces.length===1)return <Navigate to={workspacePath(state.workspaces[0])} replace/>;
+  const decision=decideSpacesEntry({status,workspacesLoading:state.loading,workspaceCount:state.workspaces.length});
+  if(decision.kind==='loading')return <LoadingView/>;
+  if(decision.kind==='redirect')return <Navigate to={decision.to} replace/>;
+  if(decision.kind==='redirect-sole-workspace')return <Navigate to={workspacePath(state.workspaces[0])} replace/>;
   return <AppShell page="spaces"/>;
 }
 function WorkspaceRoute(){
   const {orgId,cohortId}=useParams();const {status}=useAuth();const state=useWorkspaces();
   const requested=`/espacios/${orgId??''}/grupos/${cohortId??''}`;
-  if(status==='loading'||state.loading)return <LoadingView/>;
-  if(status!=='authenticated')return <Navigate to={`/login?next=${encodeURIComponent(requested)}`} replace/>;
-  const workspace=findWorkspace(state.workspaces,orgId,cohortId);if(!workspace)return <Navigate to="/espacios" replace/>;
-  return <AppShell workspace={workspace}><OrganizationWorkspacePage workspace={workspace}/></AppShell>;
+  const workspace=findWorkspace(state.workspaces,orgId,cohortId);
+  const decision=decideWorkspaceRoute({status,workspacesLoading:state.loading,requested,workspaceFound:!!workspace});
+  if(decision.kind==='loading')return <LoadingView/>;
+  if(decision.kind==='redirect')return <Navigate to={decision.to} replace/>;
+  return <AppShell workspace={workspace!}><OrganizationWorkspacePage workspace={workspace!}/></AppShell>;
 }
 function MentorRoute(){
   const {orgId,cohortId}=useParams();const {status}=useAuth();const state=useWorkspaces();
   const requested=`/espacios/${orgId??''}/grupos/${cohortId??''}/mentor`;
-  if(status==='loading'||state.loading)return <LoadingView/>;
-  if(status!=='authenticated')return <Navigate to={`/login?next=${encodeURIComponent(requested)}`} replace/>;
-  const workspace=findWorkspace(state.workspaces,orgId,cohortId);if(!workspace)return <Navigate to="/espacios" replace/>;
-  if(!workspace.can_manage)return <Navigate to={workspacePath(workspace)} replace/>;
-  return <AppShell workspace={workspace}><MentorWorkspacePage workspace={workspace}/></AppShell>;
+  const workspace=findWorkspace(state.workspaces,orgId,cohortId);
+  const decision=decideMentorRoute({status,workspacesLoading:state.loading,requested,workspaceFound:!!workspace,canManage:!!workspace?.can_manage});
+  if(decision.kind==='loading')return <LoadingView/>;
+  if(decision.kind==='redirect')return <Navigate to={decision.to} replace/>;
+  if(decision.kind==='redirect-workspace')return <Navigate to={workspacePath(workspace!)} replace/>;
+  return <AppShell workspace={workspace!}><MentorWorkspacePage workspace={workspace!}/></AppShell>;
 }
 function InstitutionSessionRoute(){
   const {orgId,cohortId,sessionId}=useParams();const {status}=useAuth();const state=useWorkspaces();const [access,setAccess]=useState<'idle'|'loading'|'allowed'|'locked'|'error'>('idle');
@@ -90,27 +95,26 @@ function InstitutionSessionRoute(){
     let active=true;
     if(status!=='authenticated'||!workspace){setAccess('idle');return()=>{active=false;};}
     setAccess('loading');
-    state.loadSessionAccess(workspace).then(items=>{if(!active)return;const row=items.find(item=>item.session_id===sessionId);setAccess(row&&(row.released||row.can_manage)?'allowed':'locked');}).catch(()=>{if(active)setAccess('error');});
+    state.loadSessionAccess(workspace).then(items=>{if(!active)return;const row=items.find(item=>item.session_id===sessionId);setAccess(sessionAccessFor(row));}).catch(()=>{if(active)setAccess('error');});
     return()=>{active=false;};
   },[status,workspace?.cohort_id,sessionId]);
   const requested=`/espacios/${orgId??''}/grupos/${cohortId??''}/intermedio/${sessionId??''}`;
-  if(status==='loading'||state.loading)return <LoadingView/>;
-  if(status!=='authenticated')return <Navigate to={`/login?next=${encodeURIComponent(requested)}`} replace/>;
-  if(!workspace||!session)return <Navigate to="/espacios" replace/>;
-  if(access==='idle'||access==='loading')return <LoadingView/>;
-  if(access==='locked')return <AppShell workspace={workspace}><LockedInstitutionSession workspace={workspace} sessionId={session.id}/></AppShell>;
-  if(access==='error')return <AppShell workspace={workspace}><main id="main" className="recovery-page"><h1>No pudimos comprobar el acceso.</h1><p>Reintenta desde tu programa. No mostramos una sesión hasta confirmar que está habilitada para tu grupo.</p><Link className="button" to={workspacePath(workspace)}>Volver a mi espacio</Link></main></AppShell>;
-  return <AppShell workspace={workspace} session={session}/>;
+  const decision=decideInstitutionSession({status,workspacesLoading:state.loading,requested,workspaceFound:!!workspace,sessionFound:!!session,access});
+  if(decision.kind==='loading')return <LoadingView/>;
+  if(decision.kind==='redirect')return <Navigate to={decision.to} replace/>;
+  if(decision.kind==='locked')return <AppShell workspace={workspace!}><LockedInstitutionSession workspace={workspace!} sessionId={session!.id}/></AppShell>;
+  if(decision.kind==='access-error')return <AppShell workspace={workspace!}><main id="main" className="recovery-page"><h1>No pudimos comprobar el acceso.</h1><p>Reintenta desde tu programa. No mostramos una sesión hasta confirmar que está habilitada para tu grupo.</p><Link className="button" to={workspacePath(workspace!)}>Volver a mi espacio</Link></main></AppShell>;
+  return <AppShell workspace={workspace!} session={session!}/>;
 }
 function LegacyWorkspaceRedirect({kind='workspace'}:{kind?:'workspace'|'mentor'|'session'}){
   const {orgId,sessionId}=useParams();const {status}=useAuth();const state=useWorkspaces();
-  if(status==='loading'||state.loading)return <LoadingView/>;
-  if(status!=='authenticated')return <Navigate to="/login?next=/espacios" replace/>;
   const matches=state.workspaces.filter(item=>item.organization_id===orgId);
-  if(matches.length!==1)return <Navigate to="/espacios" replace/>;
+  const decision=decideLegacyWorkspaceRedirect({status,workspacesLoading:state.loading,kind,organizationMatches:matches.length,canManage:!!matches[0]?.can_manage,hasSessionId:!!sessionId});
+  if(decision.kind==='loading')return <LoadingView/>;
+  if(decision.kind==='redirect')return <Navigate to={decision.to} replace/>;
   const workspace=matches[0];
-  if(kind==='mentor')return <Navigate to={workspace.can_manage?workspaceMentorPath(workspace):workspacePath(workspace)} replace/>;
-  if(kind==='session'&&sessionId)return <Navigate to={workspaceSessionPath(workspace,sessionId)} replace/>;
+  if(decision.kind==='redirect-workspace'&&decision.target==='mentor')return <Navigate to={workspaceMentorPath(workspace)} replace/>;
+  if(decision.kind==='redirect-workspace'&&decision.target==='session')return <Navigate to={workspaceSessionPath(workspace,sessionId!)} replace/>;
   return <Navigate to={workspacePath(workspace)} replace/>;
 }
 function RouteReset(){const {pathname}=useLocation();useLayoutEffect(()=>{window.scrollTo(0,0);},[pathname]);return null;}
