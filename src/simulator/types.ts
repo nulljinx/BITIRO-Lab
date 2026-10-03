@@ -32,7 +32,7 @@ export type EventPayload =
  | {type:'BUTTON_READ';active:boolean}
  | {type:'RUNTIME_ERROR';message:string};
 export type SimulationEvent=EventPayload & {sequence:number;timeMs:number};
-export interface Snapshot {mission:import('./MissionEvaluator').MissionEvidence;robot:RobotState;status:Status;feedback:string;ticks:number;collisions:number;obstacles:DynamicObstacle[];scenarioIntersections:ScenarioIntersection[];events:SimulationEvent[];instructions:number;finish:{zoneId:string|null;arrived:boolean;stopped:boolean}}
+export interface Snapshot {mission:import('./MissionEvaluator').MissionEvidence;robot:RobotState;status:Status;feedback:string;ticks:number;collisions:number;obstacles:DynamicObstacle[];scenarioIntersections:ScenarioIntersection[];events:SimulationEvent[];instructions:number;locks:{ir:boolean;button:boolean};finish:{zoneId:string|null;arrived:boolean;stopped:boolean}}
 export type WorkerCommand=Command|{type:'configure-track';trackId:string}|{type:'set-line-thresholds';values:LineThresholds}|{type:'set-s03-layout';obstacles:Point[];intersections:Point[]}|{type:'load-program';source:string;requestId:number}|{type:'run-program';source:string;requestId:number}|{type:'stop-program'};
 export type WorkerResponse=
  | {type:'track-ready';trackId:string;snapshot:Snapshot}

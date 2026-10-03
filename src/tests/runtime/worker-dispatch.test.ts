@@ -62,6 +62,15 @@ describe('simulator worker dispatcher',()=>{
   expect(snap.snapshot.status).toBe('idle');
   expect(boxes(snap.snapshot.obstacles)).toEqual(initial);
  });
+ it('run-program on S02 without an initial signal is blocked, not compiled or started',async()=>{
+  await boot();
+  send({type:'configure-track',trackId:'s02'});take();
+  send({type:'run-program',source:VALID,requestId:9});
+  const [blocked,snap]=take();
+  expect(blocked).toEqual({type:'run-blocked',requestId:9,message:'Selecciona una señal inicial para S02: IZQ, DER, ambos IR o el pulsador.'});
+  if(snap.type!=='snapshot')throw new Error('expected snapshot');
+  expect(snap.snapshot.status).toBe('idle');
+ });
  it('load-program reviews without running and echoes the requestId',async()=>{
   await boot();
   send({type:'configure-track',trackId:'s01'});take();

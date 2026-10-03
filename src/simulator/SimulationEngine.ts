@@ -10,7 +10,7 @@ import {MissionEvaluator} from './MissionEvaluator';
 import {S03_FIXED_SCENARIO,S01_BOXES,withScenarioIntersections} from './scenario';
 export class SimulationEngine {
  robot!:RobotState;obstacles:DynamicObstacle[]=[];events:SimulationEvent[]=[];
- status:Status='idle';ticks=0;collisions=0;speed=1;instructions=0;programControlled=false;
+ status:Status='idle';ticks=0;collisions=0;speed=1;instructions=0;programControlled=false;s02ButtonIsInitial=false;
  feedback='';private sequence=0;private struck=new Set<string>();private touching=false;private onLine=true;private lastZone:string|null=null;private sonarReported=new Set<string>();
  private lineThresholds:LineThresholds=[ROBOT.threshold,ROBOT.threshold,ROBOT.threshold];
  private offLineMs=0;
@@ -46,15 +46,30 @@ export class SimulationEngine {
   const intersections=this.track.id==='s03'?this.scenarioIntersections.filter(item=>!this.s03ConsumedIntersections.has(item.id)):this.scenarioIntersections;
   return withScenarioIntersections({...this.track,obstacles:this.obstacles},intersections);
  }
- /** S01 freezes its initial IR choice while an attempt is running or paused. */
- s01IrLocked(){return this.track.id==='s01'&&this.programControlled&&(this.status==='running'||this.status==='paused');}
- /** S01 needs exactly one initial IR stimulus (IZQ xor DER); returns a message when the precondition fails. */
- s01StartIssue():string|null{
+ /** Sessions whose attempt is defined by an initial stimulus frozen at start (S01, S02). */
+ private hasInitialStimulus(){return this.track.id==='s01'||this.track.id==='s02';}
+ private attemptActive(){return this.programControlled&&(this.status==='running'||this.status==='paused');}
+ /** Initial IR choice is frozen while an attempt is running or paused. */
+ initialStimuliLocked(){return this.hasInitialStimulus()&&this.attemptActive();}
+ /** The button is frozen only when it was part of the S02 initial choice (no IR active at start). */
+ buttonLocked(){return this.track.id==='s02'&&this.attemptActive()&&this.s02ButtonIsInitial;}
+ /** Marks the initial stimulus of the attempt that is about to start. */
+ freezeInitialStimuli(){this.s02ButtonIsInitial=this.track.id==='s02'&&this.robot.buttonPressed&&!this.robot.irLeft&&!this.robot.irRight;}
+ /** Per-session precondition for starting an attempt; returns a message when it fails. */
+ startIssue():string|null{return this.s01StartIssue()??this.s02StartIssue();}
+ /** S01 needs exactly one initial IR stimulus (IZQ xor DER). */
+ private s01StartIssue():string|null{
   if(this.track.id!=='s01')return null;
   const {irLeft,irRight}=this.robot;
   if(!irLeft&&!irRight)return 'Activa solo IZQ o DER antes de probar S01.';
   if(irLeft&&irRight)return 'S01 necesita un único estímulo inicial. Deja activo solo IZQ o DER.';
   return null;
+ }
+ /** S02 needs IZQ, DER, both IR or the button before starting. */
+ private s02StartIssue():string|null{
+  if(this.track.id!=='s02')return null;
+  const {irLeft,irRight,buttonPressed}=this.robot;
+  return irLeft||irRight||buttonPressed?null:'Selecciona una señal inicial para S02: IZQ, DER, ambos IR o el pulsador.';
  }
  setS03Layout(obstacles:Point[],intersections:Point[]){
   if(this.track.id!=='s03')return;
@@ -114,8 +129,8 @@ export class SimulationEngine {
    case 'stop':this.robot.leftMotor=0;this.robot.rightMotor=0;this.status='idle';this.feedback='Has detenido ambos motores.';break;
    case 'speed':if([.5,1,2].includes(command.value))this.speed=command.value;break;
    case 'motors':{const clamp=(v:number)=>Number.isFinite(v)?Math.max(-ROBOT.maxWheelCmS,Math.min(ROBOT.maxWheelCmS,v)):0;this.robot.leftMotor=clamp(command.left);this.robot.rightMotor=clamp(command.right);this.status='running';this.feedback='Prueba manual de los motores. El programa del estudiante está detenido.';break;}
-   case 'ir':if(this.track.id==='s01'&&this.s01IrLocked()){this.feedback='El estímulo inicial de S01 queda fijo durante el intento. Detén o reinicia para cambiarlo.';break;}this.robot[command.side==='left'?'irLeft':'irRight']=command.value;break;
-   case 'button':this.robot.buttonPressed=command.value;break;
+   case 'ir':if(this.initialStimuliLocked()){this.feedback=`El estímulo inicial de ${this.track.id.toUpperCase()} queda fijo durante el intento. Detén o reinicia para cambiarlo.`;break;}this.robot[command.side==='left'?'irLeft':'irRight']=command.value;break;
+   case 'button':if(this.buttonLocked()){this.feedback='El pulsador forma parte del estímulo inicial de S02 y queda fijo durante el intento. Detén o reinicia para cambiarlo.';break;}this.robot.buttonPressed=command.value;break;
    case 'pose':{
     const x=Math.max(ROBOT.radiusCm,Math.min(this.track.physicalWidthCm-ROBOT.radiusCm,command.x));
     const y=Math.max(ROBOT.radiusCm,Math.min(this.track.physicalHeightCm-ROBOT.radiusCm,command.y));
@@ -210,6 +225,6 @@ export class SimulationEngine {
  }
  snapshot():Snapshot{
   const zone=isInsideFinishZone(this.robot,this.track)?.id??null;
-  return {mission:this.mission.evaluate(this.robot),robot:{...this.robot,lcd:[...this.robot.lcd]},status:this.status,feedback:this.feedback,ticks:this.ticks,collisions:this.collisions,obstacles:this.obstacles.map(o=>({...o})),scenarioIntersections:this.scenarioIntersections.map(item=>({...item})),events:this.events.slice(-12).map(e=>e.type==='LCD_UPDATED'?{...e,rows:[...e.rows]}:{...e}),instructions:this.instructions,finish:{zoneId:zone,arrived:!!zone,stopped:!!zone&&this.robot.leftMotor===0&&this.robot.rightMotor===0}};
+  return {mission:this.mission.evaluate(this.robot),robot:{...this.robot,lcd:[...this.robot.lcd]},status:this.status,feedback:this.feedback,ticks:this.ticks,collisions:this.collisions,obstacles:this.obstacles.map(o=>({...o})),scenarioIntersections:this.scenarioIntersections.map(item=>({...item})),events:this.events.slice(-12).map(e=>e.type==='LCD_UPDATED'?{...e,rows:[...e.rows]}:{...e}),instructions:this.instructions,locks:{ir:this.initialStimuliLocked(),button:this.buttonLocked()},finish:{zoneId:zone,arrived:!!zone,stopped:!!zone&&this.robot.leftMotor===0&&this.robot.rightMotor===0}};
  }
 }
