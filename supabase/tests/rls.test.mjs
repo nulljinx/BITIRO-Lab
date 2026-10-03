@@ -19,6 +19,21 @@ await db.exec(`
  create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
  grant usage on schema auth to anon,authenticated;
 `);
+// SEC-HARDENING fixture: reproduces the hosted Supabase function/event trigger (absent from migrations) with its
+// default ACL (PUBLIC + anon/authenticated/service_role EXECUTE), so the hardening migration is tested against it.
+await db.exec(`
+ create role service_role nologin;
+ create function public.rls_auto_enable() returns event_trigger language plpgsql security definer set search_path=pg_catalog as $$
+ declare cmd record;
+ begin
+  for cmd in select * from pg_event_trigger_ddl_commands() where command_tag in ('CREATE TABLE','CREATE TABLE AS','SELECT INTO') and object_type in ('table','partitioned table')
+  loop
+   if cmd.schema_name='public' then execute format('alter table if exists %s enable row level security',cmd.object_identity); end if;
+  end loop;
+ end $$;
+ grant execute on function public.rls_auto_enable() to anon,authenticated,service_role;
+ create event trigger ensure_rls on ddl_command_end when tag in ('CREATE TABLE','CREATE TABLE AS','SELECT INTO') execute function public.rls_auto_enable();
+`);
 // REL-1: the migration set is discovered from supabase/migrations/, never listed by hand.
 const migrations=await listMigrations();
 for(const migration of migrations)await db.exec(await readFile(migration.path,'utf8'));
@@ -341,6 +356,82 @@ try {
   for(let i=0;i<10;i++)await redeem(s.d,'NO-EXISTE-'+i);
   check((await redeem(s.d,'PILOTO-ALUMNO-B')).ok===false,'Rate limit blocks a valid code after ten attempts in 15 minutes');
   check((await db.query("select count(*)::int as n from public.organization_memberships where role<>'participant' and user_id in ($1,$2,$3,$4,$5)",Object.values(s))).rows[0].n===0,'No student onboarding path produced a non-participant role');
+ }
+ // SEC-HARDENING: EXECUTE-grant matrix derived from the catalog, plus role abuse cases.
+ {
+  const A='mustakis-demo-talca',B='mustakis-demo-talca-b';
+  const fns=(await db.query(`select n.nspname as schema,p.proname as name,p.oid,p.prosecdef,p.proconfig,
+    has_function_privilege('anon',p.oid,'execute') as anon,has_function_privilege('authenticated',p.oid,'execute') as authed
+    from pg_proc p join pg_namespace n on n.oid=p.pronamespace where n.nspname in ('public','private')
+    and not exists(select 1 from pg_depend d where d.objid=p.oid and d.deptype='e')`)).rows;
+  check(fns.length>20,`Grant matrix inspected ${fns.length} public/private functions`);
+  // rls_auto_enable: no direct execution, event trigger and RLS auto-enable intact.
+  const rae=(await db.query(`select p.oid,p.prosecdef,p.proconfig,has_function_privilege('anon',p.oid,'execute') as anon,
+    has_function_privilege('authenticated',p.oid,'execute') as authed,has_function_privilege('service_role',p.oid,'execute') as service,
+    exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where a.grantee=0) as pub from pg_proc p
+    where p.oid='public.rls_auto_enable()'::regprocedure`)).rows[0];
+  check(!rae.anon&&!rae.authed&&!rae.pub,'rls_auto_enable: anon, authenticated and PUBLIC cannot execute');
+  check(!rae.service,'rls_auto_enable: service_role does not need execute (event triggers do not check EXECUTE)');
+  check(rae.prosecdef&&rae.proconfig?.includes('search_path=pg_catalog'),'rls_auto_enable stays SECURITY DEFINER with a fixed search_path');
+  await rejects(context('anon',null,()=>db.query('select public.rls_auto_enable()')),'anon cannot call rls_auto_enable via RPC','42501');
+  await rejects(user(ids.a,'select public.rls_auto_enable()'),'authenticated cannot call rls_auto_enable via RPC','42501');
+  const trg=(await db.query("select evtenabled,evtfoid::regproc::text as fn from pg_event_trigger where evtname='ensure_rls'")).rows[0];
+  check(trg?.evtenabled==='O'&&trg.fn.endsWith('rls_auto_enable'),'ensure_rls event trigger still exists, enabled, bound to rls_auto_enable');
+  await db.exec("create role ddl_probe nologin; grant usage,create on schema public to ddl_probe;");
+  await context('ddl_probe',null,()=>db.exec('create table public.rls_probe(id int)'));
+  const probe=(await db.query("select relrowsecurity from pg_class where oid='public.rls_probe'::regclass")).rows[0];
+  check(probe.relrowsecurity===true,'A table created by a role without EXECUTE on rls_auto_enable still gets RLS enabled');
+  await db.exec('drop table public.rls_probe; drop owned by ddl_probe; drop role ddl_probe');
+  // Public functions: never anon; authenticated only for the intended API.
+  const pub=fns.filter(f=>f.schema==='public'&&f.name!=='rls_auto_enable');
+  check(pub.length>=19&&pub.every(f=>!f.anon),'No public function is executable by anon (PUBLIC revoked everywhere)');
+  const hidden=pub.filter(f=>!f.authed).map(f=>f.name);
+  check(hidden.length===0,`Every public API function is executable by authenticated only${hidden.length?` (missing: ${hidden})`:''}`);
+  check(pub.filter(f=>f.prosecdef).every(f=>f.proconfig?.some(c=>c==='search_path=""')),'Every public SECURITY DEFINER function has an empty search_path');
+  // Private helpers: least privilege. RLS policies evaluate these as the caller, so only policy helpers stay executable.
+  const priv=fns.filter(f=>f.schema==='private'&&f.name!=='rls_auto_enable');
+  check(priv.every(f=>!f.anon),'No private function is executable by anon');
+  check(priv.filter(f=>f.authed).map(f=>f.name).sort().join()==='can_manage_cohort,can_read_user,is_admin,is_platform_admin','Only RLS-policy helpers are executable by authenticated in private');
+  check(priv.filter(f=>f.prosecdef).every(f=>f.proconfig?.some(c=>c==='search_path=""')),'Every private SECURITY DEFINER function has an empty search_path');
+  await rejects(user(ids.a,"select private.can_access_cohort('mustakis-demo-talca')"),'authenticated cannot call private.can_access_cohort directly','42501');
+  await rejects(user(ids.a,"select private.can_open_learning('mustakis-demo-talca','s01',1)"),'authenticated cannot call private.can_open_learning directly','42501');
+  await rejects(context('anon',null,()=>db.query('select private.is_admin()')),'anon cannot reach private helpers','42501');
+  // RLS-enabled tables without policies are intentional RPC-only/deny-all: no browser grants at all.
+  const denyAll=['private.staff_allowlist','public.cohort_code_documents','public.cohort_learning_progress','public.cohort_memberships','public.cohorts','public.content_releases','public.organization_memberships','public.programs'];
+  for(const table of denyAll){
+   const row=(await db.query(`select c.relrowsecurity,(select count(*)::int from pg_policy where polrelid=c.oid) as policies,
+    has_table_privilege('anon',c.oid,'select,insert,update,delete') as anon,has_table_privilege('authenticated',c.oid,'select,insert,update,delete') as authed
+    from pg_class c where c.oid=$1::regclass`,[table])).rows[0];
+   check(row.relrowsecurity&&row.policies===0&&!row.anon&&!row.authed,`${table} is RLS-enabled, policy-less and has no browser grants (intentional RPC-only)`);
+  }
+  // Anonymous abuse.
+  for(const sql of ["select public.admin_set_staff_allowlist('x@y.cl','"+A+"',true)","select public.admin_update_membership('"+ids.a+"','recoleta','admin')","select public.mentor_workspace_overview('"+A+"')","select public.mentor_create_participant_invite('"+A+"',5,7)","select public.mentor_list_participants('"+A+"')","select public.mentor_cohort_learning('"+A+"',1)","select public.mentor_set_session_release('"+A+"','s01',true)","select public.list_my_workspaces()","select public.get_my_cohort_learning('"+A+"','s01',1)","select public.update_my_profile('Anon')"])
+   await rejects(context('anon',null,()=>db.query(sql)),`anon denied: ${sql.slice(7,45)}`,'42501');
+  // Participant (ids.a) abuse: no mentor/admin RPC in own cohort, none in another cohort, no direct writes.
+  for(const cohort of [A,B]){
+   await rejects(user(ids.a,'select public.mentor_create_participant_invite($1,5,7)',[cohort]),`Participant cannot create an invite for ${cohort}`,'42501');
+   await rejects(user(ids.a,'select public.mentor_get_participant_invite($1)',[cohort]),`Participant cannot read the invite code of ${cohort}`,'42501');
+   await rejects(user(ids.a,'select public.mentor_revoke_participant_invite($1)',[cohort]),`Participant cannot revoke the invite of ${cohort}`,'42501');
+   await rejects(user(ids.a,'select public.mentor_list_participants($1)',[cohort]),`Participant cannot list participants of ${cohort}`,'42501');
+   await rejects(user(ids.a,'select public.mentor_cohort_learning($1,1)',[cohort]),`Participant cannot read cohort learning of ${cohort}`,'42501');
+   await rejects(user(ids.a,'select public.mentor_set_session_release($1,$2,$3)',[cohort,'s02',true]),`Participant cannot change releases of ${cohort}`,'42501');
+  }
+  await rejects(user(ids.a,"update public.content_releases set released=true"),'Participant cannot write content_releases directly','42501');
+  await rejects(user(ids.a,"select public.admin_update_membership($1,'recoleta','admin')",[ids.a]),'Participant cannot administer memberships','42501');
+  await rejects(user(ids.a,"select public.admin_set_staff_allowlist('a@b.cl',$1,true)",[A]),'Participant cannot edit the staff allowlist','42501');
+  check((await user(ids.a,'select private.is_platform_admin() as v')).rows[0].v===false,'Participant is not a platform admin');
+  // Mentor (ids.f, cohort A only).
+  for(const [label,sql,params] of [['overview','select public.mentor_workspace_overview($1)',[B]],['invite create','select public.mentor_create_participant_invite($1,5,7)',[B]],['invite read','select public.mentor_get_participant_invite($1)',[B]],['invite revoke','select public.mentor_revoke_participant_invite($1)',[B]],['roster','select public.mentor_list_participants($1)',[B]],['learning','select public.mentor_cohort_learning($1,1)',[B]]])
+   await rejects(user(ids.f,sql,params),`Mentor of A cannot use ${label} on cohort B`,'42501');
+  check((await user(ids.f,'select private.is_platform_admin() as v')).rows[0].v===false&&(await user(ids.f,'select private.is_admin() as v')).rows[0].v===false,'Mentor does not obtain platform admin permissions');
+  await rejects(user(ids.f,"select public.admin_update_membership($1,'recoleta','admin')",[ids.a]),'Mentor cannot administer platform memberships','42501');
+  check((await user(ids.f,'select public.mentor_workspace_overview($1)',[A])).rows.length===1,'Mentor still administers their own cohort');
+  // Admin: allowed administrative operations.
+  check((await user(ids.admin,'select private.is_platform_admin() as v')).rows[0].v===true,'Platform admin is recognised by the helper');
+  check((await user(ids.admin,'select public.mentor_workspace_overview($1)',[B])).rows.length===1,'Platform admin can manage any cohort');
+  await user(ids.admin,"select public.admin_set_staff_allowlist('abuse.check@colegio.cl',$1,true)",[A]);
+  await user(ids.admin,"select public.admin_set_staff_allowlist('abuse.check@colegio.cl',$1,false)",[A]);
+  check(true,'Platform admin can maintain the staff allowlist');
  }
  console.log(`\n${checks} PostgreSQL/RLS integration checks passed.`);
 } finally {await db.close();}
