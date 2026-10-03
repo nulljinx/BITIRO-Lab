@@ -1,5 +1,11 @@
 import {test,expect,type Page} from '@playwright/test';
-import {mentorSolutions} from '../../src/content/mentor-solutions';
+import {existsSync,readFileSync} from 'node:fs';
+import {join} from 'node:path';
+
+// The real S01 reference lives outside Git: BITIRO_SOLUTIONS_DIR/s01.json ({source}). Skipped when it is not available.
+const solutionsDir=process.env.BITIRO_SOLUTIONS_DIR?.trim();
+const s01File=solutionsDir?join(solutionsDir,'s01.json'):'';
+const s01Source=()=>(JSON.parse(readFileSync(s01File,'utf8')) as {source:string}).source;
 
 test.beforeEach(async({page})=>{
  await page.addInitScript(()=>localStorage.setItem('bitiro:v7:simulator-tutorial:guest','done'));
@@ -14,12 +20,13 @@ const replaceCode=async(page:Page,source:string)=>{
 };
 
 test('S01: a passed mission stays coherent after Detener and Restablecer starts a new attempt',async({page})=>{
+ test.skip(!s01File||!existsSync(s01File),'Private suite: set BITIRO_SOLUTIONS_DIR to run this test.');
  test.setTimeout(120_000);
  await page.goto('/intermedio/s01');
  const summary=page.locator('.mission-panel summary');
  await expect(summary).toContainText('0/4');await expect(summary).toContainText('Ver objetivos');
  await page.getByRole('button',{name:'IR izquierdo',exact:true}).click();
- await replaceCode(page,mentorSolutions.s01.source);
+ await replaceCode(page,s01Source());
  await page.getByLabel('Velocidad').selectOption('2');
  await page.getByRole('button',{name:'Probar código',exact:true}).click();
  await expect(summary).toContainText('Intento en curso');

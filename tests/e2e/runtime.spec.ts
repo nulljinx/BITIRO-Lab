@@ -13,6 +13,8 @@ const replaceCode=async(page:Page,source:string)=>{
  await page.keyboard.press('Control+Home');await page.keyboard.press('Control+Shift+End');await page.keyboard.press('Control+V');
  await expect.poll(()=>page.evaluate(()=>{const raw=localStorage.getItem('bitiro:v7:guest:code:s01');return raw?String(JSON.parse(raw).code??'').trim():'';})).toBe(normalized.trim());
 };
+// Minimal fragment: only proves the LCD/pause/mobile behaviour, it does not solve the mission.
+const lcdIrLeft='#include <KnightRoboticsLibs_Iroh.h>\nvoid setup(){inicializarMovimiento();inicializarSensores();inicializarPantalla();borrarPantalla();escribirPantalla(0,0,"IR IZQUIERDO");}\nvoid loop(){pausa(20);}';
 const simple=`#include <KnightRoboticsLibs_Iroh.h>
 void setup(){
  inicializarMovimiento();
@@ -44,7 +46,7 @@ test('invalid syntax marks Monaco without movement; infinite loop remains recove
 });
 test('LCD, animated strike and mobile student view',async({page})=>{
  await page.goto('/intermedio/s01');await expect(page.locator('.manual-controls')).toHaveCount(0);await expect.poll(async()=>(await page.locator('canvas[role="img"]').boundingBox())!.height).toBeLessThan(760);
- const irLeft=page.getByRole('button',{name:'IR izquierdo',exact:true});await irLeft.click();await expect(irLeft).toHaveAttribute('aria-pressed','true');await replaceCode(page,readFileSync('src/tests/reference-programs/s01-left.cpp','utf8'));await page.getByRole('button',{name:'Probar código',exact:true}).click();await expect(page.getByTestId('lcd')).toContainText('IR IZQUIERDO');await expect(page.getByTestId('lcd')).toHaveClass(/lcd-on/);await page.getByTestId('lcd').screenshot({path:'test-results/s01-lcd-activa.png'});
+ const irLeft=page.getByRole('button',{name:'IR izquierdo',exact:true});await irLeft.click();await expect(irLeft).toHaveAttribute('aria-pressed','true');await replaceCode(page,lcdIrLeft);await page.getByRole('button',{name:'Probar código',exact:true}).click();await expect(page.getByTestId('lcd')).toContainText('IR IZQUIERDO');await expect(page.getByTestId('lcd')).toHaveClass(/lcd-on/);await page.getByTestId('lcd').screenshot({path:'test-results/s01-lcd-activa.png'});
  await page.waitForTimeout(2200);await page.getByRole('button',{name:'Pausar',exact:true}).click();await expect(page.locator('.runtime-clock .status')).toContainText('En pausa');await page.screenshot({path:'test-results/s01-caja-movida.png',fullPage:true});
  await page.setViewportSize({width:390,height:844});await expect(page.locator('canvas[role="img"]')).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);expect((await page.locator('canvas[role="img"]').boundingBox())!.height).toBeLessThan(500);await page.screenshot({path:'test-results/s01-runtime-movil.png',fullPage:true});
  await page.getByRole('button',{name:/Sensores y telemetría/}).click();await expect(page.getByRole('dialog',{name:'Telemetría del IROH'})).toBeVisible();await expect(page.getByRole('dialog').getByRole('button',{name:'IR derecho',exact:true})).toBeEnabled();await expect(page.getByRole('dialog').getByRole('button',{name:'IR izquierdo',exact:true})).toHaveAttribute('aria-pressed','true');await page.screenshot({path:'test-results/premium-mobile-telemetry.png',fullPage:true});await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByRole('button',{name:'Detener la prueba',exact:true})).toBeVisible();

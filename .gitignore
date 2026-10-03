@@ -9,3 +9,7 @@ playwright-report/
 .env
 .env.*
 !.env.example
+
+# SEC-1: private mentor solutions live OUTSIDE the repository; these are only a safety net.
+bitiro-private/
+solutions-private/

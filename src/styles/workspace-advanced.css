@@ -2991,3 +2991,5 @@
 .sim-tour-hint{margin:-6px 0 12px;color:var(--legacy-hex-bdc7ec);font-size:11px;line-height:1.4;}
 .sim-tour-card h2:focus{outline:none;}
 .mission-attempt-note{margin:6px 0 10px;font-size:12px;color:var(--text-secondary);}
+
+.mentor-solution-state{margin:0;display:flex;align-items:center;gap:8px;}

@@ -1,10 +1,12 @@
-import {describe,it,expect} from 'vitest';
+import {describe,expect,it} from 'vitest';
 import {SimulationEngine} from '../../simulator/SimulationEngine';
 import {ProgramRuntime} from '../../simulator/runtime/ProgramRuntime';
-import {mentorSolutions} from '../../content/mentor-solutions';
+import {privateSolution,privateSolutionsAvailable} from '../support/private-solutions';
 import {trackForSession} from '../../content/tracks';
 
-const mentor=mentorSolutions.s05.source;
+// Needs the real reference programs (outside Git). Skipped without BITIRO_SOLUTIONS_DIR.
+describe.skipIf(!privateSolutionsAvailable)('private suite · s05-evaluator',()=>{
+const mentor=privateSolution('s05');
 const DEBOUNCE_LEFT=`      while (irIzq == 1) {
         pausa(20);
         irIzq = leerSensorObstaculoIzquierdo();
@@ -159,4 +161,6 @@ describe('S05: autorizaciones IZQ',()=>{
   t.step(50);
   expect(t.checks().junction).toBe(false);
  });
+});
+
 });

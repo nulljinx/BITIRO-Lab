@@ -1,5 +1,5 @@
 import {useEffect, useState, useRef} from 'react';
-import {Code2, Check, Download, ScanSearch, Play, ChevronDown, LoaderCircle, GraduationCap, Copy, FileInput, Keyboard} from 'lucide-react';
+import {Code2, Check, Download, ScanSearch, Play, LoaderCircle, Keyboard} from 'lucide-react';
 import Editor, {loader} from '@monaco-editor/react';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api';
 import 'monaco-editor/esm/vs/basic-languages/cpp/cpp.contribution';
@@ -11,7 +11,7 @@ import {loadCode, saveCode, markExplored, getStorageScope,localCodeDocument} fro
 import {fetchCloudLearning,saveCloudCode,markCloudActivity,type CloudContext,type CloudDocument,type LearningStatus} from './cloud-learning';
 import {afterSuccessfulSave,decideInitialSync,decideRejectedSave,remoteRevision,revisionAfterKeepingLocal} from './cloud-sync-decisions';
 import {isSupportedSource, SOURCE_LIMIT_MESSAGE} from '../../simulator/runtime/source-size';
-import {mentorSolutionFor} from '../../content/mentor-solutions';
+import {MentorSolutionPanel} from './MentorSolutionPanel';
 import {isMacPlatform,tabFocus,tabNavigationShortcut} from './tab-focus';
 (self as typeof self & {MonacoEnvironment:unknown}).MonacoEnvironment={getWorker:()=>new EditorWorker()};
 loader.config({monaco});
@@ -42,9 +42,6 @@ export function CodeEditor({session,simulation,storageScope,cloudContext,mentorM
     return()=>{subscription.dispose();tabFocus.setTabFocusMode(false);};
   },[]);
   const toggleTabNav=()=>tabFocus.setTabFocusMode(!tabFocus.getTabFocusMode());
-  const mentorSolution=mentorMode?mentorSolutionFor(session.id):null;
-  const [mentorCopied,setMentorCopied]=useState(false);
-  const [mentorOpen,setMentorOpen]=useState(false);
   async function pushCloud(){
     if(!aliveRef.current||!cloudContext||!cloudReady.current||uploadingRef.current||uploadRef.current===null)return;
     const source=uploadRef.current;
@@ -188,7 +185,6 @@ export function CodeEditor({session,simulation,storageScope,cloudContext,mentorM
     return()=>{flush(false);window.removeEventListener('pagehide',handleHide);completion.dispose();hover.dispose();};
   },[session.id,session.number,scope]);
   useEffect(()=>{highlightIrohApi();},[code,session.number]);
-  useEffect(()=>{setMentorOpen(false);},[session.id]);
   function change(value:string|undefined){
     const next=value??'';if(next===currentCode.current)return;
     currentCode.current=next;typedRef.current=true;setCode(next);clearTimeout(timer.current);
@@ -209,24 +205,18 @@ export function CodeEditor({session,simulation,storageScope,cloudContext,mentorM
       setCloudMessage('El intento no se sincronizó. Tu código local permanece disponible.');
     });}
   }
-  function loadMentorSolution(){
-    if(!mentorSolution)return;
+  function loadMentorSolution(source:string){
     const confirmed=window.confirm('Cargar la solución de referencia reemplazará el código que tienes abierto en el editor. ¿Quieres continuar?');
     if(!confirmed)return;
-    change(mentorSolution.source);
+    change(source);
     flush();
-    setMentorOpen(false);
     window.setTimeout(()=>{editor.current?.revealLineInCenter(1);editor.current?.setPosition({lineNumber:1,column:1});editor.current?.focus();},0);
   }
-  function runMentorSolution(){
-    if(!mentorSolution||!simulation||unavailable||running||busy)return;
+  function runMentorSolution(source:string){
+    if(!simulation||unavailable||running||busy)return;
     // La referencia del mentor se ejecuta de forma privada: no reemplaza el editor
     // ni modifica el progreso del grupo.
-    simulation.source(mentorSolution.source,true);
-  }
-  async function copyMentorSolution(){
-    if(!mentorSolution)return;
-    try{await navigator.clipboard.writeText(mentorSolution.source);setMentorCopied(true);window.setTimeout(()=>setMentorCopied(false),1800);}catch{/* El código sigue visible para copiar manualmente. */}
+    simulation.source(source,true);
   }
   const activityLabel=progress==='completed'?'Completada':progress==='attempted'?'Intentada':progress==='visited'?'Visitada':'Sin registrar';
   const cloudLabel=!cloudContext?'':cloudState==='loading'?'Consultando nube…':cloudState==='pending'?'Sincronizando…':cloudState==='saved'?`Nube sincronizada · ${activityLabel}`:cloudState==='offline'?'Guardado local · sin sincronización':cloudState==='conflict'?'Revisar versiones':'Guardado local';
@@ -236,7 +226,7 @@ export function CodeEditor({session,simulation,storageScope,cloudContext,mentorM
     {cloudContext&&cloudState!=='conflict'&&<p className={`cloud-summary ${cloudState==='offline'?'is-offline':''}`} role="status" title={cloudMessage||undefined}>{cloudLabel}</p>}
     <div className="editor-toolbar"><span className="runtime-target">Arduino / IROH <i>local</i></span><div className="editor-tools">{simulation&&<span className={`program-load-state ${!simulation.programLoaded?'is-empty':simulation.loadedSource===code?'is-loaded':'has-changes'}`}>{!simulation.programLoaded?'Listo para probar':simulation.loadedSource===code?'En simulador':'Cambios nuevos'}</span>}<button type="button" className={`tab-nav-toggle${tabNav?' is-active':''}`} aria-pressed={tabNav} aria-label="Navegar con Tab: Tab mueve el foco fuera del editor en vez de sangrar" title={`Atajo dentro del editor: ${tabNavigationShortcut()}`} onClick={toggleTabNav}><Keyboard size={16}/>{tabNav?'Tab: navega':'Tab: sangra'}</button><span className="sr-only" role="status" aria-live="polite">{tabNavNotice}</span><button onClick={download}><Download size={16}/>Descargar .ino</button></div></div>
     <div className="editor-wrap"><Editor onMount={instance=>{editor.current=instance;instance.addCommand((isMacPlatform()?monaco.KeyMod.WinCtrl|monaco.KeyMod.Shift:monaco.KeyMod.CtrlCmd)|monaco.KeyCode.KeyM,toggleTabNav);markers();highlightIrohApi();}} height="100%" language="cpp" path={`bitiro-${encodeURIComponent(scope)}-${session.id}.ino`} value={code} onChange={change} theme="bitiro-night" loading={<p className="editor-loading">Preparando el editor…</p>} options={{fontFamily:'IBM Plex Mono',fontSize:14,lineHeight:24,minimap:{enabled:false},scrollBeyondLastLine:false,padding:{top:16},automaticLayout:true,tabSize:2,wordWrap:'on',accessibilitySupport:'on',ariaLabel:`Código Arduino. Tab inserta sangría. Para salir del editor con el teclado pulsa ${tabNavigationShortcut()} y luego Tab.`}}/></div>
-    {mentorSolution&&<details className="mentor-solution" open={mentorOpen} onToggle={event=>setMentorOpen(event.currentTarget.open)}><summary><span className="mentor-solution-icon"><GraduationCap size={17}/></span><span><strong>Código de referencia del mentor</strong><small>Solución completa de {session.id.toUpperCase()} · solo visible para mentor.</small></span><ChevronDown size={17}/></summary><div className="mentor-solution-body"><div className="mentor-solution-heading"><div><span className="eyebrow">REFERENCIA DOCENTE</span><h3>{mentorSolution.title}</h3><p>{mentorSolution.note}</p></div><div className="mentor-solution-actions"><button type="button" onClick={()=>void copyMentorSolution()}><Copy size={15}/>{mentorCopied?'Copiada':'Copiar código'}</button><button type="button" onClick={loadMentorSolution}><FileInput size={15}/>Cargar en editor</button><button type="button" className="primary" disabled={busy||running||unavailable} onClick={runMentorSolution}><Play size={15}/>Probar referencia</button></div></div><div className="mentor-solution-code-label"><span>Código completo de referencia</span><span>{mentorSolution.source.split('\n').length} líneas</span></div><pre aria-label={`Código completo de referencia ${session.id.toUpperCase()}`}><code>{mentorSolution.source}</code></pre><p className="mentor-solution-warning">La referencia es privada del mentor. “Probar referencia” ejecuta este código sin modificar tu editor ni registrar progreso del grupo. “Cargar en editor” sí reemplaza tu copia actual y pide confirmación.</p></div></details>}
+    {mentorMode&&cloudContext&&<MentorSolutionPanel cohortId={cloudContext.cohortId} userId={cloudContext.userId} sessionId={session.id} canRun={!busy&&!running&&!unavailable} onLoad={loadMentorSolution} onRun={runMentorSolution}/>}
     {simulation&&(simulation.reviewState!=='Listo'||simulation.diagnostics.length>0)&&<div className={`runtime-diagnostics ${simulation.reviewState==='Sin errores'?'is-success':simulation.reviewState==='Error'?'is-error':''}`}><p role="status">{busy?(simulation.reviewState==='Cargando programa…'?'Cargando el programa en el simulador…':'Revisando tu programa…'):simulation.reviewState==='Ejecutando'?(simulation.snapshot.status==='paused'?'Programa en pausa':'Programa iniciado. Observa al IROH.'):simulation.reviewState==='Sin errores'?'No se encontraron errores. El código está listo para ejecutar.':simulation.reviewState}</p><ul>{simulation.diagnostics.map((d,i)=><li key={i}><button className="diagnostic" onClick={()=>{editor.current?.revealLineInCenter(d.line);editor.current?.setPosition({lineNumber:d.line,column:d.column});editor.current?.focus();}}>Línea {d.line}, columna {d.column}: {d.message}</button></li>)}</ul></div>}
     <div className="editor-bottom-bar" data-tour="run-code">{simulation?<><button className="review-button" disabled={busy||running||unavailable} onClick={()=>execute(false)}><ScanSearch size={18}/>Revisar código</button><button className="primary execute-button" disabled={busy||running||unavailable} title={running?'Detén la prueba antes de iniciar otra':'Probar la versión que estás viendo en el editor'} onClick={()=>execute(true)}>{busy?<LoaderCircle className="spin" size={18}/>:<Play size={18}/>}Probar código</button></>:<span>Material y editor · simulación próximamente</span>}</div>
     {saveState==='error'&&<p className="save-warning" role="alert">{sizeError||'No se pudo guardar. Descarga tu código para conservarlo.'}</p>}

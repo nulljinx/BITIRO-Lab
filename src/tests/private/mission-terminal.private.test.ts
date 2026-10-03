@@ -1,16 +1,18 @@
 import {describe,expect,it} from 'vitest';
-import {mentorSolutions} from '../content/mentor-solutions';
-import {trackForSession} from '../content/tracks';
-import {SimulationEngine} from '../simulator/SimulationEngine';
-import {ProgramRuntime} from '../simulator/runtime/ProgramRuntime';
-import {deriveMissionView} from '../features/simulator/mission-state';
+import {privateSolution,privateSolutionsAvailable} from '../support/private-solutions';
+import {trackForSession} from '../../content/tracks';
+import {SimulationEngine} from '../../simulator/SimulationEngine';
+import {ProgramRuntime} from '../../simulator/runtime/ProgramRuntime';
+import {deriveMissionView} from '../../features/simulator/mission-state';
 
+// Needs the real reference programs (outside Git). Skipped without BITIRO_SOLUTIONS_DIR.
+describe.skipIf(!privateSolutionsAvailable)('private suite · mission-terminal',()=>{
 type SessionId='s01'|'s02'|'s03'|'s04'|'s05';
 // Drives each reference solution the way a student would operate the simulator (stimuli included) until it passes.
 function runToCompletion(id:SessionId){
   const engine=new SimulationEngine(trackForSession(id)),runtime=new ProgramRuntime(engine);
   if(id==='s01'||id==='s02')runtime.command({type:'ir',side:'left',value:true});
-  expect(runtime.run(mentorSolutions[id].source)).toEqual([]);
+  expect(runtime.run(privateSolution(id))).toEqual([]);
   // S05 human interaction, driven by the real phase: one DER click (counter 1), an IZQ click to start,
   // then a second IZQ click once the robot has stopped in the junction. Each click is ON then OFF.
   let s05Phase:'count'|'start'|'route'|'authorise'|'done'='count',phaseTick=0,stillTicks=0;
@@ -66,10 +68,12 @@ describe('mission completion is terminal for the attempt (S01-S05)',()=>{
   }
   it('a re-run after a pass is a fresh attempt: it starts unpassed and can be completed independently',()=>{
     const {engine,runtime}=runToCompletion('s03');
-    expect(runtime.run(mentorSolutions.s03.source)).toEqual([]);
+    expect(runtime.run(privateSolution('s03'))).toEqual([]);
     expect(engine.snapshot().mission.status).toBe('in_progress');
     expect(engine.snapshot().mission.checks.every(check=>!check.passed)).toBe(true);
     for(let tick=0;tick<12000&&engine.snapshot().mission.status!=='completed';tick++)runtime.step(10);
     expect(engine.snapshot().mission.status).toBe('completed');
   });
+});
+
 });

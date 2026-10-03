@@ -2,31 +2,8 @@ import {describe,it,expect} from 'vitest';
 import {SimulationEngine} from '../simulator/SimulationEngine';
 import {ProgramRuntime} from '../simulator/runtime/ProgramRuntime';
 import {trackForSession} from '../content/tracks';
-import {mentorSolutions} from '../content/mentor-solutions';
-
-function completeS01(side:'left'|'right'){
- const engine=new SimulationEngine(trackForSession('s01'));
- const runtime=new ProgramRuntime(engine);
- runtime.command({type:'ir',side:'left',value:side==='left'});
- runtime.command({type:'ir',side:'right',value:side==='right'});
- expect(runtime.run(mentorSolutions.s01.source)).toEqual([]);
- for(let tick=0;tick<12000&&engine.snapshot().mission.status!=='completed';tick++)runtime.step(10);
- expect(engine.snapshot().mission.status).toBe('completed');
- return {engine,runtime};
-}
 
 describe('Formative mission evaluator',()=>{
- it.each(['left','right'] as const)('recognizes S01 %s only after authentic runtime milestones',side=>{
-  const {engine,runtime}=completeS01(side);
-  const result=engine.snapshot().mission;
-  expect(result.kind).toBe('formative_client_simulation');
-  expect(result.status).toBe('completed');
-  expect(result.checks).toHaveLength(4);
-  expect(result.checks.every(check=>check.passed)).toBe(true);
-  runtime.command({type:'reset'});
-  expect(engine.snapshot().mission.status).toBe('in_progress');
-  expect(engine.snapshot().mission.checks.every(check=>!check.passed)).toBe(true);
- });
  it('never awards completion for a manually dragged robot into a finish zone',()=>{
   const track=trackForSession('s02'),engine=new SimulationEngine(track);
   engine.command({type:'pose',x:track.finishZones[0].x+4,y:track.finishZones[0].y+4,heading:0});

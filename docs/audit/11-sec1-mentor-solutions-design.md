@@ -1,6 +1,13 @@
-# 11 - SEC-1 design: mentor solutions served from the database (PROPOSAL, not implemented)
+# 11 - SEC-1 design: mentor solutions served from the database
 
-Status: design only. No migration, code or test for SEC-1 exists yet. This repository is PUBLIC, so this document,
+Status: IMPLEMENTED IN THE WORKING TREE, NOT applied to production, no solutions loaded (2026-10-03). Migration
+`20261003130000_mentor_solutions.sql`, `MentorSolutionPanel`, `tools/audit-dist-solutions.mjs` (wired into `pnpm build`),
+`tools/load-mentor-solutions.mjs`, DB checks in `supabase/tests/rls.test.mjs`. Deviations from the proposal: no
+`content_sha256` column (`convert_to` is not immutable; the loader prints the hash); the eight solution-dependent test
+files moved to an optional private suite (`pnpm test:private`, `BITIRO_SOLUTIONS_DIR`); the former fixtures
+`src/tests/reference-programs/s01-{left,right}.cpp` were full S01 solutions and were removed. Original design follows.
+
+Original status: design only. This repository is PUBLIC, so this document,
 the migration, tests, fixtures and seeds must never contain real solution content.
 
 ## Premise
@@ -79,3 +86,13 @@ move to a private suite reading `BITIRO_SOLUTIONS_DIR`, skipped with a visible w
 - Mentor UX now depends on the network and needs loading/error states.
 - Forgetting the load step leaves the table empty and the panel on its generic error; include it in the deploy checklist.
 - The line-hash gate misses reformatted variants of old solutions, hence layer 3.
+
+## Release gate and migration parity (implemented)
+
+- `pnpm release` = preflight (fails at once without the private dir) + `pnpm run ci` + `tools/release-gate.mjs`. Not wired into `ci.yml`. The gate fails unless `BITIRO_SOLUTIONS_DIR` exists with valid
+  `s01..s05.json`, `pnpm test:private` passes with ZERO skipped tests, the private E2E `tests/e2e/mission-state.spec.ts` runs and passes (0 skipped), and `tools/verify-release.mjs` confirms
+  `dist/version.json` `requiredMigration` equals the latest file in `supabase/migrations/`. `pnpm check`, `pnpm build` and
+  public CI never run it and keep skipping the private suite. Output never shows the directory path or any content.
+- Migration version: with `supabase db push` keep `20261003130000`. If applied through an API/MCP that assigns another
+  remote timestamp, BEFORE the deploy rename `20261003130000_mentor_solutions.sql` to the exact remote version, rebuild
+  (so `requiredMigration` follows) and run `node tools/check-migration-parity.mjs` with the live credentials.

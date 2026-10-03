@@ -6,6 +6,7 @@ import {spawnSync} from 'node:child_process';
 import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
+import {buildPsqlScript,describeEntry} from '../../tools/load-mentor-solutions.mjs';
 import {listMigrations,latestMigration,migrationFunctions,publicFunctions,frontendRpcs,missingRpcs,rpcNames,compareMigrations} from '../../tools/migration-contract.mjs';
 
 // PostgreSQL-engine integration test. Minimal auth shim, not a mocked policy evaluator.
@@ -432,6 +433,83 @@ try {
   await user(ids.admin,"select public.admin_set_staff_allowlist('abuse.check@colegio.cl',$1,true)",[A]);
   await user(ids.admin,"select public.admin_set_staff_allowlist('abuse.check@colegio.cl',$1,false)",[A]);
   check(true,'Platform admin can maintain the staff allowlist');
+ }
+
+ // SEC-1: mentor solutions are RPC-only. Only dummy TEST-ONLY content is ever inserted; no real solution is in Git.
+ {
+  const A='mustakis-demo-talca',B='mustakis-demo-talca-b';
+  check((await db.query('select count(*)::int as n from private.mentor_solutions')).rows[0].n===0,'private.mentor_solutions is EMPTY after all migrations and seeds');
+  const table=(await db.query(`select c.relrowsecurity,(select count(*)::int from pg_policy where polrelid=c.oid) as policies,
+   has_table_privilege('anon',c.oid,'select,insert,update,delete') as anon,has_table_privilege('authenticated',c.oid,'select,insert,update,delete') as authed,
+   exists(select 1 from aclexplode(coalesce(c.relacl,acldefault('r',c.relowner))) a where a.grantee=0) as pub
+   from pg_class c where c.oid='private.mentor_solutions'::regclass`)).rows[0];
+  check(table.relrowsecurity&&table.policies===0&&!table.anon&&!table.authed&&!table.pub,'private.mentor_solutions: RLS on, no policies, no grants for anon/authenticated/PUBLIC');
+  const fn=(await db.query(`select p.prosecdef,p.provolatile,p.proconfig,has_function_privilege('anon',p.oid,'execute') as anon,
+   has_function_privilege('authenticated',p.oid,'execute') as authed,exists(select 1 from aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) a where a.grantee=0) as pub
+   from pg_proc p where p.oid='public.mentor_get_solution(text,text)'::regprocedure`)).rows[0];
+  check(fn.authed&&!fn.anon&&!fn.pub,'mentor_get_solution: authenticated can execute; anon and PUBLIC cannot');
+  check(fn.prosecdef&&fn.proconfig?.includes('search_path=""'),'mentor_get_solution is SECURITY DEFINER with an empty search_path');
+  const get=(id,cohort,session)=>user(id,'select public.mentor_get_solution($1,$2) as r',[cohort,session]);
+  // Missing row is a controlled error, and the same for everyone authorised.
+  await rejects(get(ids.f,A,'s01'),'Authorised mentor gets P0002 when no solution is loaded','P0002');
+  const DUMMY={title:'TEST-ONLY',note:'TEST-ONLY',source:'// TEST-ONLY'};
+  await db.query("insert into private.mentor_solutions(session_id,title,note,source) values('s01',$1,$2,$3)",[DUMMY.title,DUMMY.note,DUMMY.source]);
+  try{
+   const row=(await db.query("select revision,updated_at from private.mentor_solutions where session_id='s01'")).rows[0];
+   check(row.revision===1,'Solution rows start at revision 1');
+   // anon
+   await rejects(context('anon',null,()=>db.query('select * from private.mentor_solutions')),'anon cannot SELECT private.mentor_solutions','42501');
+   await rejects(context('anon',null,()=>db.query("select public.mentor_get_solution($1,'s01')",[A])),'anon cannot EXECUTE mentor_get_solution','42501');
+   // participant
+   await rejects(user(ids.a,'select * from private.mentor_solutions'),'Participant cannot SELECT private.mentor_solutions','42501');
+   await rejects(get(ids.a,A,'s01'),'Participant gets 42501 for their own cohort','42501');
+   await rejects(get(ids.a,B,'s01'),'Participant gets 42501 for another cohort','42501');
+   await rejects(user(ids.f,'select * from private.mentor_solutions'),'Mentor cannot SELECT private.mentor_solutions directly','42501');
+   await rejects(user(ids.f,"insert into private.mentor_solutions(session_id,title,source) values('s02','x','x')"),'Mentor cannot write private.mentor_solutions directly','42501');
+   // mentor
+   const own=(await get(ids.f,A,'s01')).rows[0].r;
+   check(own.title==='TEST-ONLY'&&own.source==='// TEST-ONLY'&&own.note==='TEST-ONLY'&&own.session_id==='s01'&&own.revision===1,'Mentor of the cohort obtains the TEST-ONLY solution');
+   check(Object.keys(own).sort().join()==='note,revision,session_id,source,title','Response has only session_id, title, note, source, revision');
+   await rejects(get(ids.f,B,'s01'),'Mentor of another cohort gets 42501','42501');
+   // admin: can_manage_cohort already includes platform admins; the active-cohort check still applies.
+   check((await get(ids.admin,B,'s01')).rows[0].r.title==='TEST-ONLY','Platform admin is allowed on any active cohort');
+   // validation and generic failures
+   for(const bad of ['s09','S01','s00','s1','s01 ',"s01'",null])
+    await rejects(get(ids.f,A,bad),`Invalid session id ${JSON.stringify(bad)} gets 22023`,'22023');
+   await rejects(get(ids.admin,A,'s09'),'Invalid session id is rejected for the admin too','22023');
+   let missing,noPermission;
+   try{await get(ids.f,'no-such-cohort','s01');}catch(error){missing=error;}
+   try{await get(ids.f,B,'s01');}catch(error){noPermission=error;}
+   check(missing?.code==='42501'&&noPermission?.code==='42501'&&missing.message===noPermission.message,'Unknown cohort and no-permission cohort fail with the same 42501 message');
+   await rejects(get(ids.admin,'no-such-cohort','s01'),'Unknown cohort is 42501 even for the platform admin','42501');
+   await rejects(get(ids.f,null,'s01'),'NULL cohort gets 42501','42501');
+   await db.query("update public.cohorts set active=false where id=$1",[A]);
+   try{
+    await rejects(get(ids.f,A,'s01'),'Inactive cohort gets 42501 for its mentor','42501');
+    await rejects(get(ids.admin,A,'s01'),'Inactive cohort gets 42501 for the platform admin','42501');
+   }finally{await db.query("update public.cohorts set active=true where id=$1",[A]);}
+   await rejects(get(ids.f,A,'s02'),'Valid session without a loaded solution gets P0002','P0002');
+  }finally{
+   await db.query("delete from private.mentor_solutions");
+  }
+  check((await db.query('select count(*)::int as n from private.mentor_solutions')).rows[0].n===0,'Test rows removed: private.mentor_solutions is empty again');
+
+  // Loader SQL (tools/load-mentor-solutions.mjs): psql :'var' binding is emulated; the generated script is what runs in production.
+  {
+   const run=async entry=>{
+    const script=buildPsqlScript(entry),vars=Object.fromEntries([...script.matchAll(/^\\set (\w+) '([^']*)'$/gm)].map(m=>[m[1],m[2]]));
+    const sql=script.split('\n').filter(l=>!l.startsWith('\\')).join('\n').replace(/:'(\w+)'/g,(_,name)=>`'${vars[name].replaceAll("'","''")}'`);
+    return (await db.query(sql)).rows;
+   };
+   const entry={session:'s03',title:'TEST-ONLY',note:'TEST-ONLY',source:"// TEST-ONLY ' \" \\ $$ ; drop table x; --\nline2 ñ"};
+   try{
+    check((await run(entry))[0]['?column?']==='s03|1','Loader: first upsert creates revision 1');
+    check((await db.query("select source from private.mentor_solutions where session_id='s03'")).rows[0].source===entry.source,'Loader: hostile characters round-trip unchanged (no SQL injection surface)');
+    check((await run(entry)).length===0,'Loader: identical content is a no-op and keeps the revision');
+    check((await run({...entry,source:'// TEST-ONLY v2'}))[0]['?column?']==='s03|2','Loader: changed content increments the revision');
+    check(describeEntry(entry).length===entry.source.length&&/^[0-9a-f]{64}$/.test(describeEntry(entry).sha256)&&!JSON.stringify(describeEntry(entry)).includes('TEST-ONLY'),'Loader: reports only session, length and hash');
+   }finally{await db.query("delete from private.mentor_solutions");}
+  }
  }
  console.log(`\n${checks} PostgreSQL/RLS integration checks passed.`);
 } finally {await db.close();}

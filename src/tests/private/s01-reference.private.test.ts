@@ -1,15 +1,17 @@
-import {it,expect} from 'vitest';
+import {describe,expect,it} from 'vitest';
 import {SimulationEngine} from '../../simulator/SimulationEngine';
 import {ProgramRuntime} from '../../simulator/runtime/ProgramRuntime';
-import {mentorSolutions} from '../../content/mentor-solutions';
+import {privateSolution,privateSolutionsAvailable} from '../support/private-solutions';
 import track from '../../content/tracks/s01.json';
 
+// Needs the real reference programs (outside Git). Skipped without BITIRO_SOLUTIONS_DIR.
+describe.skipIf(!privateSolutionsAvailable)('private suite · s01-reference',()=>{
 for(const side of ['left','right'] as const)it(`completa S01 ${side}: decisión, seguimiento, base y golpe contrario`,()=>{
  const engine=new SimulationEngine(track),runtime=new ProgramRuntime(engine);
  runtime.command({type:'ir',side:'left',value:side==='left'});
  runtime.command({type:'ir',side:'right',value:side==='right'});
  expect(engine.obstacles).toHaveLength(2);
- expect(runtime.run(mentorSolutions.s01.source)).toEqual([]);
+ expect(runtime.run(privateSolution('s01'))).toEqual([]);
  for(let i=0;i<12000&&engine.snapshot().mission.status!=='completed';i++)runtime.step(10);
  const result=engine.snapshot();
  expect(runtime.diagnostic).toBeNull();
@@ -30,7 +32,7 @@ for(const side of ['left','right'] as const)it(`S01 ${side}: el seguidor de un s
  const engine=new SimulationEngine(track),runtime=new ProgramRuntime(engine);
  runtime.command({type:'ir',side:'left',value:side==='left'});
  runtime.command({type:'ir',side:'right',value:side==='right'});
- expect(runtime.run(mentorSolutions.s01.source)).toEqual([]);
+ expect(runtime.run(privateSolution('s01'))).toEqual([]);
  const state=()=>engine.robot.leftMotor>0&&engine.robot.rightMotor===0?'A':engine.robot.leftMotor===0&&engine.robot.rightMotor>0?'B':'0';
  const frames:{state:string;heading:number}[]=[];
  const runs:number[]=[];let alternations=0,blackWhite=0,prevState='0',prevBlack:boolean|null=null,runStart=0,runState='0',lastHeading=0;
@@ -65,12 +67,5 @@ for(const side of ['left','right'] as const)it(`S01 ${side}: el seguidor de un s
  expect(mission.checks.every(check=>check.passed)).toBe(true);
 });
 
-it('S01 sigue ejecutando avanzar(50) libremente sin ningún IR',()=>{
- const engine=new SimulationEngine(track),runtime=new ProgramRuntime(engine);
- const start={x:engine.robot.x,y:engine.robot.y};
- expect(runtime.run('#include <KnightRoboticsLibs_Iroh.h>\nvoid setup(){inicializarMovimiento();}\nvoid loop(){avanzar(50);}')).toEqual([]);
- expect(engine.status).toBe('running');
- runtime.step(300);
- expect(Math.hypot(engine.robot.x-start.x,engine.robot.y-start.y)).toBeGreaterThan(1);
- expect(engine.snapshot().mission.checks.every(check=>!check.passed)).toBe(true);
+
 });

@@ -11,13 +11,17 @@
     "test:db": "node supabase/tests/rls.test.mjs",
     "test:e2e": "node tools/run-e2e.mjs",
     "audit:design": "node tools/audit-design-tokens.mjs",
+    "audit:dist": "node tools/audit-dist-solutions.mjs",
+    "test:private": "node node_modules/vitest/vitest.mjs run --configLoader runner src/tests/private",
+    "load:solutions": "node tools/load-mentor-solutions.mjs",
     "verify": "pnpm check && pnpm test:e2e",
     "browser:install": "node node_modules/@playwright/test/cli.js install chromium",
     "typecheck": "node node_modules/typescript/bin/tsc --noEmit",
     "test:unit": "node node_modules/vitest/vitest.mjs run --configLoader runner",
     "check": "pnpm typecheck && pnpm test:unit && pnpm test:db && pnpm audit:design",
     "browser:install:ci": "node node_modules/@playwright/test/cli.js install --with-deps chromium",
-    "ci": "pnpm check && pnpm build"
+    "ci": "pnpm check && pnpm build",
+    "release": "node tools/release-gate.mjs --preflight-only && pnpm run ci && node tools/release-gate.mjs"
   },
   "dependencies": {
     "@fontsource/ibm-plex-mono": "^5.2.0",

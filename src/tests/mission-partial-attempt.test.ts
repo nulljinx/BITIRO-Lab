@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {mentorSolutions} from '../content/mentor-solutions';
+import {MINIMAL_IDLE} from './support/minimal-programs';
 import {trackForSession} from '../content/tracks';
 import {SimulationEngine} from '../simulator/SimulationEngine';
 import {ProgramRuntime} from '../simulator/runtime/ProgramRuntime';
@@ -12,7 +12,7 @@ const view=(engine:SimulationEngine)=>{const s=engine.snapshot();return deriveMi
 function partialS01(){
   const engine=new SimulationEngine(trackForSession('s01')),runtime=new ProgramRuntime(engine);
   runtime.command({type:'ir',side:'left',value:true});
-  expect(runtime.run(mentorSolutions.s01.source)).toEqual([]);
+  expect(runtime.run(MINIMAL_IDLE)).toEqual([]);
   engine.emit({type:'IR_READ',side:'left',active:true});
   engine.emit({type:'IR_READ',side:'right',active:false});
   engine.emit({type:'LCD_UPDATED',rows:['IR izquierdo','']} as never);
@@ -23,7 +23,7 @@ describe('partial attempts survive a manual stop',()=>{
   it('A: objectives light up while the attempt runs (0/4 -> 1/4)',()=>{
     const engine=new SimulationEngine(trackForSession('s01')),runtime=new ProgramRuntime(engine);
     runtime.command({type:'ir',side:'left',value:true});
-    runtime.run(mentorSolutions.s01.source);
+    runtime.run(MINIMAL_IDLE);
     expect(passedKeys(engine)).toEqual([]);
     engine.emit({type:'IR_READ',side:'left',active:true});
     engine.emit({type:'IR_READ',side:'right',active:false});
@@ -57,17 +57,8 @@ describe('partial attempts survive a manual stop',()=>{
     const second=partialS01();
     second.runtime.command({type:'stop'});
     expect(passedKeys(second.engine)).toEqual(['decision']);
-    second.runtime.run(mentorSolutions.s01.source);
+    second.runtime.run(MINIMAL_IDLE);
     expect(passedKeys(second.engine)).toEqual([]);
-  });
-  it('E: a completed S01 stays 4/4 after stop',()=>{
-    const engine=new SimulationEngine(trackForSession('s01')),runtime=new ProgramRuntime(engine);
-    runtime.command({type:'ir',side:'left',value:true});runtime.command({type:'ir',side:'right',value:false});
-    runtime.run(mentorSolutions.s01.source);
-    for(let tick=0;tick<12000&&engine.snapshot().mission.status!=='completed';tick++)runtime.step(10);
-    runtime.command({type:'stop'});
-    expect(engine.snapshot().mission.status).toBe('completed');
-    expect(view(engine)).toMatchObject({phase:'passed',passed:4,total:4});
   });
   it('F: pose / calibration / motor test during an attempt invalidate it, and a stopped partial too',()=>{
     for(const manual of [{type:'pose',x:20,y:20,heading:0},{type:'motors',left:5,right:5}] as const){
