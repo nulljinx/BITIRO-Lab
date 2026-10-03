@@ -1,6 +1,7 @@
 import type {RobotState,SimulationEvent,TrackDefinition,LineThresholds,ScenarioIntersection} from './types';
 import {ROBOT} from './config';
 import {isInsideFinishZone} from './finish';
+import {S01_TARGET_BOX_ID} from './scenario';
 
 export interface MissionEvidence {
   sessionId:string;
@@ -22,7 +23,7 @@ export class MissionEvaluator {
  private buttonRead=false;
  private lineReads=new Set<'left'|'center'|'right'>();
  private lineLostEvents=0;
- private movedSides=new Set<'left'|'right'>();
+ private movedSides=new Set<'left'|'right'>();private movedBoxes=new Map<string,'left'|'right'>();
  private lcdDecision=false;
  private intersection=false;
  private intersectionStopMs=0;
@@ -68,7 +69,7 @@ export class MissionEvaluator {
  constructor(private track:TrackDefinition){}
  setLineThresholds(values:LineThresholds){this.lineThresholds=[...values] as LineThresholds;}
  setScenarioIntersections(values:readonly ScenarioIntersection[]){this.scenarioIntersections=values.map(item=>({...item}));}
- reset(){this.active=false;this.initialIR=null;this.initialButton=false;this.reads.clear();this.buttonRead=false;this.lineReads.clear();this.lineLostEvents=0;this.movedSides.clear();this.lcdDecision=false;this.intersection=false;this.intersectionStopMs=0;this.distance=0;this.last=null;this.lastTickMs=0;this.completed=false;this.frozen=null;this.destinationReached=false;this.invalid=false;this.obstacleDetections.clear();this.obstacleReadEvents=0;this.lcdNumber=null;this.s03IntersectionActive=null;this.s03IntersectionHeading=0;this.s03IntersectionTurned=false;this.s03IntersectionResponses=0;this.s03RespondedIntersections.clear();this.s04Gap1Seen=false;this.s04Gap1Crossed=false;this.s04Gap2Seen=false;this.s04Intersection1=false;this.s04Intersection2=false;this.s04Intersection3=false;this.s04Intersection1StopMs=0;this.s04Intersection2StopMs=0;this.s04Intersection3StopMs=0;this.s05RightActivations=0;this.s05LastRight=false;this.s05LastLeft=false;this.s05StartedByLeft=false;this.s05LcdMatchedCount=false;this.s05GapSeen=false;this.s05GapCrossed=false;this.s05JunctionReached=false;this.s05JunctionStopMs=0;this.s05JunctionAuthorized=false;this.s05DestinationReached=false;this.s05ExpectedBase=null;}
+ reset(){this.active=false;this.initialIR=null;this.initialButton=false;this.reads.clear();this.buttonRead=false;this.lineReads.clear();this.lineLostEvents=0;this.movedSides.clear();this.movedBoxes.clear();this.lcdDecision=false;this.intersection=false;this.intersectionStopMs=0;this.distance=0;this.last=null;this.lastTickMs=0;this.completed=false;this.frozen=null;this.destinationReached=false;this.invalid=false;this.obstacleDetections.clear();this.obstacleReadEvents=0;this.lcdNumber=null;this.s03IntersectionActive=null;this.s03IntersectionHeading=0;this.s03IntersectionTurned=false;this.s03IntersectionResponses=0;this.s03RespondedIntersections.clear();this.s04Gap1Seen=false;this.s04Gap1Crossed=false;this.s04Gap2Seen=false;this.s04Intersection1=false;this.s04Intersection2=false;this.s04Intersection3=false;this.s04Intersection1StopMs=0;this.s04Intersection2StopMs=0;this.s04Intersection3StopMs=0;this.s05RightActivations=0;this.s05LastRight=false;this.s05LastLeft=false;this.s05StartedByLeft=false;this.s05LcdMatchedCount=false;this.s05GapSeen=false;this.s05GapCrossed=false;this.s05JunctionReached=false;this.s05JunctionStopMs=0;this.s05JunctionAuthorized=false;this.s05DestinationReached=false;this.s05ExpectedBase=null;}
  start(robot:RobotState){this.reset();this.active=true;this.initialIR={left:robot.irLeft,right:robot.irRight};this.initialButton=robot.buttonPressed;this.last={x:robot.x,y:robot.y};this.lastTickMs=robot.simTimeMs;}
  /** Manual stop / natural end: close the attempt keeping what it achieved. The evidence is evaluated while the attempt is still valid and frozen as in_progress (or completed, if every check already passes); nothing later (IR, sensors, motion) can change it. reset()/start() clear it. */
  stopAttempt(robot:RobotState){
@@ -85,7 +86,7 @@ export class MissionEvaluator {
   if(event.type==='BUTTON_READ')this.buttonRead=true;
   if(event.type==='LINE_SENSOR_READ')this.lineReads.add(event.side);
   if(event.type==='LINE_LOST')this.lineLostEvents++;
-  if(event.type==='OBSTACLE_MOVED')this.movedSides.add(event.side);
+  if(event.type==='OBSTACLE_MOVED'){this.movedSides.add(event.side);this.movedBoxes.set(event.obstacleId,event.side);}
   if(event.type==='OBSTACLE_DETECTED'){this.obstacleReadEvents++;if(event.obstacleId)this.obstacleDetections.add(event.obstacleId);}
   if(event.type==='INTERSECTION_RESPONDED'){this.s03RespondedIntersections.add(event.intersectionId);this.s03IntersectionResponses=this.s03RespondedIntersections.size;}
   if(event.type==='LCD_UPDATED'){
@@ -214,7 +215,7 @@ export class MissionEvaluator {
    check('decision','Leer el IR inicial y guardar la decisión de ruta',this.reads.size>0&&(left||right)&&this.lcdDecision);
    check('line','Seguir la línea usando el sensor central y un umbral',this.lineReads.has('center')&&this.distance>=40);
    check('finish','Llegar a la base correspondiente',this.destinationReached);
-   check('obstacle','Mover el obstáculo hacia el lado contrario',left?this.movedSides.has('right'):right?this.movedSides.has('left'):false);
+   check('obstacle','Mover el obstáculo hacia el lado contrario',left?this.movedBoxes.get(S01_TARGET_BOX_ID.left)==='right':right?this.movedBoxes.get(S01_TARGET_BOX_ID.right)==='left':false);
   }else if(this.track.id==='s02'){
    const left=!!this.initialIR?.left,right=!!this.initialIR?.right;
    const base3WithButton=!left&&!right&&this.initialButton;

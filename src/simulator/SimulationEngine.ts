@@ -7,7 +7,7 @@ import {advanceActuators} from './actuators';
 import {isInsideFinishZone} from './finish';
 import {feedbackFor} from './LearningFeedbackEngine';
 import {MissionEvaluator} from './MissionEvaluator';
-import {S03_FIXED_SCENARIO,s01ObstacleForIR,withScenarioIntersections} from './scenario';
+import {S03_FIXED_SCENARIO,S01_BOXES,withScenarioIntersections} from './scenario';
 export class SimulationEngine {
  robot!:RobotState;obstacles:DynamicObstacle[]=[];events:SimulationEvent[]=[];
  status:Status='idle';ticks=0;collisions=0;speed=1;instructions=0;programControlled=false;
@@ -29,7 +29,7 @@ export class SimulationEngine {
  }
  reset(){
   this.s03ConsumedIntersections.clear();this.s03IntersectionTurn=null;
-  this.obstacles=this.track.id==='s01'?[]:this.track.id==='s03'&&this.s03ObstaclePoints.length?this.s03ObstaclePoints.map((point,index)=>({id:`s03-obstacle-${index+1}`,x:point.x-3,y:point.y-3,width:6,height:6,movable:false,blocking:true,vx:0,vy:0})):this.track.obstacles.map(o=>({...o,vx:0,vy:0}));
+  this.obstacles=this.track.id==='s01'?[S01_BOXES.left,S01_BOXES.right].map(o=>({...o,vx:0,vy:0})):this.track.id==='s03'&&this.s03ObstaclePoints.length?this.s03ObstaclePoints.map((point,index)=>({id:`s03-obstacle-${index+1}`,x:point.x-3,y:point.y-3,width:6,height:6,movable:false,blocking:true,vx:0,vy:0})):this.track.obstacles.map(o=>({...o,vx:0,vy:0}));
   // The plotter is a sheet on the floor, not a wall. The IROH body may overhang
   // the paper while its centre is still on the usable surface. Clamp the centre
   // to the sheet instead of forcing the complete robot footprint inside it.
@@ -55,13 +55,6 @@ export class SimulationEngine {
   if(!irLeft&&!irRight)return 'Activa solo IZQ o DER antes de probar S01.';
   if(irLeft&&irRight)return 'S01 necesita un único estímulo inicial. Deja activo solo IZQ o DER.';
   return null;
- }
- /** Keep the S01 physical scenario tied to the one IR chosen before running. */
- syncS01Scenario(){
-  if(this.track.id!=='s01')return;
-  const obstacle=s01ObstacleForIR(this.robot.irLeft,this.robot.irRight);
-  this.obstacles=obstacle?[{...obstacle,vx:0,vy:0}]:[];
-  this.robot=updateSensors(this.robot,this.scene());
  }
  setS03Layout(obstacles:Point[],intersections:Point[]){
   if(this.track.id!=='s03')return;
@@ -121,7 +114,7 @@ export class SimulationEngine {
    case 'stop':this.robot.leftMotor=0;this.robot.rightMotor=0;this.status='idle';this.feedback='Has detenido ambos motores.';break;
    case 'speed':if([.5,1,2].includes(command.value))this.speed=command.value;break;
    case 'motors':{const clamp=(v:number)=>Number.isFinite(v)?Math.max(-ROBOT.maxWheelCmS,Math.min(ROBOT.maxWheelCmS,v)):0;this.robot.leftMotor=clamp(command.left);this.robot.rightMotor=clamp(command.right);this.status='running';this.feedback='Prueba manual de los motores. El programa del estudiante está detenido.';break;}
-   case 'ir':if(this.track.id==='s01'&&this.s01IrLocked()){this.feedback='El estímulo inicial de S01 queda fijo durante el intento. Detén o reinicia para cambiarlo.';break;}this.robot[command.side==='left'?'irLeft':'irRight']=command.value;if(this.track.id==='s01'&&!this.programControlled)this.syncS01Scenario();break;
+   case 'ir':if(this.track.id==='s01'&&this.s01IrLocked()){this.feedback='El estímulo inicial de S01 queda fijo durante el intento. Detén o reinicia para cambiarlo.';break;}this.robot[command.side==='left'?'irLeft':'irRight']=command.value;break;
    case 'button':this.robot.buttonPressed=command.value;break;
    case 'pose':{
     const x=Math.max(ROBOT.radiusCm,Math.min(this.track.physicalWidthCm-ROBOT.radiusCm,command.x));

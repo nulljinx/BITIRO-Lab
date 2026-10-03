@@ -46,6 +46,22 @@ describe('simulator worker dispatcher',()=>{
   send({type:'load-program',source:VALID,requestId:5});
   expect(types(take())).toEqual(['compile-ok','snapshot']);
  });
+ it('configure-track S01 publishes both practice boxes, and ir never changes them',async()=>{
+  await boot();
+  send({type:'configure-track',trackId:'s01'});
+  const ready=take()[0];
+  if(ready.type!=='track-ready')throw new Error('expected track-ready');
+  const boxes=(o:{id:string;x:number;y:number}[])=>o.map(({id,x,y})=>({id,x,y}));
+  const initial=boxes(ready.snapshot.obstacles);
+  expect(initial).toEqual([{id:'practice-box-left',x:17,y:18},{id:'practice-box-right',x:75,y:18}]);
+  send({type:'ir',side:'left',value:true});
+  const messages=take();
+  expect(types(messages)).toEqual(['snapshot']);
+  const snap=messages[0];
+  if(snap.type!=='snapshot')throw new Error('expected snapshot');
+  expect(snap.snapshot.status).toBe('idle');
+  expect(boxes(snap.snapshot.obstacles)).toEqual(initial);
+ });
  it('load-program reviews without running and echoes the requestId',async()=>{
   await boot();
   send({type:'configure-track',trackId:'s01'});take();

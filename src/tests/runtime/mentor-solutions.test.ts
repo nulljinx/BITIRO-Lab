@@ -95,8 +95,7 @@ for(const side of ['left','right'] as const)it(`S01 mentor solution completes th
   const runtime=new ProgramRuntime(engine);
   runtime.command({type:'ir',side:'left',value:side==='left'});
   runtime.command({type:'ir',side:'right',value:side==='right'});
-  expect(engine.obstacles).toHaveLength(1);
-  expect(engine.obstacles[0].x).toBe(side==='left'?17:75);
+  expect(engine.obstacles.map(o=>o.id)).toEqual(['practice-box-left','practice-box-right']);
   expect(runtime.run(mentorSolutions.s01.source)).toEqual([]);
   for(let i=0;i<12000&&engine.snapshot().mission.status!=='completed';i++)runtime.step(10);
   expect(runtime.diagnostic).toBeNull();

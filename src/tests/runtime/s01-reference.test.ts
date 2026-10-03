@@ -8,8 +8,7 @@ for(const side of ['left','right'] as const)it(`completa S01 ${side}: decisión,
  const engine=new SimulationEngine(track),runtime=new ProgramRuntime(engine);
  runtime.command({type:'ir',side:'left',value:side==='left'});
  runtime.command({type:'ir',side:'right',value:side==='right'});
- expect(engine.obstacles).toHaveLength(1);
- expect(engine.obstacles[0].x).toBe(side==='left'?17:75);
+ expect(engine.obstacles).toHaveLength(2);
  expect(runtime.run(mentorSolutions.s01.source)).toEqual([]);
  for(let i=0;i<12000&&engine.snapshot().mission.status!=='completed';i++)runtime.step(10);
  const result=engine.snapshot();

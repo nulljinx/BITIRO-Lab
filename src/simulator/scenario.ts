@@ -2,19 +2,15 @@ import type {LinePath,Obstacle,Point,ScenarioIntersection,TrackDefinition} from 
 
 
 /**
- * S01 uses one movable obstacle at the destination selected by the initial IR.
- * The obstacle sits on the final base so the classroom sequence is preserved:
- * choose a route -> follow the line -> reach the base -> strike the obstacle.
+ * S01 always shows both practice boxes, one on each destination base. The
+ * initial IR does not create or remove them: it only selects which one is the
+ * target of the attempt (IZQ -> left base, DER -> right base).
  */
-export const S01_TARGET_OBSTACLES={
- left:{id:'practice-box',x:17,y:18,width:8,height:8,movable:true,blocking:true},
- right:{id:'practice-box',x:75,y:18,width:8,height:8,movable:true,blocking:true},
+export const S01_BOXES={
+ left:{id:'practice-box-left',x:17,y:18,width:8,height:8,movable:true,blocking:true},
+ right:{id:'practice-box-right',x:75,y:18,width:8,height:8,movable:true,blocking:true},
 } satisfies Record<'left'|'right',Obstacle>;
-
-export function s01ObstacleForIR(left:boolean,right:boolean):Obstacle|null{
- if(left===right)return null;
- return {...S01_TARGET_OBSTACLES[left?'left':'right']};
-}
+export const S01_TARGET_BOX_ID={left:S01_BOXES.left.id,right:S01_BOXES.right.id} as const;
 
 export const S03_FIXED_SCENARIO={
  obstacles:[
