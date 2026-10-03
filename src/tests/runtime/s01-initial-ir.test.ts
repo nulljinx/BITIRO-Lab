@@ -11,62 +11,77 @@ function setup(left:boolean,right:boolean){
  runtime.command({type:'ir',side:'right',value:right});
  return {engine,runtime};
 }
-const initialIR=(e:SimulationEngine)=>(e.mission as unknown as {initialIR:{left:boolean;right:boolean}|null}).initialIR;
+const decision=(e:SimulationEngine)=>e.snapshot().mission.checks.find(c=>c.key==='decision')!.passed;
+function complete(engine:SimulationEngine,runtime:ProgramRuntime){
+ for(let i=0;i<12000&&engine.snapshot().mission.status!=='completed';i++)runtime.step(10);
+ return engine.snapshot().mission;
+}
 
-describe('S01 exige exactamente un IR inicial',()=>{
- it('A: sin IR no inicia',()=>{
+describe('S01 ejecuta siempre y evalúa la elección IR de forma pasiva',()=>{
+ it('A: sin IR inicia igualmente y espera la señal',()=>{
   const {engine,runtime}=setup(false,false);
   expect(runtime.run(src)).toEqual([]);
-  expect(runtime.blockedReason).toBe('Activa solo IZQ o DER antes de probar S01.');
-  expect(engine.status).toBe('idle');expect(engine.programControlled).toBe(false);
+  expect(engine.status).toBe('running');expect(engine.programControlled).toBe(true);
+  runtime.step(300);
+  expect(engine.robot.lcd[0]).toContain('ELIGE UN IR');
+  expect(decision(engine)).toBe(false);
  });
- it('B: ambos IR no inicia',()=>{
+ it('B: ambos IR inician igualmente y no se elige ruta',()=>{
   const {engine,runtime}=setup(true,true);
-  runtime.run(src);
-  expect(runtime.blockedReason).toBe('S01 necesita un único estímulo inicial. Deja activo solo IZQ o DER.');
-  expect(engine.status).toBe('idle');expect(engine.programControlled).toBe(false);
+  expect(runtime.run(src)).toEqual([]);
+  expect(engine.status).toBe('running');
+  runtime.step(300);
+  expect(decision(engine)).toBe(false);
+  expect(engine.snapshot().mission.status).toBe('in_progress');
  });
- it('C: solo IZQ inicia y su objetivo es la caja izquierda',()=>{
+ it('C: solo IZQ → el programa lo lee y el evaluador elige la ruta izquierda',()=>{
   const {engine,runtime}=setup(true,false);
   expect(runtime.run(src)).toEqual([]);
-  expect(runtime.blockedReason).toBeNull();
-  expect(engine.status).toBe('running');expect(engine.obstacles).toHaveLength(2);expect(initialIR(engine)).toEqual({left:true,right:false});
+  expect(engine.status).toBe('running');expect(engine.obstacles).toHaveLength(2);
+  runtime.step(300);
+  expect(decision(engine)).toBe(true);
  });
- it('D: solo DER inicia y su objetivo es la caja derecha',()=>{
+ it('D: solo DER → el programa lo lee y el evaluador elige la ruta derecha',()=>{
   const {engine,runtime}=setup(false,true);
-  runtime.run(src);
-  expect(engine.status).toBe('running');expect(engine.obstacles).toHaveLength(2);expect(initialIR(engine)).toEqual({left:false,right:true});
+  runtime.run(src);runtime.step(300);
+  expect(engine.status).toBe('running');expect(engine.obstacles).toHaveLength(2);
+  expect(decision(engine)).toBe(true);
  });
- it('E: cambiar IR durante el intento no altera ruta, obstáculo ni initialIR',()=>{
+ it('E: IR activado DURANTE el intento y leído por el programa fija la ruta en ese mismo intento',()=>{
+  const {engine,runtime}=setup(false,false);
+  runtime.run(src);runtime.step(300);
+  expect(decision(engine)).toBe(false);
+  runtime.command({type:'ir',side:'right',value:true});
+  expect(engine.robot.irRight).toBe(true);
+  const mission=complete(engine,runtime);
+  expect(runtime.diagnostic).toBeNull();
+  expect(mission.status).toBe('completed');expect(mission.checks.every(c=>c.passed)).toBe(true);
+ });
+ it('F: el motor no ignora cambios de IR en running ni en pausa; la ruta ya elegida no cambia',()=>{
   const {engine,runtime}=setup(true,false);
-  runtime.run(src);runtime.step(100);
+  runtime.run(src);runtime.step(300);
   const before=JSON.stringify(engine.obstacles);
   runtime.command({type:'ir',side:'left',value:false});
   runtime.command({type:'ir',side:'right',value:true});
-  expect(engine.robot.irLeft).toBe(true);expect(engine.robot.irRight).toBe(false);
+  expect(engine.robot.irLeft).toBe(false);expect(engine.robot.irRight).toBe(true);
   expect(JSON.stringify(engine.obstacles)).toBe(before);
-  expect(initialIR(engine)).toEqual({left:true,right:false});
   runtime.command({type:'pause'});
-  runtime.command({type:'ir',side:'right',value:true});
+  runtime.command({type:'ir',side:'right',value:false});
   expect(engine.robot.irRight).toBe(false);
+  runtime.command({type:'resume'});
+  const mission=complete(engine,runtime);
+  expect(mission.status).toBe('completed');expect(mission.checks.every(c=>c.passed)).toBe(true);
  });
- it('F: stop permite preparar otra elección',()=>{
+ it('G: stop y un nuevo intento con el IR opuesto evalúan la ruta opuesta',()=>{
   const {engine,runtime}=setup(true,false);
-  runtime.run(src);runtime.step(100);
-  runtime.command({type:'stop'});
-  runtime.command({type:'ir',side:'left',value:false});
-  runtime.command({type:'ir',side:'right',value:true});
-  expect(engine.robot.irRight).toBe(true);expect(engine.obstacles).toHaveLength(2);
- });
- it('G: IZQ→DER entre intentos mueve el obstáculo y initialIR',()=>{
-  const {engine,runtime}=setup(true,false);
-  runtime.run(src);expect(initialIR(engine)).toEqual({left:true,right:false});
+  runtime.run(src);runtime.step(300);
   runtime.command({type:'stop'});
   runtime.command({type:'ir',side:'left',value:false});
   runtime.command({type:'ir',side:'right',value:true});
   runtime.run(src);
   expect(engine.obstacles).toHaveLength(2);
-  expect(initialIR(engine)).toEqual({left:false,right:true});
+  const mission=complete(engine,runtime);
+  expect(mission.status).toBe('completed');expect(mission.checks.every(c=>c.passed)).toBe(true);
  });
 });
 
@@ -86,7 +101,7 @@ describe('S01 carga siempre las dos cajas',()=>{
   ir(runtime,'left',false);ir(runtime,'right',true);expect(boxes(engine)).toEqual(BOXES);
   ir(runtime,'right',false);expect(boxes(engine)).toEqual(BOXES);
  });
- it('running no modifica las cajas al intentar cambiar IR',()=>{
+ it('cambiar IR en running no mueve las cajas',()=>{
   const {engine,runtime}=setup(true,false);runtime.run(src);runtime.step(100);
   const before=boxes(engine);
   ir(runtime,'left',false);ir(runtime,'right',true);
@@ -102,7 +117,7 @@ describe('S01 carga siempre las dos cajas',()=>{
   ir(runtime,'left',false);ir(runtime,'right',true);
   expect(boxes(engine)).toEqual(BOXES);
  });
- it('I: nuevo intento con IR opuesto no hace spawn/despawn, solo cambia el objetivo',()=>{
+ it('I: nuevo intento con IR opuesto no hace spawn/despawn, solo cambia el objetivo evaluado',()=>{
   const {engine,runtime}=setup(true,false);
   runtime.run(src);expect(boxes(engine)).toEqual(BOXES);
   runtime.command({type:'stop'});
@@ -110,7 +125,8 @@ describe('S01 carga siempre las dos cajas',()=>{
   expect(boxes(engine)).toEqual(BOXES);
   runtime.run(src);
   expect(boxes(engine)).toEqual(BOXES);
-  expect(initialIR(engine)).toEqual({left:false,right:true});
+  runtime.step(300);
+  expect(decision(engine)).toBe(true);
  });
 });
 
@@ -121,7 +137,7 @@ describe('S01 evalúa la caja correcta',()=>{
   it(`D/E/F/G: IR ${irSide} espera ${own}; mover la otra caja no cumple`,()=>{
    const {engine,runtime}=setup(irSide==='left',irSide==='right');
    runtime.run(src);
-   expect(initialIR(engine)).toEqual({left:irSide==='left',right:irSide==='right'});
+   runtime.step(300);
    strike(engine,other,dir);strike(engine,other,wrongDir);
    expect(obstacleCheck(engine)).toBe(false);
    strike(engine,own,wrongDir);

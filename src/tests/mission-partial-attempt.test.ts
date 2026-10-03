@@ -14,6 +14,7 @@ function partialS01(){
   runtime.command({type:'ir',side:'left',value:true});
   expect(runtime.run(mentorSolutions.s01.source)).toEqual([]);
   engine.emit({type:'IR_READ',side:'left',active:true});
+  engine.emit({type:'IR_READ',side:'right',active:false});
   engine.emit({type:'LCD_UPDATED',rows:['IR izquierdo','']} as never);
   return {engine,runtime};
 }
@@ -25,6 +26,7 @@ describe('partial attempts survive a manual stop',()=>{
     runtime.run(mentorSolutions.s01.source);
     expect(passedKeys(engine)).toEqual([]);
     engine.emit({type:'IR_READ',side:'left',active:true});
+    engine.emit({type:'IR_READ',side:'right',active:false});
     engine.emit({type:'LCD_UPDATED',rows:['IR izquierdo','']} as never);
     expect(passedKeys(engine)).toEqual(['decision']);
     expect(view(engine)).toMatchObject({phase:'running',passed:1,total:4});

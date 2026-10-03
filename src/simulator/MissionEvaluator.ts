@@ -17,10 +17,10 @@ export interface MissionEvidence {
 /** Pure evidence accumulator: a reset/new run cannot inherit earlier successes. */
 export class MissionEvaluator {
  private active=false;
- private initialIR:{left:boolean;right:boolean}|null=null;
- private initialButton=false;
- private reads=new Set<'left'|'right'>();
- private buttonRead=false;
+ /** Latest IR values the program itself read during this attempt (null = not read yet). */
+ private irSeen:{left:boolean|null;right:boolean|null}={left:null,right:null};
+ /** S01/S02 route choice demonstrated by the program's own reads. Frozen once valid; it only feeds evaluation, never execution. */
+ private choice:{left:boolean;right:boolean;button:boolean}|null=null;
  private lineReads=new Set<'left'|'center'|'right'>();
  private lineLostEvents=0;
  private movedSides=new Set<'left'|'right'>();private movedBoxes=new Map<string,'left'|'right'>();
@@ -71,8 +71,8 @@ export class MissionEvaluator {
  constructor(private track:TrackDefinition){}
  setLineThresholds(values:LineThresholds){this.lineThresholds=[...values] as LineThresholds;}
  setScenarioIntersections(values:readonly ScenarioIntersection[]){this.scenarioIntersections=values.map(item=>({...item}));}
- reset(){this.active=false;this.initialIR=null;this.initialButton=false;this.reads.clear();this.buttonRead=false;this.lineReads.clear();this.lineLostEvents=0;this.movedSides.clear();this.movedBoxes.clear();this.lcdDecision=false;this.intersection=false;this.intersectionStopMs=0;this.distance=0;this.last=null;this.lastTickMs=0;this.completed=false;this.frozen=null;this.destinationReached=false;this.invalid=false;this.obstacleDetections.clear();this.obstacleReadEvents=0;this.lcdNumber=null;this.s03IntersectionActive=null;this.s03IntersectionHeading=0;this.s03IntersectionTurned=false;this.s03IntersectionResponses=0;this.s03RespondedIntersections.clear();this.s04Gap1Seen=false;this.s04Gap1Crossed=false;this.s04Gap2Seen=false;this.s04Intersection1=false;this.s04Intersection2=false;this.s04Intersection3=false;this.s04Intersection1StopMs=0;this.s04Intersection2StopMs=0;this.s04Intersection3StopMs=0;this.s05RightActivations=0;this.s05LastRight=false;this.s05LastLeft=false;this.s05StartedByLeft=false;this.s05FrozenCount=0;this.s05CounterValidated=false;this.s05InitialLeftReleased=false;this.s05GapSeen=false;this.s05GapCrossed=false;this.s05JunctionReached=false;this.s05JunctionStopMs=0;this.s05JunctionAuthorized=false;this.s05DestinationReached=false;this.s05ExpectedBase=null;}
- start(robot:RobotState){this.reset();this.active=true;this.initialIR={left:robot.irLeft,right:robot.irRight};this.initialButton=robot.buttonPressed;this.last={x:robot.x,y:robot.y};this.lastTickMs=robot.simTimeMs;}
+ reset(){this.active=false;this.irSeen={left:null,right:null};this.choice=null;this.lineReads.clear();this.lineLostEvents=0;this.movedSides.clear();this.movedBoxes.clear();this.lcdDecision=false;this.intersection=false;this.intersectionStopMs=0;this.distance=0;this.last=null;this.lastTickMs=0;this.completed=false;this.frozen=null;this.destinationReached=false;this.invalid=false;this.obstacleDetections.clear();this.obstacleReadEvents=0;this.lcdNumber=null;this.s03IntersectionActive=null;this.s03IntersectionHeading=0;this.s03IntersectionTurned=false;this.s03IntersectionResponses=0;this.s03RespondedIntersections.clear();this.s04Gap1Seen=false;this.s04Gap1Crossed=false;this.s04Gap2Seen=false;this.s04Intersection1=false;this.s04Intersection2=false;this.s04Intersection3=false;this.s04Intersection1StopMs=0;this.s04Intersection2StopMs=0;this.s04Intersection3StopMs=0;this.s05RightActivations=0;this.s05LastRight=false;this.s05LastLeft=false;this.s05StartedByLeft=false;this.s05FrozenCount=0;this.s05CounterValidated=false;this.s05InitialLeftReleased=false;this.s05GapSeen=false;this.s05GapCrossed=false;this.s05JunctionReached=false;this.s05JunctionStopMs=0;this.s05JunctionAuthorized=false;this.s05DestinationReached=false;this.s05ExpectedBase=null;}
+ start(robot:RobotState){this.reset();this.active=true;this.last={x:robot.x,y:robot.y};this.lastTickMs=robot.simTimeMs;}
  /** Manual stop / natural end: close the attempt keeping what it achieved. The evidence is evaluated while the attempt is still valid and frozen as in_progress (or completed, if every check already passes); nothing later (IR, sensors, motion) can change it. reset()/start() clear it. */
  stopAttempt(robot:RobotState){
   if(!this.active||this.invalid||this.frozen)return;
@@ -84,8 +84,8 @@ export class MissionEvaluator {
  invalidate(){this.invalid=true;this.active=false;if(!this.completed)this.frozen=null;}
  observeEvent(event:SimulationEvent){
   if(!this.active||this.invalid)return;
-  if(event.type==='IR_READ')this.reads.add(event.side);
-  if(event.type==='BUTTON_READ')this.buttonRead=true;
+  if(event.type==='IR_READ'){this.irSeen[event.side]=event.active;this.chooseFromReads();}
+  if(event.type==='BUTTON_READ'&&event.active)this.chooseFromButton();
   if(event.type==='LINE_SENSOR_READ')this.lineReads.add(event.side);
   if(event.type==='LINE_LOST')this.lineLostEvents++;
   if(event.type==='OBSTACLE_MOVED'){this.movedSides.add(event.side);this.movedBoxes.set(event.obstacleId,event.side);}
@@ -93,17 +93,29 @@ export class MissionEvaluator {
   if(event.type==='INTERSECTION_RESPONDED'){this.s03RespondedIntersections.add(event.intersectionId);this.s03IntersectionResponses=this.s03RespondedIntersections.size;}
   if(event.type==='LCD_UPDATED'){
    const text=event.rows.join(' ').toUpperCase();
-   if(this.initialIR?.left&&!this.initialIR?.right&&text.includes('IR IZQUIERDO'))this.lcdDecision=true;
-   if(this.initialIR?.right&&!this.initialIR?.left&&text.includes('IR DERECHO'))this.lcdDecision=true;
+   if(this.choice?.left&&!this.choice.right&&text.includes('IR IZQUIERDO'))this.lcdDecision=true;
+   if(this.choice?.right&&!this.choice.left&&text.includes('IR DERECHO'))this.lcdDecision=true;
    const numbers=text.match(/-?\d+/g);if(numbers?.length)this.lcdNumber=Number(numbers[numbers.length-1]);
   }
+ }
+ /** S01: exactly one IR read active. S02: any IR combination read active. Reading only one side is not enough. */
+ private chooseFromReads(){
+  const {left,right}=this.irSeen;
+  if(this.choice||left===null||right===null)return;
+  if(this.track.id==='s01'&&left!==right)this.choice={left,right,button:false};
+  if(this.track.id==='s02'&&(left||right))this.choice={left,right,button:false};
+ }
+ /** S02: a pressed button the program read selects Base 3, unless an IR already read active is the selection. */
+ private chooseFromButton(){
+  if(this.choice||this.track.id!=='s02'||this.irSeen.left||this.irSeen.right)return;
+  this.choice={left:false,right:false,button:true};
  }
  observeTick(robot:RobotState){
   if(!this.active||this.invalid)return;
   if(this.last)this.distance+=Math.hypot(robot.x-this.last.x,robot.y-this.last.y);
   this.last={x:robot.x,y:robot.y};
-  if(this.track.id==='s01'&&this.initialIR){
-   const expectedId=this.initialIR.left&&!this.initialIR.right?'rect270':this.initialIR.right&&!this.initialIR.left?'rect272':null;
+  if(this.track.id==='s01'&&this.choice){
+   const expectedId=this.choice.left&&!this.choice.right?'rect270':this.choice.right&&!this.choice.left?'rect272':null;
    const expected=expectedId?this.track.finishZones.find(zone=>zone.id===expectedId):null;
    if(expected){
     const nearestX=Math.max(expected.x,Math.min(robot.x,expected.x+expected.width));
@@ -111,8 +123,8 @@ export class MissionEvaluator {
     if(Math.hypot(robot.x-nearestX,robot.y-nearestY)<=ROBOT.radiusCm)this.destinationReached=true;
    }
   }
-  if(this.track.id==='s02'&&this.initialIR){
-   const expectedId=this.initialIR.left&&this.initialIR.right?'base3':this.initialIR.right&&!this.initialIR.left?'base1':this.initialIR.left&&!this.initialIR.right?'base2':!this.initialIR.left&&!this.initialIR.right&&this.initialButton?'base3':null;
+  if(this.track.id==='s02'&&this.choice){
+   const expectedId=this.choice.left&&this.choice.right?'base3':this.choice.right&&!this.choice.left?'base1':this.choice.left&&!this.choice.right?'base2':this.choice.button?'base3':null;
    const expected=expectedId?this.track.finishZones.find(zone=>zone.id===expectedId):null;
    if(expected){
     // En S02 el robot se detiene cuando sus sensores delanteros reconocen la
@@ -229,19 +241,18 @@ export class MissionEvaluator {
   const checks:{key:string;label:string;passed:boolean}[]=[];
   const check=(key:string,label:string,passed:boolean)=>checks.push({key,label,passed:this.active&&!this.invalid&&passed});
   if(this.track.id==='s01'){
-   const left=!!this.initialIR?.left&&!this.initialIR?.right;
-   const right=!!this.initialIR?.right&&!this.initialIR?.left;
-   check('decision','Leer el IR inicial y guardar la decisión de ruta',this.reads.size>0&&(left||right)&&this.lcdDecision);
+   const left=!!this.choice?.left&&!this.choice.right;
+   const right=!!this.choice?.right&&!this.choice.left;
+   check('decision','Leer el IR inicial y guardar la decisión de ruta',(left||right)&&this.lcdDecision);
    check('line','Seguir la línea usando el sensor central y un umbral',this.lineReads.has('center')&&this.distance>=40);
    check('finish','Llegar a la base correspondiente',this.destinationReached);
    check('obstacle','Mover el obstáculo hacia el lado contrario',left?this.movedBoxes.get(S01_TARGET_BOX_ID.left)==='right':right?this.movedBoxes.get(S01_TARGET_BOX_ID.right)==='left':false);
   }else if(this.track.id==='s02'){
-   const left=!!this.initialIR?.left,right=!!this.initialIR?.right;
-   const base3WithButton=!left&&!right&&this.initialButton;
+   const left=!!this.choice?.left,right=!!this.choice?.right;
+   const base3WithButton=!!this.choice?.button;
    const expected=left&&right?'base3':right&&!left?'base1':left&&!right?'base2':base3WithButton?'base3':null;
    const expectedLabel=expected==='base1'?'Base 1':expected==='base2'?'Base 2':expected==='base3'?'Base 3':null;
-   const initialSignalRead=base3WithButton?this.buttonRead:this.reads.has('left')&&this.reads.has('right');
-   check('ir',expectedLabel?`Leer la señal inicial y determinar ${expectedLabel}`:'Leer una señal inicial válida',initialSignalRead&&!!expected);
+   check('ir',expectedLabel?`Leer la señal inicial y determinar ${expectedLabel}`:'Leer una señal inicial válida',!!expected);
    check('line','Seguir la línea de forma fluida usando los tres sensores',this.lineReads.size===3&&this.distance>=50&&this.lineLostEvents===0);
    check('cross','Reconocer el cruce central y detenerse al menos 0,3 s',this.intersection&&this.intersectionStopMs>=300);
    check('finish',expectedLabel?`Llegar a ${expectedLabel} y detener ambos motores`:'Llegar a la base indicada y detener ambos motores',stationary&&!!expected&&this.destinationReached);

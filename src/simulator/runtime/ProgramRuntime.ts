@@ -9,16 +9,13 @@ import type {Diagnostic,Execution,RuntimeWait} from './runtime-types';
 import {LIMITS} from './runtime-limits';
 import {PHYSICS_STEP_MS} from '../config';
 export class ProgramRuntime {
- diagnostic:Diagnostic|null=null;blockedReason:string|null=null;private execution:Execution<void>|null=null;private wait:RuntimeWait|null=null;private accumulated=0;
+ diagnostic:Diagnostic|null=null;private execution:Execution<void>|null=null;private wait:RuntimeWait|null=null;private accumulated=0;
  constructor(public readonly engine:SimulationEngine){}
  review(source:string):Diagnostic[]{try{validate(new Parser(source).parse());return [];}catch(error){return [diagnosticFor(error)];}}
  run(source:string):Diagnostic[]{
-  this.blockedReason=null;
   try{const program=new Parser(source).parse();validate(program);
-   const issue=this.engine.startIssue();
-   if(issue){this.blockedReason=issue;this.engine.feedback=issue;return [];}
    this.cancel();this.diagnostic=null;this.engine.status='compiling';
-   const {irLeft,irRight,buttonPressed}=this.engine.robot;this.engine.reset();Object.assign(this.engine.robot,{irLeft,irRight,buttonPressed});this.execution=new Interpreter(program,new IrohRuntimeAdapter(this.engine)).run();this.engine.freezeInitialStimuli();this.engine.programControlled=true;this.engine.status='running';this.engine.mission.start(this.engine.robot);this.engine.emit({type:'PROGRAM_STARTED'});return [];}
+   const {irLeft,irRight,buttonPressed}=this.engine.robot;this.engine.reset();Object.assign(this.engine.robot,{irLeft,irRight,buttonPressed});this.execution=new Interpreter(program,new IrohRuntimeAdapter(this.engine)).run();this.engine.programControlled=true;this.engine.status='running';this.engine.mission.start(this.engine.robot);this.engine.emit({type:'PROGRAM_STARTED'});return [];}
   catch(error){this.fail(error);return [this.diagnostic!];}
  }
  private cancel(){this.execution?.return();this.execution=null;this.wait=null;this.accumulated=0;this.engine.robot.leftMotor=0;this.engine.robot.rightMotor=0;}

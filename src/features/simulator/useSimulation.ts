@@ -62,9 +62,6 @@ export function useSimulation(sessionId:string) {
           case 'compile-error':
             if (response.requestId===requestId.current) { clearDeadline(); pendingRun.current=null; setDiagnostics(response.diagnostics); setReviewState('Error'); }
             break;
-          case 'run-blocked':
-            if (response.requestId===requestId.current) { clearDeadline(); pendingRun.current=null; setDiagnostics([]); setReviewState(response.message); }
-            break;
           case 'runtime-error': clearDeadline(); setDiagnostics([response.diagnostic]); setReviewState('Error'); break;
           case 'program-finished': setReviewState('Prueba terminada · puedes probar otra vez'); break;
         }
