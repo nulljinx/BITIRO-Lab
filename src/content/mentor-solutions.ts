@@ -101,7 +101,7 @@ void loop() {
         }
       }
 
-      pausa(20);
+      pausa(100);
     }
   }
 

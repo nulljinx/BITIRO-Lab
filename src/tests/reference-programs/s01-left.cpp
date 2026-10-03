@@ -38,5 +38,5 @@ void loop() {
     cajaMovida = true;
   }
   seguirLinea();
-  pausa(20);
+  pausa(100);
 }
