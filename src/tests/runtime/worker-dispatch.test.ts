@@ -58,7 +58,7 @@ describe('simulator worker dispatcher',()=>{
  it('run-program starts execution and echoes the requestId with running:true',async()=>{
   await boot();
   send({type:'configure-track',trackId:'s01'});take();
-  send({type:'run-program',source:VALID,requestId:42});
+  send({type:'ir',side:'left',value:true});take();send({type:'run-program',source:VALID,requestId:42});
   const [ok,snap]=take();
   expect(ok).toEqual({type:'compile-ok',requestId:42,running:true});
   if(snap.type!=='snapshot')throw new Error('expected snapshot');
@@ -67,7 +67,7 @@ describe('simulator worker dispatcher',()=>{
  it('reports compile errors with the requestId and diagnostics, without starting the run',async()=>{
   await boot();
   send({type:'configure-track',trackId:'s01'});take();
-  send({type:'run-program',source:'void setup(){ int ;',requestId:7});
+  send({type:'ir',side:'left',value:true});take();send({type:'run-program',source:'void setup(){ int ;',requestId:7});
   const [error,snap]=take();
   expect(error.type).toBe('compile-error');
   if(error.type!=='compile-error')throw new Error('unreachable');
@@ -79,7 +79,7 @@ describe('simulator worker dispatcher',()=>{
  it('maps stop-program to a stop of the engine',async()=>{
   await boot();
   send({type:'configure-track',trackId:'s01'});
-  send({type:'run-program',source:VALID,requestId:1});take();
+  send({type:'ir',side:'left',value:true});take();send({type:'run-program',source:VALID,requestId:1});take();
   send({type:'stop-program'});
   const [snap]=take();
   if(snap.type!=='snapshot')throw new Error('expected snapshot');
@@ -101,6 +101,7 @@ describe('simulator worker dispatcher',()=>{
  it('cancels the pending tick of the previous track when a new track is configured',async()=>{
   await boot();
   send({type:'configure-track',trackId:'s01'});
+  send({type:'ir',side:'left',value:true});
   send({type:'run-program',source:VALID,requestId:1});take();
   expect(vi.getTimerCount()).toBe(1);
   send({type:'configure-track',trackId:'s02'});take();
@@ -111,7 +112,7 @@ describe('simulator worker dispatcher',()=>{
  it('serialises a runtime fault as runtime-error with a diagnostic, once, and an error snapshot',async()=>{
   await boot();
   send({type:'configure-track',trackId:'s01'});take();
-  send({type:'run-program',source:RUNTIME_FAULT,requestId:3});take();
+  send({type:'ir',side:'left',value:true});take();send({type:'run-program',source:RUNTIME_FAULT,requestId:3});take();
   vi.advanceTimersByTime(200);
   const messages=take();
   const errors=messages.filter(m=>m.type==='runtime-error');

@@ -46,6 +46,16 @@ export class SimulationEngine {
   const intersections=this.track.id==='s03'?this.scenarioIntersections.filter(item=>!this.s03ConsumedIntersections.has(item.id)):this.scenarioIntersections;
   return withScenarioIntersections({...this.track,obstacles:this.obstacles},intersections);
  }
+ /** S01 freezes its initial IR choice while an attempt is running or paused. */
+ s01IrLocked(){return this.track.id==='s01'&&this.programControlled&&(this.status==='running'||this.status==='paused');}
+ /** S01 needs exactly one initial IR stimulus (IZQ xor DER); returns a message when the precondition fails. */
+ s01StartIssue():string|null{
+  if(this.track.id!=='s01')return null;
+  const {irLeft,irRight}=this.robot;
+  if(!irLeft&&!irRight)return 'Activa solo IZQ o DER antes de probar S01.';
+  if(irLeft&&irRight)return 'S01 necesita un único estímulo inicial. Deja activo solo IZQ o DER.';
+  return null;
+ }
  /** Keep the S01 physical scenario tied to the one IR chosen before running. */
  syncS01Scenario(){
   if(this.track.id!=='s01')return;
@@ -111,7 +121,7 @@ export class SimulationEngine {
    case 'stop':this.robot.leftMotor=0;this.robot.rightMotor=0;this.status='idle';this.feedback='Has detenido ambos motores.';break;
    case 'speed':if([.5,1,2].includes(command.value))this.speed=command.value;break;
    case 'motors':{const clamp=(v:number)=>Number.isFinite(v)?Math.max(-ROBOT.maxWheelCmS,Math.min(ROBOT.maxWheelCmS,v)):0;this.robot.leftMotor=clamp(command.left);this.robot.rightMotor=clamp(command.right);this.status='running';this.feedback='Prueba manual de los motores. El programa del estudiante está detenido.';break;}
-   case 'ir':this.robot[command.side==='left'?'irLeft':'irRight']=command.value;if(this.track.id==='s01'&&!this.programControlled)this.syncS01Scenario();break;
+   case 'ir':if(this.track.id==='s01'&&this.s01IrLocked()){this.feedback='El estímulo inicial de S01 queda fijo durante el intento. Detén o reinicia para cambiarlo.';break;}this.robot[command.side==='left'?'irLeft':'irRight']=command.value;if(this.track.id==='s01'&&!this.programControlled)this.syncS01Scenario();break;
    case 'button':this.robot.buttonPressed=command.value;break;
    case 'pose':{
     const x=Math.max(ROBOT.radiusCm,Math.min(this.track.physicalWidthCm-ROBOT.radiusCm,command.x));

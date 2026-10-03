@@ -39,6 +39,7 @@ export type WorkerResponse=
  | {type:'snapshot';snapshot:Snapshot}
  | {type:'compile-ok';requestId:number;running:boolean}
  | {type:'compile-error';requestId:number;diagnostics:import('./runtime/runtime-types').Diagnostic[]}
+ | {type:'run-blocked';requestId:number;message:string}
  | {type:'runtime-error';diagnostic:import('./runtime/runtime-types').Diagnostic}
  | {type:'program-finished'};
 export type Command =

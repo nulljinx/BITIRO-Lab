@@ -35,6 +35,7 @@ test('reduced motion, keyboard focus and guide stay accessible',async({page})=>{
 });
 test('mobile executes into simulator and reports errors back at editor',async({page})=>{
  await page.setViewportSize({width:390,height:844});await page.goto('/intermedio/s01');await expect(page.locator('.monaco-editor')).toBeVisible();
+ await page.getByRole('button',{name:/Sensores y telemetría/}).click();await page.getByRole('dialog').getByRole('button',{name:'IR izquierdo',exact:true}).click();await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);
  await page.getByRole('button',{name:'Probar código',exact:true}).click();await expect(page.locator('.runtime-clock .status')).toContainText('Ejecutando');await expect(page.getByRole('button',{name:'Detener la prueba',exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Detener la prueba',exact:true}).click();await expect(page.locator('.runtime-clock .status')).toContainText('Detenido');
  const editor=page.getByRole('textbox',{name:/Código Arduino/});await editor.focus();await page.context().grantPermissions(['clipboard-read','clipboard-write']);await page.evaluate(()=>navigator.clipboard.writeText('void setup(){funcionInexistente();} void loop(){}'));await page.keyboard.press('Control+Home');await page.keyboard.press('Control+Shift+End');await page.keyboard.press('Control+V');

@@ -39,7 +39,8 @@ self.onmessage=(event:MessageEvent<WorkerCommand>)=>{
     engine.setS03Layout(command.obstacles,command.intersections);
   } else if(command.type==='load-program'||command.type==='run-program'){
     const diagnostics=command.type==='run-program'?runtime.run(command.source):runtime.review(command.source);
-    post(diagnostics.length?{type:'compile-error',requestId:command.requestId,diagnostics}:{type:'compile-ok',requestId:command.requestId,running:command.type==='run-program'});
+    if(command.type==='run-program'&&runtime.blockedReason)post({type:'run-blocked',requestId:command.requestId,message:runtime.blockedReason});
+    else post(diagnostics.length?{type:'compile-error',requestId:command.requestId,diagnostics}:{type:'compile-ok',requestId:command.requestId,running:command.type==='run-program'});
     lastDiagnostic=runtime.diagnostic;
   } else runtime.command(command.type==='stop-program'?{type:'stop'}:command);
   previous=performance.now(); lastStatus=engine.status; snapshot(); schedule();

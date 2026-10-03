@@ -217,3 +217,4 @@ h1,h2,h3{font-family:var(--font-display);font-feature-settings:'ss01' 1,'ss02' 1
 .session-row.is-next .row-state:before{background:var(--action-primary)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--action-primary) 10%,transparent)}
 .session-row.is-visited .path-node i{background:var(--brand-blue);border-color:var(--brand-blue);box-shadow:none}
 .session-row.is-visited .row-state{color:var(--brand-blue)}
+.ir-buttons button:disabled{opacity:.55;cursor:not-allowed}

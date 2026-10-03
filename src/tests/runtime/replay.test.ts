@@ -15,6 +15,7 @@ void loop() {
 
 it('can run the same loaded source again from the track start',()=>{
  const engine=new SimulationEngine(track),runtime=new ProgramRuntime(engine);
+ runtime.command({type:'ir',side:'left',value:true});
  expect(runtime.run(source)).toEqual([]);
  for(let i=0;i<30;i++)runtime.step(10);
  const firstRun={x:engine.robot.x,y:engine.robot.y,time:engine.robot.simTimeMs};

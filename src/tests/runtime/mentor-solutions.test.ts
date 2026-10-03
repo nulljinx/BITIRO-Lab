@@ -136,16 +136,13 @@ for(const scenario of [
   expect(engine.robot.rightMotor).toBe(0);
 });
 
-it('S01 mentor solution refuses an invalid initial IR scenario instead of choosing a route silently',()=>{
+it('S01 refuses to start without exactly one initial IR instead of choosing a route silently',()=>{
   const engine=new SimulationEngine(trackForSession('s01'));
   const runtime=new ProgramRuntime(engine);
   expect(runtime.run(mentorSolutions.s01.source)).toEqual([]);
-  for(let i=0;i<50;i++)runtime.step(10);
-  expect(runtime.diagnostic).toBeNull();
-  expect(engine.robot.leftMotor).toBe(0);
-  expect(engine.robot.rightMotor).toBe(0);
-  expect(engine.robot.lcd[0]).toContain('ELIGE UN IR');
-  expect(engine.snapshot().mission.status).toBe('in_progress');
+  expect(runtime.blockedReason).not.toBeNull();
+  expect(engine.status).toBe('idle');
+  expect(engine.programControlled).toBe(false);
 });
 
 it('S04 mentor solution uses functions, detects the gap case and completes the official route',()=>{
