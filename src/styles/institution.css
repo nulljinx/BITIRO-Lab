@@ -745,11 +745,11 @@
 .mustakis-hero.mustakis-hero-v71:after{display:none;}
 
 /* Mentor hero: subtle community photo texture, kept behind readable content. */
-.mustakis-hero.mustakis-hero-v71.is-mentor-hero{background:var(--legacy-hex-f8f7f3);}
-.mustakis-hero.mustakis-hero-v71.is-mentor-hero:before{z-index:-3;background:linear-gradient(90deg,var(--legacy-color-rgba-14-13-159-p018) 1px,transparent 1px),linear-gradient(var(--legacy-color-rgba-14-13-159-p018) 1px,transparent 1px);background-size:64px 64px;mask-image:linear-gradient(90deg,transparent 0%,var(--neutral-black) 40%,var(--neutral-black) 100%);}
+.mustakis-hero.mustakis-hero-v71.is-photo-hero{background:var(--legacy-hex-f8f7f3);}
+.mustakis-hero.mustakis-hero-v71.is-photo-hero:before{z-index:-3;background:linear-gradient(90deg,var(--legacy-color-rgba-14-13-159-p018) 1px,transparent 1px),linear-gradient(var(--legacy-color-rgba-14-13-159-p018) 1px,transparent 1px);background-size:64px 64px;mask-image:linear-gradient(90deg,transparent 0%,var(--neutral-black) 40%,var(--neutral-black) 100%);}
 .mentor-hero-photo{position:absolute;inset:-18px -22px;z-index:-2;pointer-events:none;background-image:linear-gradient(90deg,var(--legacy-color-rgba-248-247-243-p97) 0%,var(--legacy-color-rgba-248-247-243-p90) 24%,var(--legacy-color-rgba-248-247-243-p68) 40%,var(--legacy-color-rgba-248-247-243-p38) 58%,var(--legacy-color-rgba-248-247-243-p34) 76%,var(--legacy-color-rgba-248-247-243-p48) 100%),url('/brand/mustakis/cyt-talca-group.jpg');background-size:cover;background-position:center 61%;filter:blur(3.5px) saturate(.86) contrast(.94);transform:scale(1.025);opacity:.88;}
 .mentor-hero-photo:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,var(--legacy-color-rgba-255-255-255-p03),var(--legacy-color-rgba-247-247-244-p08));}
-.mustakis-hero.mustakis-hero-v71.is-mentor-hero .mustakis-hero-copy,.mustakis-hero.mustakis-hero-v71.is-mentor-hero .mustakis-focus-card{position:relative;z-index:1;}
+.mustakis-hero.mustakis-hero-v71.is-photo-hero .mustakis-hero-copy,.mustakis-hero.mustakis-hero-v71.is-photo-hero .mustakis-focus-card{position:relative;z-index:1;}
 @media(max-width:900px){.mentor-hero-photo{opacity:.62;background-position:58% 58%;filter:blur(5px) saturate(.78);background-image:linear-gradient(90deg,var(--legacy-color-rgba-248-247-243-p94) 0%,var(--legacy-color-rgba-248-247-243-p79) 48%,var(--legacy-color-rgba-248-247-243-p58) 100%),url('/brand/mustakis/cyt-talca-group.jpg');}}
 @media(prefers-reduced-motion:reduce){.mentor-hero-photo{transform:scale(1.02);}}
 .mustakis-grid-motif{position:absolute;right:4.5%;top:42px;width:28px;height:28px;border-radius:7px;background:var(--legacy-color-rgba-14-13-159-p055);box-shadow:40px 0 var(--legacy-color-rgba-14-13-159-p055),0 40px var(--legacy-color-rgba-14-13-159-p055),40px 40px var(--legacy-color-rgba-14-13-159-p055);z-index:-1;pointer-events:none;}
@@ -2052,44 +2052,44 @@
 
 
 /* v7.70 · mentor workspace cleanup */
-.theme-mustakis.is-mentor-view .workspace-learning{
+.theme-mustakis .workspace-learning{
   padding-top:38px;
   padding-bottom:44px;
 }
-.theme-mustakis.is-mentor-view .workspace-learning .section-heading{
+.theme-mustakis .workspace-learning .section-heading{
   align-items:flex-end;
 }
-.theme-mustakis.is-mentor-view .workspace-learning .section-heading h2{
+.theme-mustakis .workspace-learning .section-heading h2{
   margin-bottom:4px;
 }
-.theme-mustakis.is-mentor-view .institution-sessions{
+.theme-mustakis .institution-sessions{
   margin-top:18px;
   gap:14px;
 }
-.theme-mustakis.is-mentor-view .institution-session{
+.theme-mustakis .institution-session{
   min-height:228px;
 }
-.theme-mustakis.is-mentor-view .institution-session.is-preparing-card{
+.theme-mustakis .institution-session.is-preparing-card{
   min-height:142px;
   align-self:start;
   padding:18px 18px 16px;
   background:var(--legacy-hex-f5f7fa);
   box-shadow:none;
 }
-.theme-mustakis.is-mentor-view .institution-session.is-preparing-card:before{
+.theme-mustakis .institution-session.is-preparing-card:before{
   height:3px;
 }
-.theme-mustakis.is-mentor-view .institution-session.is-preparing-card h3{
+.theme-mustakis .institution-session.is-preparing-card h3{
   margin:8px 0 0;
   font-size:16px;
   line-height:1.2;
 }
-.theme-mustakis.is-mentor-view .institution-session.is-preparing-card>p,
-.theme-mustakis.is-mentor-view .institution-session.is-preparing-card .session-skills,
-.theme-mustakis.is-mentor-view .institution-session.is-preparing-card>.small{
+.theme-mustakis .institution-session.is-preparing-card>p,
+.theme-mustakis .institution-session.is-preparing-card .session-skills,
+.theme-mustakis .institution-session.is-preparing-card>.small{
   display:none;
 }
-.theme-mustakis.is-mentor-view .institution-session.is-preparing-card .session-state{
+.theme-mustakis .institution-session.is-preparing-card .session-state{
   margin-top:8px;
 }
 .mentor-institution-strip{
@@ -2130,10 +2130,27 @@
   .mentor-institution-platform{display:none;}
 }
 @media(max-width:767px){
-  .theme-mustakis.is-mentor-view .workspace-learning{padding-top:28px;padding-bottom:34px;}
-  .theme-mustakis.is-mentor-view .institution-session.is-preparing-card{min-height:118px;}
+  .theme-mustakis .workspace-learning{padding-top:28px;padding-bottom:34px;}
+  .theme-mustakis .institution-session.is-preparing-card{min-height:118px;}
   .mentor-institution-strip{grid-template-columns:1fr;padding:16px 20px;gap:14px;}
   .mentor-institution-partner{padding-left:0;border-left:0;border-top:1px solid var(--legacy-color-rgba-9-8-95-p10);padding-top:12px;}
   .mentor-institution-identity img{width:140px;}
   .mentor-compact-footer{padding:14px 20px;align-items:flex-start;flex-direction:column;gap:10px;}
+}
+
+/* v8 · participant view shares the mentor visual system */
+.mustakis-method-compact{list-style:none;margin:18px 0 0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border:1px solid var(--alpha-mustakis-navy-14);border-radius:12px;background:var(--mustakis-cream);overflow:hidden;}
+.mustakis-method-compact li{display:grid;grid-template-columns:auto 1fr;grid-template-areas:'n t' 'n d';column-gap:12px;align-items:center;padding:12px 16px;}
+.mustakis-method-compact li+li{border-left:1px solid var(--alpha-mustakis-navy-14);}
+.mustakis-method-compact b{grid-area:n;font:600 12px/1 var(--font-sans);color:var(--mustakis-blue);}
+.mustakis-method-compact strong{grid-area:t;font:600 13px/1.3 var(--font-sans);color:var(--mustakis-navy);}
+.mustakis-method-compact span{grid-area:d;font-size:11px;color:var(--text-secondary);}
+@media(max-width:1000px){
+  .mustakis-method-compact{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .mustakis-method-compact li:nth-child(3){border-left:0;}
+  .mustakis-method-compact li:nth-child(n+3){border-top:1px solid var(--alpha-mustakis-navy-14);}
+}
+@media(max-width:767px){
+  .mustakis-method-compact{grid-template-columns:1fr;}
+  .mustakis-method-compact li+li{border-left:0;border-top:1px solid var(--alpha-mustakis-navy-14);}
 }
