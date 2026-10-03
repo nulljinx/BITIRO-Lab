@@ -35,7 +35,7 @@ export async function markCloudActivity(context:CloudContext,sessionId:string,ev
 
 /** Browser-formative only; this is not a server-verified exam or mentor grade. */
 export async function submitFormativeMission(context:CloudContext,evidence:MissionEvidence):Promise<void>{
- if(evidence.status!=='completed'||evidence.checks.length!==4||!evidence.checks.every(check=>check.passed))throw new Error('La misión no cumple los objetivos.');
+ if(evidence.status!=='completed'||evidence.checks.length===0||!evidence.checks.every(check=>check.passed))throw new Error('La misión no cumple los objetivos.');
  const {data,error}=await requireSupabase().rpc('submit_my_formative_mission',{
   p_cohort_id:context.cohortId,p_session_id:evidence.sessionId,p_version:context.activityVersion,p_evidence:evidence
  });

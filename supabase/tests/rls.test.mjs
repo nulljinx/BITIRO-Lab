@@ -161,6 +161,16 @@ try {
  await rejects(user(ids.b,'select public.submit_my_formative_mission($1,$2,$3::jsonb,$4)',['mustakis-demo-talca','s01',JSON.stringify(evidence),1]),'Unjoined account cannot submit a mission in another cohort','42501');
  check((await user(ids.a,'select public.submit_my_formative_mission($1,$2,$3::jsonb,$4) as state',['mustakis-demo-talca','s01',JSON.stringify(evidence),1])).rows[0].state==='completed','Released mission stores formative simulation result in the user cohort only');
  check((await user(ids.a,"select public.mark_my_cohort_activity('mustakis-demo-talca','s01','visited',1) as state")).rows[0].state==='completed','Opening a completed mission does not downgrade formative progress');
+ await db.query("insert into public.content_releases(cohort_id,session_id,released) values ('mustakis-demo-talca','s03',true),('mustakis-demo-talca','s04',true),('mustakis-demo-talca','s05',true),('mustakis-demo-talca','s06',true) on conflict(cohort_id,session_id) do update set released=excluded.released");
+ const evidenceFor=(sessionId,patch={})=>JSON.stringify({...evidence,sessionId,...patch});
+ const submit=(id,sessionId,json)=>user(id,'select public.submit_my_formative_mission($1,$2,$3::jsonb,$4) as state',['mustakis-demo-talca',sessionId,json,1]);
+ for(const sessionId of ['s02','s03','s04','s05'])check((await submit(ids.a,sessionId,evidenceFor(sessionId))).rows[0].state==='completed',`Formative mission ${sessionId} is accepted`);
+ await rejects(submit(ids.a,'s06',evidenceFor('s06')),'Formative mission s06 is rejected','22023');
+ await rejects(submit(ids.a,'s03',evidenceFor('s03',{checks:[{key:'a',passed:true},{key:'b',passed:false}]})),'A failed check is rejected','22023');
+ await rejects(submit(ids.a,'s03',evidenceFor('s03',{checks:[]})),'Empty checks are rejected','22023');
+ await rejects(submit(ids.a,'s03',evidenceFor('s04')),'Evidence sessionId that differs from the session is rejected','22023');
+ await rejects(submit(ids.b,'s03',evidenceFor('s03')),'Unjoined account cannot submit S03 evidence','42501');
+ await db.query("delete from public.content_releases where cohort_id='mustakis-demo-talca' and session_id in ('s03','s04','s05','s06')");
 
  await rejects(user(ids.a,"select public.mentor_cohort_learning('mustakis-demo-talca',1)"),'Participant cannot access mentor learning summary','42501');
  await rejects(user(ids.a,"select public.get_my_cohort_learning('mustakis-demo-talca','s01',null)"),'Null version does not bypass authorization','42501');

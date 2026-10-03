@@ -54,7 +54,7 @@ describe('cloud-learning RPC contract',()=>{
 });
 
 describe('submitFormativeMission client guard',()=>{
- it('submits completed evidence with exactly four passed checks',async()=>{
+ it('submits completed evidence with all checks passed',async()=>{
   rpc.mockResolvedValue({data:'completed',error:null});
   const e=evidence();
   await expect(submitFormativeMission(context,e)).resolves.toBeUndefined();
@@ -62,12 +62,17 @@ describe('submitFormativeMission client guard',()=>{
  });
  it.each([
   ['not completed',evidence({status:'in_progress'} as Partial<MissionEvidence>)],
-  ['three checks',evidence({checks:[1,2,3].map(n=>({key:`k${n}`,label:'',passed:true}))} as Partial<MissionEvidence>)],
-  ['five checks',evidence({checks:[1,2,3,4,5].map(n=>({key:`k${n}`,label:'',passed:true}))} as Partial<MissionEvidence>)],
+  ['no checks',evidence({checks:[]} as Partial<MissionEvidence>)],
   ['one failed check',evidence({checks:[true,true,true,false].map((passed,n)=>({key:`k${n}`,label:'',passed}))} as Partial<MissionEvidence>)],
  ])('rejects locally without calling the server: %s',async(_name,e)=>{
   await expect(submitFormativeMission(context,e)).rejects.toThrow('La misión no cumple los objetivos.');
   expect(rpc).not.toHaveBeenCalled();
+ });
+ it.each(['s03','s04','s05'])('accepts completed %s evidence',async sessionId=>{
+  rpc.mockResolvedValue({data:'completed',error:null});
+  const e=evidence({sessionId} as Partial<MissionEvidence>);
+  await expect(submitFormativeMission(context,e)).resolves.toBeUndefined();
+  expect(rpc).toHaveBeenCalledWith('submit_my_formative_mission',{p_cohort_id:'c1',p_session_id:sessionId,p_version:3,p_evidence:e});
  });
  it('fails when the server does not answer "completed"',async()=>{
   rpc.mockResolvedValue({data:'attempted',error:null});
