@@ -16,7 +16,7 @@ function validUrl(value: string): boolean {
 export const authConfigured = Boolean(url && key && validUrl(url) && isPublicKey(key));
 export const supabase = authConfigured ? createClient(url!, key!, {
   global:{fetch:(input,init)=>fetch(input,{...init,signal:init?.signal?AbortSignal.any([init.signal,AbortSignal.timeout(15000)]):AbortSignal.timeout(15000)})},
-  auth: {flowType:'pkce', detectSessionInUrl:true, persistSession:true, autoRefreshToken:true},
+  auth: {flowType:'pkce', detectSessionInUrl:false, persistSession:true, autoRefreshToken:true},
 }) : null;
 export function requireSupabase() {
   if (!supabase) throw new Error('Las cuentas todavía no están configuradas. Los espacios institucionales requieren una cuenta BITIRO autenticada.');

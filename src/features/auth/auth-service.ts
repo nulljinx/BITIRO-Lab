@@ -1,5 +1,6 @@
 import {requireSupabase} from '../../lib/supabase';
-import {rememberOAuthNext} from './auth-navigation';
+import {rememberOAuthNext,type OAuthFlow} from './auth-navigation';
+import {providerFromSession,type SessionProvider} from './signup-flow';
 import type {Membership, Profile, SignUpInput, Site} from './auth-types';
 
 export const passwordMinimum = 12;
@@ -29,8 +30,8 @@ export async function signIn(email:string,password:string):Promise<void> {
 }
 // Identity only: Supabase's default Google scopes (openid, email, profile). No extra scopes and no provider_token use.
 // The role is never sent; accounts always start as participants and are elevated only by server-side rules.
-export async function signInWithGoogle(next='/espacios'):Promise<void> {
-  rememberOAuthNext(next);
+export async function signInWithGoogle(next='/espacios',flow:OAuthFlow='login'):Promise<void> {
+  rememberOAuthNext(next,undefined,flow);
   const {error}=await requireSupabase().auth.signInWithOAuth({provider:'google',options:{redirectTo:callbackUrl()}});
   if(error)throw new Error('No pudimos iniciar el acceso con Google. Inténtalo nuevamente o usa tu correo.');
 }
@@ -39,6 +40,25 @@ export async function signUp(input:SignUpInput):Promise<{confirmationRequired:bo
   const {data,error}=await requireSupabase().auth.signUp({email:input.email.trim(),password:input.password,options:{emailRedirectTo:callbackUrl(),data:{display_name}}});
   if(error)throw new Error('No pudimos registrar la cuenta. Revisa los datos o solicita recuperar tu contraseña si ya tienes cuenta.');
   return {confirmationRequired:!data.session};
+}
+export async function resendSignupConfirmation(email:string):Promise<void> {
+  const {error}=await requireSupabase().auth.resend({type:'signup',email:email.trim(),options:{emailRedirectTo:callbackUrl()}});
+  if(error)throw new Error('No pudimos reenviar el correo. Inténtalo nuevamente en unos minutos.');
+}
+// The single owner of the PKCE code exchange (the client is created with detectSessionInUrl:false).
+// Calls are memoised per code, so re-renders or StrictMode cannot spend the one-time code twice.
+// Resolves with the provider of the resulting session so the callback can pick the right copy.
+const exchanges=new Map<string,Promise<{provider:SessionProvider}>>();
+export function exchangeAuthCode(code:string):Promise<{provider:SessionProvider}> {
+  let task=exchanges.get(code);
+  if(!task){
+    task=requireSupabase().auth.exchangeCodeForSession(code).then(({data,error})=>{
+      if(error||!data.session)throw new Error('Este enlace no es válido o ya venció.');
+      return {provider:providerFromSession(data.session)};
+    });
+    exchanges.set(code,task);
+  }
+  return task;
 }
 export async function signOut():Promise<void> {
   const {error}=await requireSupabase().auth.signOut({scope:'local'});if(error)throw new Error('No pudimos cerrar la sesión. Inténtalo nuevamente.');

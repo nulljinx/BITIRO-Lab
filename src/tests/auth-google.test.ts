@@ -23,15 +23,30 @@ describe('Google OAuth sign-in',()=>{
     expect(consumeOAuthNext()).toBe('/espacios/mustakis/grupos/talca-a/intermedio/s01');
     expect(consumeOAuthNext()).toBeNull();
   });
-  it('rewrites unsafe destinations and ignores tampered storage',()=>{
+  it('treats unsafe or tampered storage as no destination',()=>{
     const store=memoryStore();
     rememberOAuthNext('https://evil.example',store);expect(consumeOAuthNext(store)).toBe('/espacios');
-    store.setItem(oauthNextKey,'//evil.example');expect(consumeOAuthNext(store)).toBe('/espacios');
+    store.setItem(oauthNextKey,'//evil.example');expect(consumeOAuthNext(store)).toBeNull();
+    store.setItem(oauthNextKey,'{not json');expect(consumeOAuthNext(store)).toBeNull();
     expect(consumeOAuthNext(store)).toBeNull();
   });
   it('surfaces a generic error when the provider call fails',async()=>{
     signInWithOAuth.mockResolvedValue({error:new Error('provider is not enabled')});
     const {signInWithGoogle}=await import('../features/auth/auth-service');
     await expect(signInWithGoogle()).rejects.toThrow(/Google/);
+  });
+  it('register flow never resumes at /cuenta and defaults to /espacios',()=>{
+    const store=memoryStore();
+    rememberOAuthNext('/cuenta',store,'register');expect(consumeOAuthNext(store)).toBe('/espacios');
+    rememberOAuthNext('/espacios',store,'register');expect(consumeOAuthNext(store)).toBe('/espacios');
+  });
+  it('a newer attempt overwrites a stale destination and old entries expire',()=>{
+    const store=memoryStore();
+    rememberOAuthNext('/cuenta',store,'login');rememberOAuthNext('/espacios',store,'register');
+    expect(consumeOAuthNext(store)).toBe('/espacios');
+    rememberOAuthNext('/cuenta',store,'login',1000);expect(consumeOAuthNext(store,1000+16*60*1000)).toBeNull();
+  });
+  it('login keeps an explicit destination',()=>{
+    const store=memoryStore();rememberOAuthNext('/cuenta',store,'login');expect(consumeOAuthNext(store)).toBe('/cuenta');
   });
 });

@@ -8,8 +8,10 @@ export interface SignUpInput {email:string; password:string; displayName:string}
 export interface AuthContextValue {
   status:AuthStatus; user:User|null; profile:Profile|null; membership:Membership|null; sites:Site[]; error:string|null;
   signIn:(email:string,password:string)=>Promise<void>;
-  signInWithGoogle:(next?:string)=>Promise<void>;
+  signInWithGoogle:(next?:string,flow?:'login'|'register')=>Promise<void>;
   signUp:(input:SignUpInput)=>Promise<{confirmationRequired:boolean}>;
+  resendSignupConfirmation:(email:string)=>Promise<void>;
+  exchangeAuthCode:(code:string)=>Promise<{provider:'google'|'email'|'unknown'}>;
   signOut:()=>Promise<void>;
   resetPassword:(email:string)=>Promise<void>;
   updatePassword:(password:string)=>Promise<void>;
