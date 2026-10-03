@@ -70,7 +70,15 @@ export class MissionEvaluator {
  setScenarioIntersections(values:readonly ScenarioIntersection[]){this.scenarioIntersections=values.map(item=>({...item}));}
  reset(){this.active=false;this.initialIR=null;this.initialButton=false;this.reads.clear();this.buttonRead=false;this.lineReads.clear();this.lineLostEvents=0;this.movedSides.clear();this.lcdDecision=false;this.intersection=false;this.intersectionStopMs=0;this.distance=0;this.last=null;this.lastTickMs=0;this.completed=false;this.frozen=null;this.destinationReached=false;this.invalid=false;this.obstacleDetections.clear();this.obstacleReadEvents=0;this.lcdNumber=null;this.s03IntersectionActive=null;this.s03IntersectionHeading=0;this.s03IntersectionTurned=false;this.s03IntersectionResponses=0;this.s03RespondedIntersections.clear();this.s04Gap1Seen=false;this.s04Gap1Crossed=false;this.s04Gap2Seen=false;this.s04Intersection1=false;this.s04Intersection2=false;this.s04Intersection3=false;this.s04Intersection1StopMs=0;this.s04Intersection2StopMs=0;this.s04Intersection3StopMs=0;this.s05RightActivations=0;this.s05LastRight=false;this.s05LastLeft=false;this.s05StartedByLeft=false;this.s05LcdMatchedCount=false;this.s05GapSeen=false;this.s05GapCrossed=false;this.s05JunctionReached=false;this.s05JunctionStopMs=0;this.s05JunctionAuthorized=false;this.s05DestinationReached=false;this.s05ExpectedBase=null;}
  start(robot:RobotState){this.reset();this.active=true;this.initialIR={left:robot.irLeft,right:robot.irRight};this.initialButton=robot.buttonPressed;this.last={x:robot.x,y:robot.y};this.lastTickMs=robot.simTimeMs;}
- invalidate(){this.invalid=true;this.active=false;}
+ /** Manual stop / natural end: close the attempt keeping what it achieved. The evidence is evaluated while the attempt is still valid and frozen as in_progress (or completed, if every check already passes); nothing later (IR, sensors, motion) can change it. reset()/start() clear it. */
+ stopAttempt(robot:RobotState){
+  if(!this.active||this.invalid||this.frozen)return;
+  const evidence=this.evaluate(robot);
+  if(!this.frozen)this.frozen={...evidence,checks:evidence.checks.map(item=>({...item})),progress:evidence.progress?{...evidence.progress}:undefined};
+  this.active=false;
+ }
+ /** Manual manipulation (pose, calibration, motor test, runtime error): the attempt is void. A completed attempt stays terminal; a frozen partial one is discarded. */
+ invalidate(){this.invalid=true;this.active=false;if(!this.completed)this.frozen=null;}
  observeEvent(event:SimulationEvent){
   if(!this.active||this.invalid)return;
   if(event.type==='IR_READ')this.reads.add(event.side);

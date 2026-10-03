@@ -18,7 +18,7 @@ export class ProgramRuntime {
   catch(error){this.fail(error);return [this.diagnostic!];}
  }
  private cancel(){this.execution?.return();this.execution=null;this.wait=null;this.accumulated=0;this.engine.robot.leftMotor=0;this.engine.robot.rightMotor=0;}
- command(command:Command){if(command.type==='reset'||command.type==='stop'||command.type==='motors'||command.type==='pose'){this.cancel();this.diagnostic=null;this.engine.programControlled=false;this.engine.mission.invalidate();}this.engine.command(command);}
+ command(command:Command){if(command.type==='reset'||command.type==='stop'||command.type==='motors'||command.type==='pose'){if(command.type==='stop')this.engine.mission.stopAttempt(this.engine.robot);this.cancel();this.diagnostic=null;this.engine.programControlled=false;if(command.type!=='stop')this.engine.mission.invalidate();}this.engine.command(command);}
  private fail(error:unknown){this.diagnostic=diagnosticFor(error);this.cancel();this.engine.status='error';this.engine.mission.invalidate();this.engine.emit({type:'RUNTIME_ERROR',message:this.diagnostic.message});}
  private slice(){
   if(!this.execution)return;
@@ -28,7 +28,7 @@ export class ProgramRuntime {
    if(action.kind==='instruction'){this.engine.instructions++;if(++instructions>LIMITS.instructions)throw new LanguageError('ExecutionLimitError','Tu programa está ejecutando demasiadas instrucciones seguidas sin darle tiempo al IROH para reaccionar. Añade una pausa dentro del ciclo.',action.loc);}
    else if(action.kind==='wait'){this.wait=action.wait;break;}
    else if(action.kind==='loop-boundary')break;
-   else {this.cancel();this.engine.status='finished';this.engine.emit({type:'PROGRAM_FINISHED'});break;}
+   else {this.engine.mission.stopAttempt(this.engine.robot);this.cancel();this.engine.status='finished';this.engine.emit({type:'PROGRAM_FINISHED'});break;}
   }}catch(error){this.fail(error);}
  }
  step(ms:number){if(!Number.isFinite(ms)||ms<0)throw new RangeError('El paso debe ser finito y positivo.');if(this.engine.status!=='running')return;this.accumulated+=ms;while(this.accumulated>=PHYSICS_STEP_MS&&this.engine.status==='running'){this.accumulated-=PHYSICS_STEP_MS;this.slice();this.engine.tick();}}
