@@ -10,16 +10,25 @@ type SessionId='s01'|'s02'|'s03'|'s04'|'s05';
 function runToCompletion(id:SessionId){
   const engine=new SimulationEngine(trackForSession(id)),runtime=new ProgramRuntime(engine);
   if(id==='s01'||id==='s02')runtime.command({type:'ir',side:'left',value:true});
-  if(id==='s05')runtime.command({type:'ir',side:'right',value:true});
   expect(runtime.run(mentorSolutions[id].source)).toEqual([]);
-  let pulse=0;
+  // S05 human interaction, driven by the real phase: one DER click (counter 1), an IZQ click to start,
+  // then a second IZQ click once the robot has stopped in the junction. Each click is ON then OFF.
+  let s05Phase:'count'|'start'|'route'|'authorise'|'done'='count',phaseTick=0,stillTicks=0;
   for(let tick=0;tick<40000&&engine.snapshot().mission.status!=='completed';tick++){
     runtime.step(10);
-    if(id==='s05'){
-      // S05 stimuli: one right pulse (counter 1), then left pulses to start and to authorise at the junction.
-      if(tick===20)runtime.command({type:'ir',side:'right',value:false});
-      if(tick>=40&&tick%50===0){pulse++;runtime.command({type:'ir',side:'left',value:pulse%2===1});}
-    }
+    if(id!=='s05')continue;
+    phaseTick++;
+    const robot=engine.robot,inJunction=robot.y<67&&robot.y>50,stopped=robot.leftMotor===0&&robot.rightMotor===0;
+    if(s05Phase==='count'){
+      if(phaseTick===20)runtime.command({type:'ir',side:'right',value:true});
+      if(phaseTick===42){runtime.command({type:'ir',side:'right',value:false});s05Phase='start';phaseTick=0;}
+    }else if(s05Phase==='start'){
+      if(phaseTick===20)runtime.command({type:'ir',side:'left',value:true});
+      if(phaseTick===42){runtime.command({type:'ir',side:'left',value:false});s05Phase='route';phaseTick=0;}
+    }else if(s05Phase==='route'){
+      stillTicks=inJunction&&stopped?stillTicks+1:0;
+      if(stillTicks>35){runtime.command({type:'ir',side:'left',value:true});s05Phase='authorise';phaseTick=0;}
+    }else if(s05Phase==='authorise'&&phaseTick===22){runtime.command({type:'ir',side:'left',value:false});s05Phase='done';}
   }
   expect(engine.snapshot().mission.status).toBe('completed');
   return {engine,runtime};

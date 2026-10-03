@@ -57,7 +57,9 @@ export class MissionEvaluator {
  private s05LastRight=false;
  private s05LastLeft=false;
  private s05StartedByLeft=false;
- private s05LcdMatchedCount=false;
+ private s05FrozenCount=0;
+ private s05CounterValidated=false;
+ private s05InitialLeftReleased=false;
  private s05GapSeen=false;
  private s05GapCrossed=false;
  private s05JunctionReached=false;
@@ -69,7 +71,7 @@ export class MissionEvaluator {
  constructor(private track:TrackDefinition){}
  setLineThresholds(values:LineThresholds){this.lineThresholds=[...values] as LineThresholds;}
  setScenarioIntersections(values:readonly ScenarioIntersection[]){this.scenarioIntersections=values.map(item=>({...item}));}
- reset(){this.active=false;this.initialIR=null;this.initialButton=false;this.reads.clear();this.buttonRead=false;this.lineReads.clear();this.lineLostEvents=0;this.movedSides.clear();this.movedBoxes.clear();this.lcdDecision=false;this.intersection=false;this.intersectionStopMs=0;this.distance=0;this.last=null;this.lastTickMs=0;this.completed=false;this.frozen=null;this.destinationReached=false;this.invalid=false;this.obstacleDetections.clear();this.obstacleReadEvents=0;this.lcdNumber=null;this.s03IntersectionActive=null;this.s03IntersectionHeading=0;this.s03IntersectionTurned=false;this.s03IntersectionResponses=0;this.s03RespondedIntersections.clear();this.s04Gap1Seen=false;this.s04Gap1Crossed=false;this.s04Gap2Seen=false;this.s04Intersection1=false;this.s04Intersection2=false;this.s04Intersection3=false;this.s04Intersection1StopMs=0;this.s04Intersection2StopMs=0;this.s04Intersection3StopMs=0;this.s05RightActivations=0;this.s05LastRight=false;this.s05LastLeft=false;this.s05StartedByLeft=false;this.s05LcdMatchedCount=false;this.s05GapSeen=false;this.s05GapCrossed=false;this.s05JunctionReached=false;this.s05JunctionStopMs=0;this.s05JunctionAuthorized=false;this.s05DestinationReached=false;this.s05ExpectedBase=null;}
+ reset(){this.active=false;this.initialIR=null;this.initialButton=false;this.reads.clear();this.buttonRead=false;this.lineReads.clear();this.lineLostEvents=0;this.movedSides.clear();this.movedBoxes.clear();this.lcdDecision=false;this.intersection=false;this.intersectionStopMs=0;this.distance=0;this.last=null;this.lastTickMs=0;this.completed=false;this.frozen=null;this.destinationReached=false;this.invalid=false;this.obstacleDetections.clear();this.obstacleReadEvents=0;this.lcdNumber=null;this.s03IntersectionActive=null;this.s03IntersectionHeading=0;this.s03IntersectionTurned=false;this.s03IntersectionResponses=0;this.s03RespondedIntersections.clear();this.s04Gap1Seen=false;this.s04Gap1Crossed=false;this.s04Gap2Seen=false;this.s04Intersection1=false;this.s04Intersection2=false;this.s04Intersection3=false;this.s04Intersection1StopMs=0;this.s04Intersection2StopMs=0;this.s04Intersection3StopMs=0;this.s05RightActivations=0;this.s05LastRight=false;this.s05LastLeft=false;this.s05StartedByLeft=false;this.s05FrozenCount=0;this.s05CounterValidated=false;this.s05InitialLeftReleased=false;this.s05GapSeen=false;this.s05GapCrossed=false;this.s05JunctionReached=false;this.s05JunctionStopMs=0;this.s05JunctionAuthorized=false;this.s05DestinationReached=false;this.s05ExpectedBase=null;}
  start(robot:RobotState){this.reset();this.active=true;this.initialIR={left:robot.irLeft,right:robot.irRight};this.initialButton=robot.buttonPressed;this.last={x:robot.x,y:robot.y};this.lastTickMs=robot.simTimeMs;}
  /** Manual stop / natural end: close the attempt keeping what it achieved. The evidence is evaluated while the attempt is still valid and frozen as in_progress (or completed, if every check already passes); nothing later (IR, sensors, motion) can change it. reset()/start() clear it. */
  stopAttempt(robot:RobotState){
@@ -150,33 +152,50 @@ export class MissionEvaluator {
    const inside=(id:string)=>{const zone=zoneById(id);return !!zone&&lineFront.x>=zone.x&&lineFront.x<=zone.x+zone.width&&lineFront.y>=zone.y&&lineFront.y<=zone.y+zone.height;};
    const allWhite=[robot.lineLeft,robot.lineCenter,robot.lineRight].every((value,index)=>value<this.lineThresholds[index]);
 
-   // Conteo real de activaciones del estímulo derecho: solo flancos 0 -> 1 y
-   // solo antes de que el IR izquierdo autorice el inicio del recorrido.
-   if(!this.s05StartedByLeft&&!this.s05LastRight&&robot.irRight)this.s05RightActivations++;
-   if(!this.s05StartedByLeft&&!this.s05LastLeft&&robot.irLeft&&this.s05RightActivations>0){
-    this.s05StartedByLeft=true;
-    this.s05ExpectedBase=this.s05RightActivations===1?'base1':this.s05RightActivations===2?'base2':'base3';
-   }
+   // S05 phases, driven only by physical rising edges:
+   //  A counting   DER false->true edges count (a held DER counts once).
+   //  B start      a NEW IZQ edge after at least one count freezes the counter,
+   //               derives the base and checks the CURRENT LCD shows that counter.
+   //               An IZQ edge in the same tick as a DER edge never starts.
+   //  C route      line, gap, junction (only after the start).
+   //  D junction   the start IZQ must be released; a second IZQ edge while the
+   //               robot is stopped inside the junction authorises the branch.
+   //  E base       only the frozen counter selects the expected base, and only
+   //               after the junction authorisation.
+   const rightEdge=robot.irRight&&!this.s05LastRight;
+   const leftEdge=robot.irLeft&&!this.s05LastLeft;
+   if(!this.s05StartedByLeft){
+    if(rightEdge)this.s05RightActivations++;
+    if(leftEdge&&!rightEdge&&this.s05RightActivations>0){
+     this.s05StartedByLeft=true;
+     this.s05FrozenCount=this.s05RightActivations;
+     this.s05ExpectedBase=this.s05FrozenCount===1?'base1':this.s05FrozenCount===2?'base2':'base3';
+     const shown=robot.lcd.join(' ').match(/-?\d+/g);
+     this.s05CounterValidated=!!shown&&Number(shown[shown.length-1])===this.s05FrozenCount;
+    }
+   }else if(!robot.irLeft)this.s05InitialLeftReleased=true;
    this.s05LastRight=robot.irRight;
    this.s05LastLeft=robot.irLeft;
-   if(this.s05RightActivations>0&&this.lcdNumber===this.s05RightActivations)this.s05LcdMatchedCount=true;
 
-   if(inside('gap')&&allWhite)this.s05GapSeen=true;
-   const gap=zoneById('gap');
-   if(this.s05GapSeen&&gap&&lineFront.y<gap.y-.5)this.s05GapCrossed=true;
+   if(this.s05StartedByLeft){
+    if(inside('gap')&&allWhite)this.s05GapSeen=true;
+    const gap=zoneById('gap');
+    if(this.s05GapSeen&&gap&&lineFront.y<gap.y-.5)this.s05GapCrossed=true;
 
-   if(inside('junction')&&allLineSensorsBlack){
-    this.s05JunctionReached=true;
-    if(robot.leftMotor===0&&robot.rightMotor===0)this.s05JunctionStopMs+=elapsed;
-    if(robot.leftMotor===0&&robot.rightMotor===0&&robot.irLeft)this.s05JunctionAuthorized=true;
-   }
+    const stopped=robot.leftMotor===0&&robot.rightMotor===0;
+    if(inside('junction')&&allLineSensorsBlack){
+     this.s05JunctionReached=true;
+     if(stopped)this.s05JunctionStopMs+=elapsed;
+     if(stopped&&leftEdge&&this.s05InitialLeftReleased)this.s05JunctionAuthorized=true;
+    }
 
-   if(this.s05ExpectedBase){
-    const expected=this.track.finishZones.find(zone=>zone.id===this.s05ExpectedBase);
-    if(expected){
-     const nearestX=Math.max(expected.x,Math.min(lineFront.x,expected.x+expected.width));
-     const nearestY=Math.max(expected.y,Math.min(lineFront.y,expected.y+expected.height));
-     if(Math.hypot(lineFront.x-nearestX,lineFront.y-nearestY)<=2)this.s05DestinationReached=true;
+    if(this.s05JunctionAuthorized&&this.s05ExpectedBase){
+     const expected=this.track.finishZones.find(zone=>zone.id===this.s05ExpectedBase);
+     if(expected){
+      const nearestX=Math.max(expected.x,Math.min(lineFront.x,expected.x+expected.width));
+      const nearestY=Math.max(expected.y,Math.min(lineFront.y,expected.y+expected.height));
+      if(Math.hypot(lineFront.x-nearestX,lineFront.y-nearestY)<=2)this.s05DestinationReached=true;
+     }
     }
    }
   }
@@ -239,7 +258,7 @@ export class MissionEvaluator {
   }else if(this.track.id==='s05'){
    const countLabel=this.s05RightActivations>0?String(this.s05RightActivations):'0';
    const baseLabel=this.s05ExpectedBase==='base1'?'Base 1':this.s05ExpectedBase==='base2'?'Base 2':this.s05ExpectedBase==='base3'?'Base 3':'la base indicada';
-   check('counter',`Contar IR derecho y mostrar ${countLabel} en la LCD`,this.s05RightActivations>0&&this.s05LcdMatchedCount);
+   check('counter',`Contar IR derecho y mostrar ${countLabel} en la LCD`,this.s05StartedByLeft&&this.s05CounterValidated);
    check('line','Comenzar con IR izquierdo, seguir la línea y atravesar el gap',this.s05StartedByLeft&&this.lineReads.size===3&&this.s05GapSeen&&this.s05GapCrossed&&this.distance>=85);
    check('junction','Detenerse en la intersección y esperar un nuevo IR izquierdo',this.s05JunctionReached&&this.s05JunctionStopMs>=250&&this.s05JunctionAuthorized);
    check('finish',`Elegir ${baseLabel} según el contador y detenerse en la base final`,!!this.s05ExpectedBase&&this.s05DestinationReached&&stationary);
